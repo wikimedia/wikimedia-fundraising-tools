@@ -15,6 +15,7 @@ def main():
     # === Extract options ===
     parser = OptionParser(usage="usage: %prog [options] <# of seconds to audit>")
     parser.add_option("-c", "--config", dest='configFile', default=None, help='Path to configuration file')
+    parser.add_option("-g", "--gracePeriod", dest='gracePeriod', default=0, help='Number of seconds from now backwards to ignore')
     (options, args) = parser.parse_args()
 
     if len(args) != 1:
@@ -22,7 +23,8 @@ def main():
         exit()
         
     startTime = datetime.fromtimestamp(int(time.time()) - int(args[0]))
-    print("Starting AWS audit from %s" % startTime.isoformat())
+    endTime = datetime.fromtimestamp(int(time.time()) - options.gracePeriod)
+    print("Starting AWS audit from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Get the configuration options ===
     config = SafeConfigParser()
@@ -55,7 +57,7 @@ def main():
     # === Main Application ===
     # --- Obtain AWS information ---
     print("Obtaining AWS transactions for the period")
-    awsTransactions = aws.getAccountActivity( startTime, fpsOperation='Pay', status='Success' )
+    awsTransactions = aws.getAccountActivity( startTime, endDate=endTime, fpsOperation='Pay', status='Success' )
     print("Obtained %d transactions" % len(awsTransactions))
     
     # --- Main loop: checks each aws transaction against the Civi database; adding it if it doesn't exist ---
