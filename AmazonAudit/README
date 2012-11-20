@@ -1,0 +1,16 @@
+-- Amazon Auditing Script --
+
+INSTALLATION
+The python stomp library must be installed for use. This can be obtained
+from http://code.google.com/p/stomppy/. This software was developed originally
+on the 3.X series of the library.
+
+CONFIGURATION
+The amazon-audit.cfg script is provided as a base template. Although this file
+can be modified it is recommended you create a site-local.cfg file and feed
+it to the script with the '-c' option.
+
+RUNNING
+This script requires one argument which is the number of seconds into the past
+to look for lost transactions.
+
