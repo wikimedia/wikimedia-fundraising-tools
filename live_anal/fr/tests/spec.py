@@ -1,13 +1,12 @@
 '''
-Parse test descriptions
-
-centralnotice import is hidden in a lazy hack until presentation driver is decoupled
+TODO:
+* match start_time to discriminate between mutations of an otherwise identical test...
 '''
 
-import time_util
-import centralnotice
-import contributions
 import re
+
+import time_util
+import campaign_log
 
 try:
     #import jail
@@ -15,8 +14,43 @@ try:
 
     def read_gdoc_spec(doc=None):
         return list(parse_spec(gdocs.Spreadsheet(doc=doc).get_all_rows()))
+
+    def update_gdoc_spec(doc=None, old_spec=None):
+        '''
+        Try to reconstruct actual tests by parsing centralnotice change logs
+        '''
+
+        print "Updating test specs with latest CentralNotice changes... ", doc
+
+        if not old_spec:
+            old_spec = read_gdoc_spec(doc=doc)
+
+    def write_gdoc_results(doc=None, results=[]):
+        print "Writing test results to %s" % doc
+        doc = gdocs.Spreadsheet(doc=doc)
+        for result in results:
+            props = {}
+            props.update(result['criteria'])
+            props.update(result['results'])
+            doc.append_row(props)
+
+
+    class GdocSpecfile(Specfile):
+        def __init__(self, doc=None):
+            super(Specfile, self).__init__()
+
+            self.spec = read_gdoc_spec(doc=doc)
+
+            self.doc = gdocs.Spreadsheet(doc=doc)
+
+        def append_test(self, test):
+            super(Specfile, self).append_test(test)
+
+            self.doc.append_row(test)
+
 except ImportError:
     pass
+
 
 def parse_spec(spec):
     for row in spec:
@@ -26,116 +60,46 @@ def parse_spec(spec):
             continue
         yield FrTest(**row)
 
-def update_gdoc_spec(doc=None, old_spec=None):
-    '''
-    Try to reconstruct actual tests by parsing centralnotice change logs
-    '''
-    import gdocs
 
-    if not old_spec:
-        old_spec = read_gdoc_spec(doc=doc)
+def compare_test_fuzzy(a, b):
+    if a.campaigns == b.campaigns and a.banners == b.banners:
+        return True
 
-    print "Updating test specs with latest CentralNotice changes... ", doc
-    spec_doc = gdocs.Spreadsheet(doc=doc)
+class Specfile(object):
+    '''or other storage format'''
+    def __init__(self):
+        self.spec = []
 
-    def is_relevant(entry):
-        '''
-        This change enabled/disabled a test; or an enabled test has been mutated.
-        '''
-        if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
-            return True
+    def append_test(self, test):
+        self.spec.append(test)
 
-    def test_from_entry(entry, edge):
-        # FIXME: assuming this is a banner test
-        banners = entry[edge]['banners']
-        if hasattr(banners, 'keys'):
-            banners = banners.keys()
+    def update_test(self, test, update=None, index=None, insert=False):
+        if not update:
+            update = test
+        if not index:
+            index = self.find_test(test)
+        if index:
+            self.spec[match] = test_ending
+        elif insert:
+            sepc.spec.append(test_ending)
 
-        test = FrTest(
-            type="banner",
-            campaigns=entry['campaign'],
-            banners=banners,
-            start=entry[edge]['start'],
-            end=entry[edge]['end'],
-        )
-
-        # FIXME x 2
-        test.timestamp = entry['timestamp']
-        if edge == 'begin':
-            test.end_time = entry['timestamp']
-        else:
-            test.start_time = entry['timestamp']
-
-        return test
-
-    def find_test(spec, test):
-        '''
-        I'd like to do start_time match to discriminate between mutations of an otherwise identical test...
-        Maybe this isn't DTRT, but something similar needs to happen.
-        '''
-        #print "DEBUG: Searching for ", test, " in ", spec
-        # FIXME hardcoding missing "end" logic.
-        for index, existing in enumerate(spec):
-            if not existing:
-                continue
-            if test.campaigns == existing.campaigns and test.banners == existing.banners:
+    def find_test(test):
+        for index, existing in enumerate(self.spec):
+            if existing and compare_test_fuzzy(test, existing):
                 return index
 
-    logs = centralnotice.get_campaign_logs(since=time_util.str_time_offset(days=-1))
-    changes = [ e for e in logs if is_relevant(e) ]
-    changes.reverse()
 
-    spec = old_spec
-    for entry in changes:
-        if 'enabled' in entry['removed'] and entry['removed']['enabled']:
-            test_ending = test_from_entry(entry, 'begin')
-            match = find_test(spec, test_ending)
-            if match is not None:
-                spec[match] = test_ending
-                print "DEBUG: updating end time in row", match, test_ending
-                spec_doc.update_row({'end': test_ending.timestamp}, index=match+1)
-            else:
-                print "DEBUG: not altering out-of-scope test: ", test_ending
-        else:
-            print "DEBUG: not mutating test at ", entry['timestamp']
+def update_spec(spec):
+    for test_ending, test_beginning in campaign_log.get_relevant_events():
+        if test_ending:
+            spec.update_test(test_ending)
 
-        if 'enabled' in entry['added'] and entry['added']['enabled']:
-            test_beginning = test_from_entry(entry, 'end')
-            match = find_test(spec, test_beginning)
-            if match is None:
-                if test_beginning.label:
-                    #FIXME hack:
-                    spec.append(test_beginning)
-                    # XXX test_beginning.__dict__ + 
-                    props = {
-                        'label': test_beginning.label,
-                        'type': "banner",
-                        'start': test_beginning.timestamp,
-                        'end': test_beginning.end_time,
-                        'campaigns': ", ".join([ c['name'] for c in test_beginning.campaigns ]),
-                        'banners': ", ".join(test_beginning.banners),
-                    }
-                    spec_doc.append_row(props)
-                #else:
-                #    props['disabled'] = "X"
-            else:
-                spec[match].timestamp = test_beginning.timestamp
-                spec_doc.update_row({'end': test_beginning.end_time}, index=match+1)
-                print "DEBUG: re-opening existing test by updating end time: row ", match, test_beginning
-        else:
-            print "DEBUG: not mutating test at ", entry['timestamp']
+        if test_beginning:
+            #XXX
+            if test_beginning.label:
+                spec.update_test(test_beginning)
 
     return spec
-
-def write_gdoc_results(doc=None, results=[]):
-    import gdocs
-    print "Writing test results to %s" % doc
-    doc = gdocs.Spreadsheet(doc=doc)
-    for result in results:
-        props = {}
-        props.update(result['criteria'])
-        props.update(result['results'])
-        doc.append_row(props)
 
 def update_gdoc_results(doc=None, results=[]):
     import gdocs
