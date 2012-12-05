@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import os
+
+import config
+import jail
+import lock
+
+unique = os.environ['LOGNAME']
+lockfile = "/tmp/%s-franal-update-proc.lock" % unique
+
+lock.begin(filename=lockfile)
+
+# do gdocs and simplemediawiki queries in an insolated environment
+#FIXME: security is illusory
+jail.run("""
+import fr.tests
+fr.tests.update_gdoc_spec(doc="%(url)s")
+""" % {'url': config.test_spec_url})
+
+lock.end()

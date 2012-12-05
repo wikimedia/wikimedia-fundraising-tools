@@ -1,0 +1,27 @@
+test_spec_url = "https://docs.google.com/a/wikimedia.org/spreadsheet/ccc?key=0AvYeJET4NyTPdHp4MFdORDVId1puQUd2MGxEYnU1anc#gid=0"
+test_results_url = "https://docs.google.com/a/wikimedia.org/spreadsheet/ccc?key=0AvYeJET4NyTPdHp4MFdORDVId1puQUd2MGxEYnU1anc#gid=1"
+
+# (in the future) this string will appear as the author of changes
+app_name = "bot: FR"
+
+gdocs = {
+    'email': '',
+    'passwd': '',
+}
+
+centralnotice_mw_api = "http://meta.wikimedia.org/w/api.php"
+
+db_params = {
+    'host': 'localhost',
+    'db': 'wmf_civi',
+    'user': 'wmf',
+    'passwd': 'ggg',
+    'debug': True,
+}
+
+# if any tables are not in the civicrm database, specify the db name and prefix here.
+#scratch_db_prefix = 'test.%s_' % os.environ['LOGNAME']
+public_reporting_prefix = ''
+contribution_tracking_prefix = 'drupal.'
+
+reference_day = '20121116000000'
