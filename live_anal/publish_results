@@ -19,7 +19,7 @@ lock.begin(filename=lockfile)
 #FIXME: security is illusory
 jail.run("""
 from cPickle import dump
-from fr.tests import read_gdoc_spec
+from fr.tests.spec_gdoc import read_gdoc_spec
 
 print "Reading test specifications from %(url)s"
 tests = read_gdoc_spec(doc="%(url)s")
@@ -30,7 +30,7 @@ tests = pickle.load(open(spec_tmp, "r"))
 
 # Compile statistics from the database
 results = []
-for test in tests:
+for test in tests.spec:
     test.load_results()
     results.extend([r.__dict__ for r in test.results])
 
@@ -39,7 +39,7 @@ open(results_tmp, "w").write(json.dumps(results, indent=4))
 # store in gdocs spreadsheet
 jail.run("""
 from json import loads
-from fr.tests import update_gdoc_results
+from fr.tests.results_gdoc import update_gdoc_results
 
 results = loads(open("%(results)s", "r").read())
 update_gdoc_results(doc="%(url)s", results=results)

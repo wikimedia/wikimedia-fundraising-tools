@@ -1,10 +1,17 @@
 '''
 Test specifications, cases, and results.
+
+These are not unit tests ;) they are WMF Fundraising A/B tests.
 '''
 
 import re
 
 from fr.centralnotice import get_campaign
+from fr.contributions import get_totals
+
+FR_LABEL_PATTERN = r'_\d+_([^_]+)_'
+FUDGE_TRIALS = 100000
+CONFIDENCE_LEVEL = 0.95
 
 class FrTest(object):
     def __init__(self, label=None, type="", campaigns=None, banners=None, start=None, end=None, source_index=0, **ignore):
@@ -51,7 +58,7 @@ class FrTest(object):
         else:
             self.label = ""
             if self.banners:
-                match = re.search(r"_\d+_([^_]+)_", self.banners[0])
+                match = re.search(FR_LABEL_PATTERN, self.banners[0])
                 if match and match.group(1):
                     self.label = match.group(1)
 
@@ -66,7 +73,7 @@ class FrTest(object):
                 results = []
                 for name in self.banners:
                     test_case = self.get_case(campaign=campaign['name'], banner=name)
-                    totals = contributions.get_totals(**test_case)
+                    totals = get_totals(**test_case)
 
                     result_extra = {
                         'preview': "http://en.wikipedia.org/wiki/Special:Random?banner=" + name,
@@ -99,7 +106,6 @@ class FrTest(object):
 
     def get_case(self, **kw):
         conditions = {
-            'campaign': campaign['name'],
             'start': self.start_time,
             'end': self.end_time,
         }
@@ -121,8 +127,6 @@ Test: %(type)s (%(campaigns)s) %(start)s - %(end)s
 
     def get_confidence(self, results, name_column=None, successes_column=None, trials=None):
         from stats_abba import Experiment
-        FUDGE_TRIALS = 100000
-        CONFIDENCE_LEVEL=0.95
         num_test_cases = len(results)
 
         if not num_test_cases:

@@ -26,15 +26,17 @@ def is_fr_test(test):
 
 
 class FrTestSpec(object):
-    '''or other storage format'''
+    '''Manage a collection of test specifications
+    '''
+
     def __init__(self, spec=[]):
         self.spec = spec
 
-    def update_test(self, test, index=None, insert=True):
-        if not index:
-            index = self.find_test(test)
+    def update_test(self, test, insert=True):
+        index = self.find_test(test)
+        test.modified = True
         if index:
-            test.source_index = self.spec[source_index]
+            test.source_index = self.spec[index].source_index
             self.spec[index] = test
         elif insert:
             if self.spec:
@@ -47,9 +49,7 @@ class FrTestSpec(object):
                 return existing.source_index
 
     def update_from_logs(self):
-        '''
-        Try to reconstruct actual tests by parsing centralnotice change logs
-        '''
+        '''Try to reconstruct actual tests by parsing centralnotice change logs'''
 
         for test_ending, test_beginning in campaign_log.get_relevant_events():
             if test_ending:

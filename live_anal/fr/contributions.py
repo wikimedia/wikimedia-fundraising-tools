@@ -60,7 +60,7 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
         query.params['campaign'] = campaign
     if banner:
         query.columns.append( ct_banner_clause + " AS banner" )
-        query.where.append("%s = '%(banner)s'" % (ct_banner_clause, ))
+        query.where.append(ct_banner_clause + " = '%(banner)s'")
         query.params['banner'] = banner
     if country:
         query.where.append("country = '%(country)s'")
