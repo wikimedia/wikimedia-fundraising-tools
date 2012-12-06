@@ -6,7 +6,6 @@ import MySQLdb as Dbi
 class Connection(object):
     def __init__(self, host=None, user=None, passwd=None, db=None, debug=False):
         self.db_conn = Dbi.connect(host=host, user=user, passwd=passwd, db=db)
-        self.cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
         self.debug = debug
 
     def close(self):
@@ -14,11 +13,16 @@ class Connection(object):
         pass
 
     def execute(self, sql):
+        cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
         if self.debug:
             print sql
-        self.cursor.execute(str(sql))
-        for row in self.cursor.fetchall():
+        if hasattr(sql, 'uninterpolated_sql') and sql.params:
+            cursor.execute(sql.uninterpolated_sql(), sql.params)
+        else:
+            cursor.execute(str(sql))
+        for row in cursor.fetchall():
             yield row
+        cursor.close()
 
 class Query(object):
     def __init__(self):
@@ -27,8 +31,9 @@ class Query(object):
         self.where = []
         self.order_by = []
         self.group_by = []
+        self.params = {}
 
-    def __repr__(self):
+    def uninterpolated_sql(self):
         sql = "SELECT " + ",\n\t\t".join(self.columns)
         sql += "\n\tFROM " + "\n\t\t".join(self.tables)
         if self.where:
@@ -38,3 +43,6 @@ class Query(object):
         if self.group_by:
             sql += "\n\tGROUP BY " + ", ".join(self.group_by)
         return sql
+
+    def __repr__(self):
+        return self.uninterpolated_sql() % self.params
