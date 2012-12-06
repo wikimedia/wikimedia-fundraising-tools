@@ -56,17 +56,17 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
         query.where.extend(wheres)
     if campaign:
         query.columns.append("utm_campaign AS campaign")
-        query.where.append("utm_campaign = '%(campaign)s'")
+        query.where.append("utm_campaign = %(campaign)s")
         query.params['campaign'] = campaign
     if banner:
         query.columns.append( ct_banner_clause + " AS banner" )
-        query.where.append(ct_banner_clause + " = '%(banner)s'")
+        query.where.append(ct_banner_clause + " = %(banner)s")
         query.params['banner'] = banner
     if country:
-        query.where.append("country = '%(country)s'")
+        query.where.append("country = %(country)s")
         query.params['country'] = country
     if start and end:
-        query.where.append("ts BETWEEN '%(start)s' AND '%(end)s'")
+        query.where.append("ts BETWEEN %(start)s AND %(end)s")
         query.params['start'] = start
         query.params['end'] = end
 

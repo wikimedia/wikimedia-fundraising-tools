@@ -45,4 +45,8 @@ class Query(object):
         return sql
 
     def __repr__(self):
-        return self.uninterpolated_sql() % self.params
+        # FIXME:
+        qparams = {}
+        for k, s in self.params.items():
+            qparams[k] = "'%s'" % s
+        return self.uninterpolated_sql() % qparams

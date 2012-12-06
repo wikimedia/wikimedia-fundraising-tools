@@ -91,8 +91,8 @@ class FrTest(object):
                         results[i].add_result('p-value', levels.two_tailed_p_value)
                         results[i].add_result('improvement', levels.relative_improvement.value * 100)
                 except ImportError as e:
-                    print "ERROR: not calculating confidence, dummy: ", e.strerror
-                results[0].add_result('confidencelink', self.get_confidence_link(results, 'banner', 'donations', 100000))
+                    print "ERROR: not calculating confidence, dummy: ", e.message
+                results[0].add_result('confidencelink', self.get_confidence_link(results, 'banner', 'donations', FUDGE_TRIALS))
 
                 self.results.extend(results)
 
@@ -174,14 +174,14 @@ class TestResult(object):
         if results:
             self.add_result(results)
 
-    def add_result(self, result):
+    def add_result(self, result, value=None):
         if hasattr(result, 'keys'):
             self.results.update(result)
         elif hasattr(result, 'append'):
             for entry in result:
                 self.add_result(entry)
         else:
-            raise "Failed to add result: %s" % repr(result)
+            self.results[result] = value
 
     def __repr__(self):
         import json
