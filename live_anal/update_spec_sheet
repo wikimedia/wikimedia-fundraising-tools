@@ -14,8 +14,8 @@ lock.begin(filename=lockfile)
 # do gdocs and simplemediawiki queries in an insolated environment
 #FIXME: security is illusory
 jail.run("""
-import fr.tests
-fr.tests.update_gdoc_spec(doc="%(url)s")
+from fr.tests.spec_gdoc import update_gdoc_spec
+update_gdoc_spec(doc="%(url)s")
 """ % {'url': config.test_spec_url})
 
 lock.end()

@@ -1,5 +1,8 @@
 '''
 '''
+
+from fr.tests import FrTest
+
 def tests_from_entry(entry):
     '''
     Returns a tuple, (test ended, test begun)
@@ -37,7 +40,8 @@ def tests_from_entry(entry):
     return (test_from_entry('begin'), test_from_entry('end'), )
 
 def get_relevant_events():
-    import centralnotice
+    from fr.centralnotice import get_campaign_logs
+    import fr.time_util
 
     def is_relevant(entry):
         '''
@@ -46,5 +50,5 @@ def get_relevant_events():
         if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
             return True
 
-    logs = centralnotice.get_campaign_logs(since=time_util.str_time_offset(days=-1))
+    logs = get_campaign_logs(since=fr.time_util.str_time_offset(days=-1))
     return [ tests_from_entry(e) for e in reversed(logs) if is_relevant(e) ]

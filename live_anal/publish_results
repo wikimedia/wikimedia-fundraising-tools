@@ -31,7 +31,6 @@ tests = pickle.load(open(spec_tmp, "r"))
 # Compile statistics from the database
 results = []
 for test in tests:
-    print test
     test.load_results()
     results.extend([r.__dict__ for r in test.results])
 

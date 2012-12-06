@@ -38,7 +38,7 @@ On Google Drive:
 
     Label, Type, Campaigns, Banners, Start, End, Disabled, Notes
 
-    Label, Banner, Campaign, Language, Country, Start, End, Clicks, Donations, Total, Mean, Mean20, SD, P-value, Confidence_link, Preview, Updated, Sql-disabled
+    Label, Banner, Campaign, Language, Country, Start, End, Clicks, Donations, Total, Mean, Mean20, SD, P-value, Improvement, Confidence link, Preview, Updated, Sql-disabled
 
 As root:
 

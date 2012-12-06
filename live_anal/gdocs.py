@@ -9,6 +9,7 @@ import gdata.spreadsheet.service
 import config
 
 # TODO: ExecuteBatch; 2-leg oauth
+# TODO: cache rows locally, operate and then flush
 
 def authenticate(client):
     #client.SetOAuthInputParameters(
