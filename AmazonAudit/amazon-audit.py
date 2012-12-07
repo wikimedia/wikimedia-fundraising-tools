@@ -76,6 +76,12 @@ def main():
         #       we need, so make another one, txn specific.
         txnInfo = aws.getTransaction( txn['TransactionId'] )
 
+        # --- Get our contribution tracking ID (but it's stupid because AWS is stupid... ugh!)
+        ctid = None
+        for part in txn['TransactionPart']:
+            if part['Role'] == 'Recipient':
+                ctid = part['Reference']
+
         # --- Confirm that the transaction has in fact completed before constructing the STOMP message
         if txnInfo['StatusCode'] != 'Success':
             sys.stderr.write("Amazon changed the status of %s on us!" % txn['TransactionId'])
@@ -83,12 +89,12 @@ def main():
 
         # Construct the STOMP message
         headers = {
-            'correlation-id': 'amazon-%s' % txnInfo['CallerReference'],
+            'correlation-id': 'amazon-%s' % txn['TransactionId'],
             'destination': config.get('Stomp', 'verified-queue'),
             'persistent': 'true'
         }
         msg = {
-            "contribution_tracking_id": '',
+            "contribution_tracking_id": ctid if ctid is not None else '',
             "gateway_txn_id": txn['TransactionId'],
 
             "email": txnInfo['SenderEmail'],
@@ -134,7 +140,7 @@ def main():
         }
 
         # Inject the message
-        print("Injecting found message into queue. Transaction ID: %s, Contribution ID: %s" % (txn['TransactionId'], txnInfo['CallerReference']))
+        print("Injecting found message into queue. Transaction ID: %s, Contribution ID: %s" % (txn['TransactionId'], ctid))
         sc.send(
             json.dumps(msg),
             headers
