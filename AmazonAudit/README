@@ -11,6 +11,10 @@ can be modified it is recommended you create a site-local.cfg file and feed
 it to the script with the '-c' option.
 
 RUNNING
-This script requires one argument which is the number of seconds into the past
-to look for lost transactions.
+This script requires two arguments which are:
+- the number of seconds into the past to look for lost transactions
+- and the number of seconds of grace where we will not look for transactions
+
+So, amazon-audit.py 462000 86400 will search 5 days into the past ignoring any
+transaction that occurred within the last 24 hours.
 
