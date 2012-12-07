@@ -31,9 +31,13 @@ tests = pickle.load(open(spec_tmp, "r"))
 # Compile statistics from the database
 results = []
 for test in tests.spec:
+    if not test.enabled:
+        continue
     test.load_results()
     print "DEBUG: ", test.results
+    # Flatten results into a list
     results.extend([r.__dict__ for r in test.results])
+    #results.extend(test.results)
 
 open(results_tmp, "w").write(json.dumps(results, indent=4))
 

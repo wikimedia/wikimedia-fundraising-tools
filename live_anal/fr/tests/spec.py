@@ -9,11 +9,8 @@ from fr.tests import FrTest
 import campaign_log
 
 def parse_spec(spec):
-    for index, row in enumerate(spec):
-        if 'disabled' in row and hasattr(row['disabled'], 'strip') and row['disabled'].strip():
-            #print "DEBUG: Skipping disabled test spec: %s" % str(row)
-            continue
-        yield FrTest(source_index=index, **row)
+    for row in spec:
+        yield FrTest(**row)
 
 def compare_test_fuzzy(a, b):
     if a.campaigns == b.campaigns and a.banners == b.banners:
@@ -36,11 +33,8 @@ class FrTestSpec(object):
         index = self.find_test(test)
         test.modified = True
         if index:
-            test.source_index = self.spec[index].source_index
             self.spec[index] = test
         elif insert:
-            if self.spec:
-                test.source_index = self.spec[-1].source_index + 1
             self.spec.append(test)
 
     def find_test(self, test):
