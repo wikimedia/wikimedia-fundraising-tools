@@ -17,16 +17,14 @@ def update_gdoc_results(doc=None, results=[]):
     def find_matching_cases(criteria):
         matching = []
 
-        def compare_row(row, criteria):
+        def fuzzy_compare_row(row, criteria):
             if not row:
                 return False
-            for k, v in result['criteria'].items():
-                if row[k] != v:
-                    return False
-            return True
+            if criteria['banner'] == row['banner'] and criteria['campaign'] == row['campaign']:
+                return True
 
         for n, row in enumerate(existing, 1):
-            if compare_row(row, criteria):
+            if fuzzy_compare_row(row, criteria):
                 matching.append(n)
 
         return matching
@@ -37,14 +35,15 @@ def update_gdoc_results(doc=None, results=[]):
 
         matching = find_matching_cases(result['criteria'])
 
+        props = {}
+        props.update(result['results'])
+        props.update(result['criteria'])
+
         if len(matching) == 0:
-            props = {}
-            props.update(result['criteria'])
-            props.update(result['results'])
             doc.append_row(props)
         else:
             if len(matching) > 1:
                 print "WARNING: more than one result row %s matches criteria: %s" % (matching, result['criteria'], )
             index = matching[-1]
             print "DEBUG: updating row %d" % index
-            doc.update_row(result['results'], index=index)
+            doc.update_row(props, index=index)
