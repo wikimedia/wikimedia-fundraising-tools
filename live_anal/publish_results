@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+import json
+import cPickle as pickle
+import os
+
+import config
+import jail
+import lock
+
+unique = os.environ['LOGNAME']
+spec_tmp = "/tmp/%s-tests.pickle" % unique
+results_tmp = "/tmp/%s-test_results.json" % unique
+lockfile = "/tmp/%s-franal-publish-proc.lock" % unique
+
+lock.begin(filename=lockfile)
+
+# do gdocs and simplemediawiki queries in an insolated environment
+#FIXME: security is illusory
+jail.run("""
+from cPickle import dump
+from fr.tests.spec_gdoc import read_gdoc_spec
+
+print "Reading test specifications from %(url)s"
+tests = read_gdoc_spec(doc="%(url)s")
+dump(tests, open("%(out)s", "w"))
+""" % {'url': config.test_spec_url, 'out': spec_tmp})
+
+tests = pickle.load(open(spec_tmp, "r"))
+
+# Compile statistics from the database
+results = []
+for test in tests.spec:
+    test.load_results()
+    print "DEBUG: ", test.results
+    results.extend([r.__dict__ for r in test.results])
+
+open(results_tmp, "w").write(json.dumps(results, indent=4))
+
+# store in gdocs spreadsheet
+jail.run("""
+from json import loads
+from fr.tests.results_gdoc import update_gdoc_results
+
+results = loads(open("%(results)s", "r").read())
+update_gdoc_results(doc="%(url)s", results=results)
+""" % {'results': results_tmp, 'url': config.test_results_url})
+
+lock.end()

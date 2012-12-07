@@ -1,0 +1,52 @@
+CentralNotice campaign-based tests are inferred from the log api, descriptions
+of each test are stored in a database (in this case, a Google spreadsheet), and
+results aggregated from private databases.
+
+There are two jobs which can be scheduled or disabled independently:
+* update_specs - suggested interval, 5 minutes
+    Sync CN logs to the test description database.  The algorithm is roughly,
+If the campaign change would result in a different end-user experience (usually,
+an enable or disable event), create or update the new test regime which is begun
+by this change.  Also, mark a test matching the previous state as ending at this
+time.
+* publish_results - suggested 1 or 2 minutes
+    Click and contribution results are generated or updated from test cases.
+Columns must be present in the results worksheet if they are to be populated,
+the scripts do not create their own schema or headers.  See the README.
+
+Jobs will create a lockfile to prevent redundant (and harmful!) concurrency.
+
+Confidence levels should be identical to Thumbtack's "abba" demo.  The first
+banner of a campaign becomes the baseline.
+
+Swapping spreadsheet rows or columns will not affect these scripts.
+
+NOTE:
+* If the first banner name in a campaign cannot be parsed, the test will not
+automatically appear in the list.  A description line may be added by hand.
+
+* Only A/B banner tests are handled correctly.
+
+* If a column on the results sheet is named "Sql", raw queries will be dumped there.
+
+
+INSTALLATION
+=============
+On Google Drive:
+
+  Create two worksheets, under a single spreadsheet if desired.  Paste these columns into the column headers line (row 1) of the test descriptions worksheet, and the results worksheet:
+
+    Label, Type, Campaigns, Banners, Start, End, Disabled, Notes
+
+    Label, Banner, Campaign, Language, Country, Start, End, Clicks, Donations, Total, Mean, Mean20, SD, P-value, Improvement, Confidence link, Preview, Updated, Sql-disabled
+
+As root:
+
+  pip install virtualenv MySQL-python
+
+In this directory:
+
+  virtualenv jailenv
+  PATH=jailenv/bin pip install simplemediawiki kitchen gdata
+
+  cp config.py.example config.py # and edit
