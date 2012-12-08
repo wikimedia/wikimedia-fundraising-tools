@@ -29,7 +29,7 @@ def main():
         
     startTime = datetime.fromtimestamp(int(time.time()) - int(args[0]))
     endTime = datetime.fromtimestamp(int(time.time()) - int(options.gracePeriod))
-    print("Starting AWS audit from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
+    print("AWS audit requested from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Get the configuration options ===
     config = SafeConfigParser()
@@ -71,6 +71,7 @@ def main():
             historyStart = dateutil.parser.parse(hfile.readline().strip())
             historyEnd = dateutil.parser.parse(hfile.readline().strip())
             startTime = historyEnd
+            print("History file modified search period, now %s to %s" % (startTime.isoformat(), endTime.isoformat()))
     else:
         print('Not starting with a valid history file.')
 
@@ -80,8 +81,8 @@ def main():
         sfile.write("!!! Starting run for dates %s -> %s\n" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Sanity checks ===
-    if endTime > startTime:
-        endTime = startTime
+    if endTime < startTime:
+         startTime = endTime
     
     # === Main Application ===
     # --- Process all previously pending transactions from the history file. If the transaction is still in some form
