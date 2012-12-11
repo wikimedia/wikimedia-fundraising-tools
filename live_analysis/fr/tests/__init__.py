@@ -76,6 +76,7 @@ class FrTest(object):
 
                     result_extra = {
                         'preview': "http://en.wikipedia.org/wiki/Special:Random?banner=" + name,
+                        'screenshot': "http://fundraising-archive.wmflabs.org/banner/%s.png" % name,
                         'label': self.label,
                     }
 
