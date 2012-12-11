@@ -14,7 +14,7 @@ FUDGE_TRIALS = 100000
 CONFIDENCE_LEVEL = 0.95
 
 class FrTest(object):
-    def __init__(self, label=None, type="", campaigns=None, banners=None, start=None, end=None, source_index=0, **ignore):
+    def __init__(self, label=None, type="", campaigns=None, banners=None, start=None, end=None, disabled=False, **ignore):
         #print "Warning: ignoring columns: %s" % (", ".join(ignore.keys()), )
 
         self.campaigns = []
@@ -62,8 +62,7 @@ class FrTest(object):
                 if match and match.group(1):
                     self.label = match.group(1)
 
-        # FIXME: egregious hack until gdocs are cached
-        self.source_index = source_index
+        self.enabled = not disabled
 
         self.results = []
 
@@ -114,15 +113,16 @@ class FrTest(object):
 
     def __repr__(self):
         description = '''
-Test: %(type)s (%(campaigns)s) %(start)s - %(end)s
-''' % {'type': self.type, 'campaigns': str([c['name'] for c in self.campaigns]), 'start': self.start_time, 'end': self.end_time, }
+Test: %(label)s (%(campaigns)s) %(start)s - %(end)s
+''' % {'label': self.label, 'campaigns': str([c['name'] for c in self.campaigns]), 'start': self.start_time, 'end': self.end_time, }
+        if not self.enabled:
+            description += " DISABLED "
         if self.is_banner_test:
             description += " banners: " + str(self.banners)
         if self.is_country_test:
             description += " countries: " + str(self.countries)
         if self.is_lp_test:
             description += " lps: " + str(self.lps)
-        description += " row: %(source_index)s " % {'source_index': self.source_index}
         return description
 
     def get_confidence(self, results, name_column=None, successes_column=None, trials=None):

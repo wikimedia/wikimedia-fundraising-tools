@@ -15,18 +15,17 @@ def update_gdoc_spec(doc=None, spec=None):
     spec.update_from_logs()
 
     doc = Spreadsheet(doc=doc)
-    last_row = doc.num_rows() - 1
-    for test in spec.spec:
-        if not hasattr(test, 'modified') or not test.modified:
-            continue
-        rownum = int(test.source_index)+1
-        if rownum <= last_row:
-            print "DEBUG: updating spec row %d" % rownum
-            print test
+    for index, test in enumerate(spec.spec, 0):
+        test = spec.spec[index]
+        rownum = index + 1
+        if rownum < doc.num_rows():
+            if not hasattr(test, 'modified') or not test.modified:
+                continue
+            print("DEBUG: updating spec end time in row %d" % rownum, test)
             if test.end_time:
                 doc.update_row({'end': test.end_time}, index=rownum)
         else:
-            print "DEBUG: appending spec row"
+            print("DEBUG: appending spec row (%d)" % index, test)
             doc.append_row({
                 'label': test.label,
                 'type': "banner",

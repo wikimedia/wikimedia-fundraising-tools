@@ -12,7 +12,7 @@ def tests_from_entry(entry):
     the related contributions.
     '''
     def test_from_entry(edge):
-        if (edge == 'begin' and 'enabled' in entry['added'] and entry['added']['enabled']) or (edge == 'end' and 'enabled' in entry['removed'] and entry['removed']['enabled']):
+        if (edge == 'begin' and 'enabled' in entry['added'] and int(entry['added']['enabled'])) or (edge == 'end' and 'enabled' in entry['removed'] and int(entry['removed']['enabled'])):
             # irrelevant
             return False
 
