@@ -7,6 +7,7 @@ from optparse import OptionParser
 from datetime import datetime
 import dateutil.parser
 import time
+import pytz
 import MySQLdb as MySQL
 import json
 import sys
@@ -27,8 +28,8 @@ def main():
         parser.print_usage()
         exit()
         
-    startTime = datetime.fromtimestamp(int(time.time()) - int(args[0]))
-    endTime = datetime.fromtimestamp(int(time.time()) - int(options.gracePeriod))
+    startTime = datetime.fromtimestamp(int(time.time()) - int(args[0]), pytz.utc)
+    endTime = datetime.fromtimestamp(int(time.time()) - int(options.gracePeriod), pytz.utc)
     print("AWS audit requested from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Get the configuration options ===
@@ -123,20 +124,17 @@ def main():
     
     # --- Main loop: checks each aws transaction against the Civi database; adding it if it doesn't exist ---
     txncount = 0
-    notInCiviCount = 0
     for txn in awsTransactions:
         txncount += 1
-        if not isTxnInCivi(txn['TransactionId'], dbcon):
-            notInCiviCount += 1
-            result = processTransaction(txn, dbcon, aws, sc, sfile, config)
-            historyStats[result] += 1
-            if result == 'Pending':
-                hfile.write("%s\n" % json.dumps(txn))
-                hfile.flush()
+        result = processTransaction(txn, dbcon, aws, sc, sfile, config)
+        historyStats[result] += 1
+        if result == 'Pending':
+            hfile.write("%s\n" % json.dumps(txn))
+            hfile.flush()
 
     print("\n--- Finished processing of messages. ---\n")
 
-    print("Of %d new AWS messages, %d were not found in Civi." % (txncount, notInCiviCount))
+    print("%d new AWS messages" % txncount)
     print(" Additionally %d messages were processed from history" % historyCount)
     print("This resulted in the following:")
     for entry in historyStats.items():
