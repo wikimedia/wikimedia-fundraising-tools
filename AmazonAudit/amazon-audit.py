@@ -167,7 +167,7 @@ def processTransaction(txn, dbcon, aws, sc, sfile, config):
     smallString = '.'
     ctid = '?'
 
-    if (txn['TransactionStatus'] != 'Failure') or (not isTxnInCivi(txn['TransactionId'], dbcon)):
+    if (txn['TransactionStatus'] != 'Failure') and (not isTxnInCivi(txn['TransactionId'], dbcon)):
         # Get additional information about the transaction because getAccountActivity does not provide all
         # the required information. We also have to check what the status of this transaction is.
         txnInfo = aws.getTransaction( txn['TransactionId'] )
