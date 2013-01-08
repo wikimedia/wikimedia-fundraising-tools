@@ -22,6 +22,8 @@ def main():
     parser.add_option("-g", "--gracePeriod", dest='gracePeriod', default=0, help='Number of seconds from now backwards to ignore')
     parser.add_option("-i", "--historyFile", dest='historyFile', default=None, help='Stores any pending transactions and the last run time')
     parser.add_option('-l', "--logFile", dest='logFile', default=None, help='Saves a log of all Amazon transactions')
+    parser.add_option('--auditPayments', dest='auditPayments', action='store_true', default=False, help='Audit payment operations.')
+    parser.add_option('--auditRefunds', dest='auditRefunds', action='store_true', default=False, help='Audit refund operations.')
     (options, args) = parser.parse_args()
 
     if len(args) != 1:
@@ -86,6 +88,8 @@ def main():
          startTime = endTime
     
     # === Main Application ===
+    awsTransactions = []
+
     # --- Process all previously pending transactions from the history file. If the transaction is still in some form
     #     of pending, add it back to the history list.
     historyCount = 0
@@ -100,14 +104,32 @@ def main():
         print("Processing history file")
         for txn in hfile:
             historyCount += 1
-            txn = json.loads(txn)
-            result = processTransaction(txn, dbcon, aws, sc, sfile, config)
-            historyStats[result] += 1
-            if result == 'Pending':
-                historyList.append(txn)
+            awsTransactions.append(json.loads(txn))
         hfile.close()
 
-    # --- Prepare the history file for write ---
+    # --- Obtain AWS history ---
+    if options.auditPayments:
+        print("Obtaining AWS payment transactions for the period %s -> %s" % (startTime.isoformat(), endTime.isoformat()))
+        awsTransactions += aws.getAccountActivity(startTime, endDate=endTime, fpsOperation='Pay')
+        print("Obtained %d transactions" % len(awsTransactions))
+
+    if options.auditRefunds:
+        print("Obtaining AWS refund transactions for the period %s -> %s" % (startTime.isoformat(), endTime.isoformat()))
+        awsTransactions += aws.getAccountActivity(startTime, endDate=endTime, fpsOperation='Refund')
+        print("Obtained %d transactions" % len(awsTransactions))
+    
+    # --- Main loop: checks each aws transaction against the Civi database; adding it if it doesn't exist ---
+    txncount = 0
+    for txn in awsTransactions:
+        txncount += 1
+        result = dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options)
+        historyStats[result] += 1
+        if result == 'Pending':
+            historyList.append(txn)
+
+    print("\n--- Finished processing of messages. ---\n")
+
+    # --- Write the history file ---
     if options.historyFile:
         print("Rewriting history file with %d transactions" % len(historyList))
         hfile = open(options.historyFile, 'w')
@@ -117,25 +139,9 @@ def main():
         print("Flushing history file in preparation for main loop")
         hfile.flush()
 
-    # --- Obtain AWS history ---
-    print("Obtaining AWS transactions for the period %s -> %s" % (startTime.isoformat(), endTime.isoformat()))
-    awsTransactions = aws.getAccountActivity(startTime, endDate=endTime, fpsOperation='Pay')
-    print("Obtained %d transactions" % len(awsTransactions))
-    
-    # --- Main loop: checks each aws transaction against the Civi database; adding it if it doesn't exist ---
-    txncount = 0
-    for txn in awsTransactions:
-        txncount += 1
-        result = processTransaction(txn, dbcon, aws, sc, sfile, config)
-        historyStats[result] += 1
-        if result == 'Pending':
-            hfile.write("%s\n" % json.dumps(txn))
-            hfile.flush()
-
-    print("\n--- Finished processing of messages. ---\n")
-
-    print("%d new AWS messages" % txncount)
-    print(" Additionally %d messages were processed from history" % historyCount)
+    # --- Final statistics
+    print("Processed %d AWS messages" % txncount)
+    print(" ... of which %d messages were from history" % historyCount)
     print("This resulted in the following:")
     for entry in historyStats.items():
         print(" %s Messages: %d" % entry)
@@ -152,7 +158,7 @@ def main():
 
     time.sleep(1)   # Let the STOMP library catch up
 
-def processTransaction(txn, dbcon, aws, sc, sfile, config):
+def dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options):
     """Main message processing logic. Will determine if a message needs to be injected or not
 
     txn -- The transaction from getAccountActivity()
@@ -174,12 +180,19 @@ def processTransaction(txn, dbcon, aws, sc, sfile, config):
 
         # Do that aforementioned status check
         if txnInfo['TransactionStatus'] == 'Success':
-            ctid = remediateTransaction(txn, txnInfo, sc, config)
-            retval = 'Success'
-            smallString = '+'
+            if (txn['FPSOperation'] == 'Pay') and options.auditPayments:
+                ctid = remediatePaymentTransaction(txn, txnInfo, sc, config)
+                retval = 'Success'
+                smallString = '+'
+            elif (txn['FPSOperation'] == 'Refund') and options.auditRefunds:
+                ctid = remediateRefundTransaction(txn, txnInfo, sc, config)
+                retval = 'Success'
+                smallString = '-'
+            else:
+                retval = 'Pending'
+                smallString = '!'
         elif txnInfo['TransactionStatus'] == 'Pending' or txnInfo['TransactionStatus'] == 'Reserved':
             retval = 'Pending'
-            smallString = '-'
         else:
             retval = 'Failed'
     else:
@@ -214,7 +227,7 @@ def isTxnInCivi(txnid, dbcon):
     """
 
     cur = dbcon.cursor()
-    cur.execute("SELECT trxn_id FROM civicrm_contribution WHERE trxn_id LIKE 'AMAZON %s%%';" % txnid)
+    cur.execute("SELECT id FROM civicrm_contribution WHERE trxn_id LIKE 'AMAZON %s%%';" % txnid)
     rc = cur.rowcount
     cur.close()
     if rc >= 1:
@@ -222,7 +235,7 @@ def isTxnInCivi(txnid, dbcon):
     else:
         return False
 
-def remediateTransaction(txn, txnInfo, sc, config):
+def remediatePaymentTransaction(txn, txnInfo, sc, config):
     """Injects a new message into the queue for consumption by Civi
 
     txn -- The transaction data given from the getAccountActivity call
@@ -300,6 +313,54 @@ def remediateTransaction(txn, txnInfo, sc, config):
         "user_ip":"",
         "response":False,
         "recurring":""
+    }
+
+    # Inject the message
+    sc.send(
+        json.dumps(msg),
+        headers
+    )
+
+    return ctid
+
+def remediateRefundTransaction(txn, txnInfo, sc, config):
+    """Injects a new message into the refund queue for consumption by Civi
+
+    txn -- The transaction data given from the getAccountActivity call
+    txnInfo -- Transaction data given from the getTransaction call
+    sc -- Stomp queue object
+    config -- Configuration object
+
+    returns -- The contribution tracking ID
+    """
+
+    # --- It appears AWS does not retain the merchant reference for refunds; it does however
+    # give us a FPS parent transaction ID
+    ctid = 'Refund'
+    orig_txnid = txn['OriginalTransactionId']
+
+    # Construct the STOMP message
+    headers = {
+        'correlation-id': 'amazon-%s' % orig_txnid,
+        'destination': config.get('Stomp', 'refund-queue'),
+        'persistent': 'true'
+    }
+    msg = {
+        "gateway_refund_id": txn['TransactionId'],
+        "gateway_parent_id": orig_txnid,
+
+        "gross_currency": txnInfo['TransactionAmount']['CurrencyCode'],
+        "gross": txnInfo['TransactionAmount']['Value'],
+
+        "fee_currency": txn['FPSFees']['CurrencyCode'],
+        "fee": abs(float(txn['FPSFees']['Value'])),
+
+        "date": dateutil.parser.parse(txnInfo['DateCompleted']).astimezone(dateutil.tz.tzutc()).strftime('%s'),
+
+        "gateway":"amazon",
+        "gateway_account": config.get('AwsConfig', 'accountName'),
+        "payment_method":"amazon",
+        "payment_submethod": txn['PaymentMethod'],
     }
 
     # Inject the message

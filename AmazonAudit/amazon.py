@@ -216,7 +216,11 @@ class Amazon:
             nextStart = None
 
         if 'Transaction' not in dom:
+            # No transactions :'(
             dom['Transaction'] = []
+        elif 'TransactionId' in dom['Transaction']:
+            # A single transaction which needs to be listafied
+            dom['Transaction'] = [dom['Transaction']]
 
         if returnNext:
             # This behaviour allows us to chain things together to get everything

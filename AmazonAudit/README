@@ -16,10 +16,13 @@ This script requires one arguments which is:
 
 It is recommended to also use the following options
 -g  The number of seconds of grace
--i  Specifies a history file where pending transactions can be placed for future processing on the next run
-    and tells the script on the next run where it left off
+-i  Specifies a history file where pending transactions can be placed for future
+    processing on the next run and tells the script on the next run where it left off
 -l  Specifies a log file which contains details about things that happened
 
 So, amazon-audit.py -g 86400 462000 will search 5 days into the past ignoring any
 transaction that occurred within the last 24 hours.
 
+It is required that you tell the script what it needs to audit. At the moment this script
+can audit 'Payment' and 'Refund' FPS operations. These are specified by --auditPayments and
+--auditRefunds respectively.
