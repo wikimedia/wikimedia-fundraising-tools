@@ -35,8 +35,9 @@ def main():
     print("AWS audit requested from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Get the configuration options ===
+    localdir = os.path.dirname(os.path.abspath(__file__))
     config = SafeConfigParser()
-    fileList = ['./amazon-config.cfg']
+    fileList = ["%s/amazon-config.cfg" % localdir]
     if options.configFile is not None:
         fileList.append(options.configFile)
     config.read(fileList)
@@ -354,6 +355,8 @@ def remediateRefundTransaction(txn, txnInfo, sc, config):
 
         "fee_currency": txn['FPSFees']['CurrencyCode'],
         "fee": abs(float(txn['FPSFees']['Value'])),
+
+        "type": 'refund',
 
         "date": dateutil.parser.parse(txnInfo['DateCompleted']).astimezone(dateutil.tz.tzutc()).strftime('%s'),
 
