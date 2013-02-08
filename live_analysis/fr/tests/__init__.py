@@ -8,6 +8,7 @@ import re
 
 from fr.centralnotice import get_campaign
 from fr.contributions import get_totals
+from fr.impressions import get_impressions
 
 FR_LABEL_PATTERN = r'_\d+_([^_]+)_'
 FUDGE_TRIALS = 100000
@@ -73,11 +74,13 @@ class FrTest(object):
                 for name in self.banners:
                     test_case = self.get_case(campaign=campaign['name'], banner=name)
                     totals = get_totals(**test_case)
+                    impressions = get_impressions(campaign=campaign['name'], banner=name)
 
                     result_extra = {
                         'preview': "http://en.wikipedia.org/wiki/Special:Random?banner=" + name,
                         'screenshot': "http://fundraising-archive.wmflabs.org/banner/%s.png" % name,
                         'label': self.label,
+                        'impressions': str(impressions),
                     }
 
                     results.append(TestResult(

@@ -50,3 +50,14 @@ class Query(object):
         for k, s in self.params.items():
             qparams[k] = "'%s'" % s
         return self.uninterpolated_sql() % qparams
+
+
+db_conn = False
+
+def get_db():
+    '''Convienience'''
+    import config
+    global db_conn
+    if not db_conn:
+        db_conn = Connection(**config.db_params)
+    return db_conn

@@ -11,8 +11,6 @@ import time_util
 import top_ten
 import config
 
-db_conn = False
-
 ct_banner_clause = "LEFT(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1), LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1)))"
 
 
@@ -73,7 +71,7 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
     if not query.where:
         raise Exception("Don't try this query without a where clause.")
 
-    result = list(get_db().execute(query))
+    result = list(db.get_db().execute(query))
     row = result.pop()
 
     # nasty hack for json encoding snafu:
@@ -86,10 +84,3 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
     row['updated'] = time_util.str_now()
 
     return row
-
-def get_db():
-    import db
-    global db_conn
-    if not db_conn:
-        db_conn = db.Connection(**config.db_params)
-    return db_conn
