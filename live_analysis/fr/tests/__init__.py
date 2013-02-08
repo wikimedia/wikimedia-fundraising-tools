@@ -10,7 +10,7 @@ from fr.centralnotice import get_campaign
 from fr.contributions import get_totals
 from fr.impressions import get_impressions
 
-FR_LABEL_PATTERN = r'_\d+_([^_]+)_'
+FR_LABEL_PATTERN = r'B13_\d+_(?P<testname>[^_]+)_(?P<variation>[^_]+)_(?P<dropdown>[^_]+)_(?P<language>[a-z]{2})(?P<country>[A-Z]{2})'
 FUDGE_TRIALS = 100000
 CONFIDENCE_LEVEL = 0.95
 
@@ -46,6 +46,8 @@ class FrTest(object):
 
                 self.banners = reduce(reduce_banners, self.campaigns, [])
 
+            #self.variations = [ FrTestVariation(banner=b) for b in self.banners ]
+
         self.is_country_test = (type.count('country') > 0)
         self.is_lp_test = (type.count('lp') > 0)
 
@@ -54,14 +56,7 @@ class FrTest(object):
         self.start_time = start
         self.end_time = end
 
-        if label:
-            self.label = label
-        else:
-            self.label = ""
-            if self.banners:
-                match = re.search(FR_LABEL_PATTERN, self.banners[0])
-                if match and match.group(1):
-                    self.label = match.group(1)
+        self.label = label
 
         self.enabled = not disabled
 
@@ -72,16 +67,30 @@ class FrTest(object):
             if self.is_banner_test and self.banners:
                 results = []
                 for name in self.banners:
-                    test_case = self.get_case(campaign=campaign['name'], banner=name)
+                    test_case = self.get_case(
+                        campaign=campaign['name'],
+                        banner=name
+                    )
                     totals = get_totals(**test_case)
                     impressions = get_impressions(campaign=campaign['name'], banner=name)
 
                     result_extra = {
                         'preview': "http://en.wikipedia.org/wiki/Special:Random?banner=" + name,
                         'screenshot': "http://fundraising-archive.wmflabs.org/banner/%s.png" % name,
-                        'label': self.label,
+
                         'impressions': str(impressions),
                     }
+
+                    # FIXME: refactor to a variations hook
+                    match = re.match(FR_LABEL_PATTERN, name)
+                    if match:
+                        result_extra.update({
+                            'label': match.group("testname"),
+                            'language': match.group("language"),
+                            'variation': match.group("variation"),
+                            'dropdown': match.group("dropdown") is "dr",
+                            'country': match.group("country"),
+                        })
 
                     results.append(TestResult(
                         criteria=test_case,
@@ -113,6 +122,7 @@ class FrTest(object):
             'end': self.end_time,
         }
         conditions.update(**kw)
+
         return conditions
 
     def __repr__(self):
@@ -191,3 +201,5 @@ class TestResult(object):
         return '''
 Result: %s
   -> %s''' % (json.dumps(self.criteria, indent=4), json.dumps(self.results, indent=4), )
+
+#class TestVariation(object):
