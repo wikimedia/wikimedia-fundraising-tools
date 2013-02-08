@@ -20,7 +20,7 @@ def update_gdoc_results(doc=None, results=[]):
         def fuzzy_compare_row(row, criteria):
             if not row:
                 return False
-            if criteria['banner'] == row['banner'] and criteria['campaign'] == row['campaign']:
+            if criteria['banner'] == row['banner'] and criteria['campaign'] == row['campaign'] and criteria['start'] == row['start']:
                 return True
 
         for n, row in enumerate(existing, 1):
@@ -45,5 +45,5 @@ def update_gdoc_results(doc=None, results=[]):
             if len(matching) > 1:
                 print "WARNING: more than one result row %s matches criteria: %s" % (matching, result['criteria'], )
             index = matching[-1]
-            print "DEBUG: updating row %d" % index
+            print "DEBUG: updating row %d with %s" % (index, result['criteria']['banner'])
             doc.update_row(props, index=index)
