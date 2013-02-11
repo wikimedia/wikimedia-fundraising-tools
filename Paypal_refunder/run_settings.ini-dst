@@ -1,0 +1,18 @@
+[account]
+USER = api_user
+PWD = api_pwd
+
+[url]
+test = https://api.sandbox.paypal.com/nvp
+prod = https://api.paypal.com/nvp
+
+[whatever]
+cert = paypal_api_cert.txt
+limit = 500
+mode = normal
+
+[db]
+server = dbserver
+un = dbuser
+pw = dbpw
+db_name = dbname
