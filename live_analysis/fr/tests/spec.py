@@ -13,11 +13,11 @@ def parse_spec(spec):
         yield FrTest(**row)
 
 def compare_test_fuzzy(a, b):
-    if a.campaigns == b.campaigns and a.banners == b.banners:
+    if a.campaign == b.campaign and a.banners == b.banners:
         return True
 
 def is_fr_test(test):
-    if test.label and test.banners and test.campaigns:
+    if test.label and test.banners and test.campaign:
         is_chapter = re.search(r'(_|\b)WM[A-Z]{2}(_|\b)', test.banners[0])
         return not is_chapter
 

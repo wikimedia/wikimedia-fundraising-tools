@@ -25,6 +25,7 @@ def get_campaign( campaign ):
     } )
 
     if campaign in result:
+        result[campaign]['name'] = campaign
         cached_campaigns[campaign] = result[campaign]
         return cached_campaigns[campaign]
 
