@@ -31,7 +31,7 @@ def tests_from_entry(entry):
 
         return FrTest(
             type="banner",
-            campaigns=entry['campaign'],
+            campaign=entry['campaign'],
             banners=banners,
             start=start,
             end=end

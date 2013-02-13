@@ -1,4 +1,4 @@
-def get_impressions(campaign=None, banner=None):
+def get_impressions(campaign=None, banner=None, **ignore):
     import db
 
     query = db.Query()

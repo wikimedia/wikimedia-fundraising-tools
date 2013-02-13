@@ -37,3 +37,8 @@ spec_prefix = ''
 results_prefix = ''
 
 reference_day = '20121116000000'
+
+fr_banner_naming = r'B13_\d+_(?P<testname>[^_]+)_(?P<variation>[^_]+)_(?P<dropdown>[^_]+)_(?P<language>[a-z]{2})(?P<country>[A-Z]{2})'
+
+fudge_trials = 100000
+confidence_level = 0.95
