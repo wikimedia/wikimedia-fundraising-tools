@@ -90,6 +90,8 @@ class FrTest(object):
                             'variation': match.group("variation"),
                             'dropdown': match.group("dropdown") is "dr",
                             'country': match.group("country"),
+
+                            'preview': "http://en.wikipedia.org/wiki/Special:Random?banner=%s&country=%s&uselang=%s" % (name, match.group("country"), match.group("language")),
                         })
 
                     results.append(TestResult(
