@@ -99,9 +99,10 @@ class FrTest(object):
 
                 try:
                     confidence = self.get_confidence(results, 'banner', 'donations')
-                    for i, levels in enumerate(confidence):
-                        results[i].add_result('p-value', levels.two_tailed_p_value)
-                        results[i].add_result('improvement', levels.relative_improvement.value * 100)
+                    if confidence:
+                        for i, levels in enumerate(confidence):
+                            results[i].add_result('p-value', levels.two_tailed_p_value)
+                            results[i].add_result('improvement', levels.relative_improvement.value * 100)
                 except ImportError as e:
                     print "ERROR: not calculating confidence, dummy: ", e.message
                 results[0].add_result('confidencelink', self.get_confidence_link(results, 'banner', 'donations', FUDGE_TRIALS))
@@ -145,9 +146,14 @@ Test: %(label)s (%(campaigns)s) %(start)s - %(end)s
 
         if not num_test_cases:
             return
-        baseline_successes = results[0].results[successes_column]
+
+        results = sorted(results, key=lambda result: result.results[successes_column])
+        for result in results:
+            if result.results[successes_column]:
+                baseline_successes = result.results[successes_column]
+                break
+
         if not baseline_successes:
-            #FIXME
             return
 
         experiment = Experiment(
@@ -166,13 +172,17 @@ Test: %(label)s (%(campaigns)s) %(start)s - %(end)s
                 trials = result.results[trials]
             else:
                 trials = FUDGE_TRIALS
-            cases.append(experiment.get_results(num_successes=successes, num_trials=trials))
+            calculated = experiment.get_results(num_successes=successes, num_trials=trials)
+            cases.append(calculated)
 
         return cases
 
     def get_confidence_link(self, results, name_column, successes_column, trials):
         cases = []
         for result in results:
+            # skip empty results, usually these will be "blank" banners
+            if not result.results[successes_column]:
+                continue
             name = result.results[name_column]
             successes = result.results[successes_column]
             if hasattr(trials, 'encode'):
