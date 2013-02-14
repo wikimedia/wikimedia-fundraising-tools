@@ -67,8 +67,8 @@ def handle_unknown(line):
 def handle_refund(line):
     global config, messaging
 
-    if line['Status'] is not "Completed":
-            return handle_unknown(line)
+    if line['Status'] != "Completed":
+        return handle_unknown(line)
 
     txn_id = line['Transaction ID']
 
@@ -85,11 +85,11 @@ def handle_refund(line):
 
 def normalize_msg(line):
     refund_type = "unknown"
-    if line['Type'] is "Refund":
+    if line['Type'] == "Refund":
         refund_type = "refund"
-    elif line['Type'] is "Chargeback Settlement":
+    elif line['Type'] == "Chargeback Settlement":
         refund_type = "chargeback"
-    elif line['Type'] is "Reversal":
+    elif line['Type'] == "Reversal":
         refund_type = "reversal"
 
     return {
