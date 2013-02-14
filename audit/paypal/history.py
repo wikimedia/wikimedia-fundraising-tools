@@ -7,6 +7,8 @@ import time
 import json
 import csv
 import atexit
+import re
+import gzip
 
 def main():
     global config, messaging, options
@@ -14,13 +16,21 @@ def main():
     parser.add_option("-c", "--config", dest='configFile', default=[ "paypal-audit.cfg" ], action='append', help='Path to configuration file')
     parser.add_option("-f", "--auditFile", dest='auditFile', default=None, help='CSV of transaction history')
     parser.add_option('-l', "--logFile", dest='logFile', default="audit.log", help='Destination logfile. New messages will be appended.')
+    parser.add_option("-n", "--no-effect", dest='noEffect', default=False, action="store_true", help="Dummy no-effect mode")
     (options, args) = parser.parse_args()
 
     path = options.auditFile
-    infile = csv.DictReader(open(path, "rU"))
+    if re.search(r'[.]gz$', path):
+        f = gzip.open(path, "rb")
+    else:
+        f = open(path, "rU")
+    infile = csv.DictReader(f)
 
     config = SafeConfigParser()
     config.read(options.configFile)
+
+    if options.noEffect:
+        log("*** Dummy mode! Not injecting stomp messages ***")
 
     messaging = Stomp(config)
 
@@ -37,6 +47,7 @@ def main():
     ]
 
     ignore_types = [
+        "Authorization",
         "Cancelled Fee",
         # currency conversion is an explanation of amounts which appear elsewhere
         "Currency Conversion",
@@ -44,6 +55,7 @@ def main():
         "Temporary Hold",
         # seems to be the cancellation of a temporary hold
         "Update to Reversal",
+        "Website Payments Pro API Solution",
     ]
 
     audit_dispatch = {
@@ -118,9 +130,16 @@ class Stomp(object):
             self.sc.disconnect()
 
             # Let the STOMP library catch up
+            import time
             time.sleep(1)
 
     def send(self, headers=None, msg=None):
+        global options
+
+        if options.noEffect:
+            log("not queueing message. " + json.dumps(msg))
+            return
+
         self.sc.send(
             json.dumps(msg),
             headers
