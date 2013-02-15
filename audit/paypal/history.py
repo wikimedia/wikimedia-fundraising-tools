@@ -9,6 +9,8 @@ import csv
 import atexit
 import re
 import gzip
+import locale
+import dateutil.parser
 
 def main():
     global config, messaging, options
@@ -33,6 +35,8 @@ def main():
         log("*** Dummy mode! Not injecting stomp messages ***")
 
     messaging = Stomp(config)
+
+    locale.setlocale(locale.LC_NUMERIC, "")
 
     # fix spurious whitespace around column header names
     infile.fieldnames = [ name.strip() for name in infile.fieldnames ]
@@ -104,13 +108,17 @@ def normalize_msg(line):
     elif line['Type'] == "Reversal":
         refund_type = "reversal"
 
+    timestamp = dateutil.parser.parse(
+        line['Date'] + " " + line['Time'] + " " + line['Time Zone'],
+    ).strftime("%s")
+
     return {
-        'date': line['Date'] + " " + line['Time'] + " " + line['Time Zone'],
+        'date': timestamp,
         'email': line['From Email Address'],
         'gross_currency': line['Currency'],
-        'gross': line['Gross'],
-        'fee': line['Fee'],
-        'net': line['Net'],
+        'gross': round(0 - locale.atof(line['Gross']), 2),
+        'fee': round(0 - locale.atof(line['Fee']), 2),
+        'net': round(0 - locale.atof(line['Net']), 2),
         'gateway_refund_id': line['Transaction ID'],
         'gateway_parent_id': line['Reference Txn ID'],
         'gateway': "paypal",
