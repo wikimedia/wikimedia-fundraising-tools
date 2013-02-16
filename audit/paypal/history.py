@@ -11,9 +11,10 @@ import re
 import gzip
 import locale
 import dateutil.parser
+import civicrm
 
 def main():
-    global config, messaging, options
+    global config, messaging, options, civi
     parser = OptionParser(usage="usage: %prog [options]")
     parser.add_option("-c", "--config", dest='configFile', default=[ "paypal-audit.cfg" ], action='append', help='Path to configuration file')
     parser.add_option("-f", "--auditFile", dest='auditFile', default=None, help='CSV of transaction history')
@@ -35,20 +36,12 @@ def main():
         log("*** Dummy mode! Not injecting stomp messages ***")
 
     messaging = Stomp(config)
+    civi = civicrm.Civicrm(config)
 
     locale.setlocale(locale.LC_NUMERIC, "")
 
     # fix spurious whitespace around column header names
     infile.fieldnames = [ name.strip() for name in infile.fieldnames ]
-
-    ipn_handled_types = [
-        "Subscription Payment Received",
-        "Web Accept Payment Received",
-        "Shopping Cart Payment Received",
-        "Virtual Debt Card Credit Received",
-        "Payment Received",
-        "Update to eCheck Received",
-    ]
 
     ignore_types = [
         "Authorization",
@@ -66,10 +59,17 @@ def main():
         "Reversal": handle_refund,
         "Chargeback Settlement": handle_refund,
         "Refund": handle_refund,
+
+        "Subscription Payment Received": handle_payment,
+        "Web Accept Payment Received": handle_payment,
+        "Shopping Cart Payment Received": handle_payment,
+        "Virtual Debt Card Credit Received": handle_payment,
+        "Payment Received": handle_payment,
+        "Update to eCheck Received": handle_payment,
     }
 
     for line in infile:
-        if line['Type'] in ipn_handled_types + ignore_types:
+        if line['Type'] in ignore_types:
             log("Ignoring %s of type %s" % (line['Transaction ID'], line['Type']))
             continue
         if line['Type'] in audit_dispatch:
@@ -81,7 +81,7 @@ def handle_unknown(line):
     log("Unhandled transaction, type \"%s\": %s" % (line['Type'], json.dumps(line)))
 
 def handle_refund(line):
-    global config, messaging
+    global config, messaging, civi
 
     if line['Status'] != "Completed":
         return handle_unknown(line)
@@ -89,17 +89,68 @@ def handle_refund(line):
     txn_id = line['Transaction ID']
 
     # Construct the STOMP message
-    headers = {
-        'correlation-id': 'paypal-%s' % txn_id,
-        'destination': config.get('Stomp', 'refund-queue'),
-        'persistent': 'true',
-    }
+    msg = normalize_refund_msg(line)
+
+    if not civi.transaction_exists(line['Reference Txn ID']):
+        log("Refund missing parent: %s" % (json.dumps(msg), ))
+    elif not civi.transaction_exists(txn_id):
+        log("Queueing refund %s" % (txn_id, ))
+        messaging.send(msg, "refund")
+    else:
+        log("Refund already exists: %s" % (txn_id, ))
+
+def handle_payment(line):
+    global config, messaging, civi
+
+    if line['Status'] != "Completed":
+        return handle_unknown(line)
+
+    txn_id = line['Transaction ID']
+
+    # Construct the STOMP message
     msg = normalize_msg(line)
 
-    log("Queueing refund %s" % (txn_id, ))
-    messaging.send(headers, msg)
+    if not civi.transaction_exists(txn_id):
+        log("Queueing payment %s" % (txn_id, ))
+        messaging.send(msg, "payment")
+    else:
+        log("Payment already exists: %s" % (txn_id, ))
 
 def normalize_msg(line):
+    timestamp = dateutil.parser.parse(
+        line['Date'] + " " + line['Time'] + " " + line['Time Zone'],
+    ).strftime("%s")
+
+    names = line['Name'].split(" ")
+
+    return {
+        'date': timestamp,
+        'email': line['From Email Address'],
+
+        'first_name': names[0],
+        'last_name': " ".join(names[1:]),
+
+        'street_address': line['Address Line 1'],
+        'supplemental_address_1': line['Address Line 2/District/Neighborhood'],
+        'city': line['Town/City'],
+        'state_province': line['State/Province/Region/County/Territory/Prefecture/Republic'],
+        'country': line['Country'],
+        'postal_code': line['Zip/Postal Code'],
+
+        'comment': line['Note'],
+        # somthing with: line['Subscription Number'],
+
+        'gross_currency': line['Currency'],
+        'gross': round(locale.atof(line['Gross']), 2),
+        'fee': round(locale.atof(line['Fee']), 2),
+        'net': round(locale.atof(line['Net']), 2),
+        'gateway': "paypal",
+        'gateway_txn_id': line['Transaction ID'],
+    }
+
+def normalize_refund_msg(line):
+    msg = normalize_msg(line)
+
     refund_type = "unknown"
     if line['Type'] == "Refund":
         refund_type = "refund"
@@ -108,23 +159,16 @@ def normalize_msg(line):
     elif line['Type'] == "Reversal":
         refund_type = "reversal"
 
-    timestamp = dateutil.parser.parse(
-        line['Date'] + " " + line['Time'] + " " + line['Time Zone'],
-    ).strftime("%s")
-
-    return {
-        'date': timestamp,
-        'email': line['From Email Address'],
-        'gross_currency': line['Currency'],
-        'gross': round(0 - locale.atof(line['Gross']), 2),
-        'fee': round(0 - locale.atof(line['Fee']), 2),
-        'net': round(0 - locale.atof(line['Net']), 2),
+    msg.update({
+        'gross': 0 - msg['gross'],
+        'fee': 0 - msg['fee'],
+        'net': 0 - msg['net'],
+        'type': refund_type,
         'gateway_refund_id': line['Transaction ID'],
         'gateway_parent_id': line['Reference Txn ID'],
-        'gateway': "paypal",
-        'type': refund_type,
-    }
+    })
 
+    return msg
 
 class Stomp(object):
     def __init__(self, config):
@@ -141,12 +185,21 @@ class Stomp(object):
             import time
             time.sleep(1)
 
-    def send(self, headers=None, msg=None):
-        global options
+    def send(self, msg, queue_name):
+        global options, config
 
         if options.noEffect:
             log("not queueing message. " + json.dumps(msg))
             return
+
+        headers = {
+            'correlation-id': '%s-%s' % (msg['gateway'], msg['gateway_txn_id']),
+            'destination': config.get('Stomp', '%s-queue' % (queue_name,)),
+            'persistent': 'true',
+        }
+
+        if config.getboolean('Stomp', 'debug'):
+            log("sending %s %s" % (headers, msg))
 
         self.sc.send(
             json.dumps(msg),
