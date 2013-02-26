@@ -36,6 +36,9 @@ class FrTest(object):
         self.end_time = end
 
         self.label = label
+        if not self.label:
+            # FIXME
+            self.label = campaign
 
         self.enabled = not disabled
 

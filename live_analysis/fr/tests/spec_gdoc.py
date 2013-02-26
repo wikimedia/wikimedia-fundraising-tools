@@ -31,6 +31,6 @@ def update_gdoc_spec(doc=None, spec=None):
                 'type': "banner",
                 'start': test.start_time,
                 'end': test.end_time,
-                'campaigns': ", ".join([ c['name'] for c in test.campaigns ]),
+                'campaign': test.campaign['name'],
                 'banners': ", ".join(test.banners),
             })
