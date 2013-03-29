@@ -26,21 +26,27 @@ def main():
     config.read(fileList)
 
     # === BEGIN PROCESSING ===
-    print("Running query...")
-    stats = getPerYearData(
-        config.get('MySQL', 'hostname'),
-        config.getint('MySQL', 'port'),
-        config.get('MySQL', 'username'),
-        config.get('MySQL', 'password'),
-        config.get('MySQL', 'database')
-    )
+    hostname = config.get('MySQL', 'hostname')
+    port = config.getint('MySQL', 'port')
+    username = config.get('MySQL', 'username')
+    password = config.get('MySQL', 'password')
+    database = config.get('MySQL', 'schema')
+
+    print("Running per year query...")
+    stats = getPerYearData(hostname, port, username, password, database)
 
     print("Pivoting data into year/day form...")
     (years, pivot) = pivotDataByYear(stats)
 
-    print("Writing output files...")
+    print("Writing year data output files...")
     createSingleOutFile(stats, 'date', workingDir + '/donationdata-vs-day.csv')
     createOutputFiles(pivot, 'date', workingDir + '/yeardata-day-vs-', years)
+
+    print("Running per campaign query...")
+    pcStats = getPerCampaignData(hostname, port, username, password, database)
+
+    print("Writing campaign data output files...")
+    createSingleOutFile(pcStats, ('medium', 'campaign'), workingDir + '/campaign-vs-amount.csv')
 
 
 def getPerYearData(host, port, username, password, database):
@@ -103,6 +109,58 @@ def getPerYearData(host, port, username, password, database):
     return data
 
 
+def getPerCampaignData(host, port, username, password, database):
+    """
+    Obtain basic statistics (USD sum, number donations, USD avg amount, USD max amount,
+    USD YTD sum) per medium, campaign
+
+    Returns a dict like: {(medium, campaign) => {value => value} where value types are:
+    - start_date, stop_date, count, sum, avg, std, max
+    """
+    con = db.connect(host=host, port=port, user=username, passwd=password, db=database)
+    cur = con.cursor()
+    cur.execute("""
+        SELECT
+          ct.utm_medium,
+          ct.utm_campaign,
+          min(c.receive_date),
+          max(c.receive_date),
+          count(*),
+          sum(c.total_amount),
+          avg(c.total_amount),
+          std(c.total_amount),
+          max(c.total_amount)
+        FROM drupal.contribution_tracking ct, civicrm.civicrm_contribution c
+        WHERE
+          ct.contribution_id=c.id AND
+          c.total_amount >= 0
+        GROUP BY utm_medium, utm_campaign;
+        """)
+
+    data = {}
+    for row in cur:
+        (medium, campaign, start, stop, count, sum, usdavg, usdstd, usdmax) = row
+        count = int(count)
+        sum = float(sum)
+        usdavg = float(usdavg)
+        usdstd = float(usdstd)
+        usdmax = float(usdmax)
+
+        data[(medium, campaign)] = {
+            'start_date': start,
+            'stop_date': stop,
+            'count': count,
+            'sum': sum,
+            'avg': usdavg,
+            'usdstd': usdstd,
+            'usdmax': usdmax
+        }
+
+    del cur
+    con.close()
+    return data
+
+
 def pivotDataByYear(stats):
     """
     Transformation of the statistical data -- grouping reports by date
@@ -152,9 +210,15 @@ def createOutputFiles(stats, firstcol, basename, colnames = None):
         createSingleOutFile(stats[report], firstcol, basename + report + '.csv', colnames)
 
 
-def createSingleOutFile(stats, firstcol, filename, colnames = None):
+def createSingleOutFile(stats, firstcols, filename, colnames = None):
     """
     Creates a single report file from a keyed dict
+
+    stats       must be a dictionary of something list like; if internally it is a dictionary
+                then the column names will be taken from the dict; otherwise they come colnames
+
+    firstcols   can be a string or a list depending on how the data is done but it should
+                reflect the primary key of stats
     """
     if colnames is None:
         colnames = stats.itervalues().next().keys()
@@ -162,12 +226,23 @@ def createSingleOutFile(stats, firstcol, filename, colnames = None):
     else:
         colindices = range(0, len(colnames))
 
+    if isinstance(firstcols, basestring):
+        firstcols = [firstcols]
+    else:
+        firstcols = list(firstcols)
+
     f = file(filename, 'w')
     csvf = csv.writer(f)
-    csvf.writerow([firstcol] + colnames)
+    csvf.writerow(firstcols + colnames)
 
     for linekey in sorted(stats.keys()):
-        csvf.writerow([linekey] + [stats[linekey][col] for col in colindices])
+        if isinstance(linekey, basestring):
+            linekeyl = [linekey]
+        else:
+            linekeyl = list(linekey)
+
+        rowdata = [stats[linekey][col] for col in colindices]
+        csvf.writerow(linekeyl + rowdata)
     f.close()
 
 
