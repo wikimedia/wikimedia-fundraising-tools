@@ -181,9 +181,9 @@ def pivotDataByYear(stats):
             years.append(year)
 
         for report in reports:
-            if ('2006/%s/%s 23:59:59' % (month, day)) not in pivot[report]:
-                pivot[report]['2006/%s/%s 23:59:59' % (month, day)] = {}
-            pivot[report]['2006/%s/%s 23:59:59' % (month, day)][year] = stats[date][report]
+            if ('2000/%s/%s 23:59:59' % (month, day)) not in pivot[report]:
+                pivot[report]['2000/%s/%s 23:59:59' % (month, day)] = {}
+            pivot[report]['2000/%s/%s 23:59:59' % (month, day)][year] = stats[date][report]
 
     # Now listify the data
     years.sort()
