@@ -48,10 +48,15 @@ def get_allocations( project=None, language=None, country=None, anonymous=True, 
     } )
     return result['banners']
 
-def get_campaign_logs( since=None ):
-    result = mw_call( {
+def get_campaign_logs( since=None, limit=50, offset=0 ):
+    params = {
         'action': 'query',
         'list': 'centralnoticelogs',
-        'start': since,
-    } )
+        'limit': limit,
+        'offset': offset,
+    }
+    if since:
+        params['start'] = since
+
+    result = mw_call( params )
     return result['logs']
