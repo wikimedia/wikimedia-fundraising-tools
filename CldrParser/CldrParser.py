@@ -150,7 +150,9 @@ def outputData(data, outfile, className, namespace=None):
 
     skeleton = """<?php %(namespace)s
 /**
- * This file was automatically generated, do not edit!
+ * This file was automatically generated, do not edit! Use
+ *   https://git.wikimedia.org/tree/wikimedia%%2Ffundraising%%2Ftools.git/HEAD/CldrParser
+ *   to update this file when required.
  *
  * input: CLDR data file, %(cldrVersion)s
  */
