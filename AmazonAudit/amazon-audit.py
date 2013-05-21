@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 from amazon import Amazon
 import stomp
@@ -15,52 +15,51 @@ import os
 
 AWS_HISTORY_FILE_VERSTR = "AWSHistory.1"
 
-def main():
-    # === Extract options ===
-    parser = OptionParser(usage="usage: %prog [options] <# of seconds to audit>")
-    parser.add_option("-c", "--config", dest='configFile', default=None, help='Path to configuration file')
-    parser.add_option("-g", "--gracePeriod", dest='gracePeriod', default=0, help='Number of seconds from now backwards to ignore')
-    parser.add_option("-i", "--historyFile", dest='historyFile', default=None, help='Stores any pending transactions and the last run time')
-    parser.add_option('-l', "--logFile", dest='logFile', default=None, help='Saves a log of all Amazon transactions')
-    parser.add_option('--auditPayments', dest='auditPayments', action='store_true', default=False, help='Audit payment operations.')
-    parser.add_option('--auditRefunds', dest='auditRefunds', action='store_true', default=False, help='Audit refund operations.')
-    (options, args) = parser.parse_args()
+_config = None
+_civiDB = None
+_stompLink = None
+_awsLink = None
+_logFile = None
 
-    if len(args) != 1:
-        parser.print_usage()
-        exit()
-        
-    startTime = datetime.fromtimestamp(int(time.time()) - int(args[0]), pytz.utc)
-    endTime = datetime.fromtimestamp(int(time.time()) - int(options.gracePeriod), pytz.utc)
+def main(secondsToAudit, configFile, gracePeriod, historyFile, logFile, auditPayments, auditRefunds):
+    global _config
+    global _civiDB
+    global _awsLink
+    global _stompLink
+    global _logFile
+
+    startTime = datetime.fromtimestamp(int(time.time()) - int(secondsToAudit), pytz.utc)
+    endTime = datetime.fromtimestamp(int(time.time()) - int(gracePeriod), pytz.utc)
     print("AWS audit requested from %s to %s" % (startTime.isoformat(), endTime.isoformat()))
 
-    # === Get the configuration options ===
+    # === Initialize the configuration file ===
     localdir = os.path.dirname(os.path.abspath(__file__))
-    config = SafeConfigParser()
-    fileList = ["%s/amazon-config.cfg" % localdir]
-    if options.configFile is not None:
-        fileList.append(options.configFile)
-    config.read(fileList)
+    _config = SafeConfigParser()
+    fileList = ["%s/amazon-audit.cfg" % localdir]
+    if configFile is not None:
+        fileList.append(configFile)
+    _config.read(fileList)
 
     # === Open up ze STOMP ===
-    host_and_ports = (config.get('Stomp', 'server'), config.getint('Stomp', 'port'))
-    sc = stomp.Connection(host_and_ports=[host_and_ports])
-    sc.start()
-    sc.connect()
+    host_and_ports = (_config.get('Stomp', 'server'), _config.getint('Stomp', 'port'))
+    print(host_and_ports)
+    _stompLink = stomp.Connection(host_and_ports=[host_and_ports])
+    _stompLink.start()
+    _stompLink.connect()
     
     # === Connection to Amazon ===
-    aws = Amazon(
-        awsEndpoint = config.get('AwsConfig', 'endpoint'),
-        awsAccessKey = config.get('AwsConfig', 'accessKey'),
-        awsSecret = config.get('AwsConfig', 'secretKey')
+    _awsLink = Amazon(
+        awsEndpoint=_config.get('AwsConfig', 'endpoint'),
+        awsAccessKey=_config.get('AwsConfig', 'accessKey'),
+        awsSecret=_config.get('AwsConfig', 'secretKey')
     )
 
     # === Connection to MySQL ===
-    dbcon = MySQL.connect(
-        config.get('MySQL', 'host'),
-        config.get('MySQL', 'user'),
-        config.get('MySQL', 'password'),
-        config.get('MySQL', 'schema')
+    _civiDB = MySQL.connect(
+        _config.get('MySQL', 'host'),
+        _config.get('MySQL', 'user'),
+        _config.get('MySQL', 'password'),
+        _config.get('MySQL', 'schema')
     )
 
     # === Open up the history and log files ===
@@ -68,9 +67,8 @@ def main():
     # history file.
     hfile = None
     historyStart = startTime
-    historyEnd = endTime
-    if options.historyFile and os.path.exists(options.historyFile):
-        hfile = open(options.historyFile, 'r')
+    if historyFile and os.path.exists(historyFile):
+        hfile = open(historyFile, 'r')
         if hfile.readline().strip() == AWS_HISTORY_FILE_VERSTR:
             historyStart = dateutil.parser.parse(hfile.readline().strip())
             historyEnd = dateutil.parser.parse(hfile.readline().strip())
@@ -79,10 +77,9 @@ def main():
     else:
         print('Not starting with a valid history file.')
 
-    sfile = None
-    if options.logFile:
-        sfile = open(options.logFile, 'a')
-        sfile.write("!!! Starting run for dates %s -> %s\n" % (startTime.isoformat(), endTime.isoformat()))
+    if logFile:
+        _logFile = open(logFile, 'a')
+        _logFile.write("!!! Starting run for dates %s -> %s\n" % (startTime.isoformat(), endTime.isoformat()))
 
     # === Sanity checks ===
     if endTime < startTime:
@@ -109,21 +106,21 @@ def main():
         hfile.close()
 
     # --- Obtain AWS history ---
-    if options.auditPayments:
+    if auditPayments:
         print("Obtaining AWS payment transactions for the period %s -> %s" % (startTime.isoformat(), endTime.isoformat()))
-        awsTransactions += aws.getAccountActivity(startTime, endDate=endTime, fpsOperation='Pay')
+        awsTransactions += _awsLink.getAccountActivity(startTime, endDate=endTime, fpsOperation='Pay')
         print("Obtained %d transactions" % len(awsTransactions))
 
-    if options.auditRefunds:
+    if auditRefunds:
         print("Obtaining AWS refund transactions for the period %s -> %s" % (startTime.isoformat(), endTime.isoformat()))
-        awsTransactions += aws.getAccountActivity(startTime, endDate=endTime, fpsOperation='Refund')
+        awsTransactions += _awsLink.getAccountActivity(startTime, endDate=endTime, fpsOperation='Refund')
         print("Obtained %d transactions" % len(awsTransactions))
     
     # --- Main loop: checks each aws transaction against the Civi database; adding it if it doesn't exist ---
     txncount = 0
     for txn in awsTransactions:
         txncount += 1
-        result = dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options)
+        result = dispatchTransaction(txn, auditPayments, auditRefunds)
         historyStats[result] += 1
         if result == 'Pending':
             historyList.append(txn)
@@ -131,9 +128,9 @@ def main():
     print("\n--- Finished processing of messages. ---\n")
 
     # --- Write the history file ---
-    if options.historyFile:
+    if historyFile:
         print("Rewriting history file with %d transactions" % len(historyList))
-        hfile = open(options.historyFile, 'w')
+        hfile = open(historyFile, 'w')
         hfile.write("%s\n%s\n%s\n" % (AWS_HISTORY_FILE_VERSTR, historyStart.isoformat(), endTime.isoformat()))
         for txn in historyList:
             hfile.write("%s\n" % json.dumps(txn))
@@ -149,44 +146,51 @@ def main():
 
     # === Final Application Cleanup ===
     print("\nCleaning up.")
-    dbcon.close()
-    sc.disconnect()
+    _civiDB.close()
+    _stompLink.disconnect()
 
     if hfile:
         hfile.close()
-    if sfile:
-        sfile.close()
+    if _logFile:
+        _logFile.close()
 
     time.sleep(1)   # Let the STOMP library catch up
 
-def dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options):
+
+def dispatchTransaction(txn, auditPayments, auditRefunds):
     """Main message processing logic. Will determine if a message needs to be injected or not
 
-    txn -- The transaction from getAccountActivity()
-    aws -- The AWS connection object
-    sc -- The Stomp connection object
-    sfile -- The log file
-    config -- The configuration object
+    Arguments:
+        txn: The transaction from getAccountActivity()
+        auditPayments: Boolean, true if 'Pay' statements from AWS are to be audited
+        auditRefunds: Boolean, true if 'Refund' statements from AWS are to be audited
 
-    returns "Success on injection, Pending on AWS pending, Failed on AWS failure, Ignored on already present in Civi
+    Returns:
+        "Success" on injection
+        "Pending" on AWS pending
+        "Failed" on AWS failure
+        "Ignored" on already present in Civi
     """
-    retval = ''
+
+    global _awsLink
+    global _logFile
+
     smallString = '.'
     ctid = '?'
 
-    if (txn['TransactionStatus'] != 'Failure') and (not isTxnInCivi(txn['TransactionId'], dbcon)):
+    if (txn['TransactionStatus'] != 'Failure') and (not isTxnInCivi(txn['TransactionId'])):
         # Get additional information about the transaction because getAccountActivity does not provide all
         # the required information. We also have to check what the status of this transaction is.
-        txnInfo = aws.getTransaction( txn['TransactionId'] )
+        txnInfo = _awsLink.getTransaction( txn['TransactionId'] )
 
         # Do that aforementioned status check
         if txnInfo['TransactionStatus'] == 'Success':
-            if (txn['FPSOperation'] == 'Pay') and options.auditPayments:
-                ctid = remediatePaymentTransaction(txn, txnInfo, sc, config)
+            if (txn['FPSOperation'] == 'Pay') and auditPayments:
+                ctid = injectPaymentMessage(txn, txnInfo)
                 retval = 'Success'
                 smallString = '+'
-            elif (txn['FPSOperation'] == 'Refund') and options.auditRefunds:
-                ctid = remediateRefundTransaction(txn, txnInfo, sc, config)
+            elif (txn['FPSOperation'] == 'Refund') and auditRefunds:
+                ctid = injectRefundTransaction(txn, txnInfo)
                 retval = 'Success'
                 smallString = '-'
             else:
@@ -209,8 +213,8 @@ def dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options):
         datetime.now(dateutil.tz.tzutc()).isoformat()
     )
 
-    if sfile:
-        sfile.write("%s\n" % bigString)
+    if _logFile:
+        _logFile.write("%s\n" % bigString)
         sys.stdout.write(smallString)
         sys.stdout.flush()
     else:
@@ -218,16 +222,20 @@ def dispatchTransaction(txn, dbcon, aws, sc, sfile, config, options):
 
     return retval
 
-def isTxnInCivi(txnid, dbcon):
+
+def isTxnInCivi(txnid):
     """ Query the Civi database to determine if the txnid is present.
 
-    txnid -- The Amazon transaction ID
-    dbcon -- Database connection object
+    Arguments:
+        txnid: The Amazon transaction ID
 
-    returns True if transaction is present in Civi
+    Returns:
+        True if transaction is present in Civi
     """
 
-    cur = dbcon.cursor()
+    global _civiDB
+
+    cur = _civiDB.cursor()
     cur.execute("SELECT id FROM civicrm_contribution WHERE trxn_id LIKE 'AMAZON %s%%';" % txnid)
     rc = cur.rowcount
     cur.close()
@@ -236,19 +244,19 @@ def isTxnInCivi(txnid, dbcon):
     else:
         return False
 
-def remediatePaymentTransaction(txn, txnInfo, sc, config):
-    """Injects a new message into the queue for consumption by Civi
 
-    txn -- The transaction data given from the getAccountActivity call
-    txnInfo -- Transaction data given from the getTransaction call
-    sc -- Stomp queue object
-    config -- Configuration object
+def extractCtidFromAws(txn):
+    """Attempts to extract a contribution tracking ID (CTID) from the return of getAccountActivity
 
-    returns -- The contribution tracking ID
+    Arguments:
+        txn: The AWS transaction response from
+
+    Returns:
+        Integer CTID if found, else None
     """
 
-    # --- Get our contribution tracking ID (but it's stupid because AWS is stupid... ugh!)
     ctid = None
+
     if isinstance(txn['TransactionPart'], list):
         for part in txn['TransactionPart']:
             if part['Role'] == 'Recipient' and 'Reference' in part:
@@ -264,10 +272,29 @@ def remediatePaymentTransaction(txn, txnInfo, sc, config):
                 # It's not a number or a UUID... very strange... not using is
                 ctid = None
 
+    return ctid
+
+
+def injectPaymentMessage(txn, txnInfo):
+    """Injects a new message into the queue for consumption by Civi
+
+    Arguments:
+        txn: The transaction data given from the getAccountActivity call
+
+    Returns:
+        An integer contribution tracking ID or None if no CTID can be found
+    """
+
+    global _config
+    global _stompLink
+
+    # --- Get our contribution tracking ID (but it's stupid because AWS is stupid... ugh!)
+    ctid = extractCtidFromAws(txn)
+
     # Construct the STOMP message
     headers = {
         'correlation-id': 'amazon-%s' % txn['TransactionId'],
-        'destination': config.get('Stomp', 'verified-queue'),
+        'destination': _config.get('Stomp', 'verified-queue'),
         'persistent': 'true'
     }
     msg = {
@@ -290,7 +317,7 @@ def remediatePaymentTransaction(txn, txnInfo, sc, config):
         "date": dateutil.parser.parse(txnInfo['DateReceived']).astimezone(dateutil.tz.tzutc()).strftime('%s'),
 
         "gateway":"amazon",
-        "gateway_account": config.get('AwsConfig', 'accountName'),
+        "gateway_account": _config.get('AwsConfig', 'accountName'),
         "payment_method":"amazon",
         "payment_submethod": txn['PaymentMethod'],
         "referrer":"",
@@ -317,23 +344,27 @@ def remediatePaymentTransaction(txn, txnInfo, sc, config):
     }
 
     # Inject the message
-    sc.send(
+    _stompLink.send(
         json.dumps(msg),
         headers
     )
 
     return ctid
 
-def remediateRefundTransaction(txn, txnInfo, sc, config):
+
+def injectRefundTransaction(txn, txnInfo):
     """Injects a new message into the refund queue for consumption by Civi
 
-    txn -- The transaction data given from the getAccountActivity call
-    txnInfo -- Transaction data given from the getTransaction call
-    sc -- Stomp queue object
-    config -- Configuration object
+    Arguments:
+        txn: The transaction data given from the getAccountActivity call
+        txnInfo: Transaction data given from the getTransaction call
 
-    returns -- The contribution tracking ID
+    Returns:
+        The contribution tracking ID
     """
+
+    global _config
+    global _stompLink
 
     # --- It appears AWS does not retain the merchant reference for refunds; it does however
     # give us a FPS parent transaction ID
@@ -343,7 +374,7 @@ def remediateRefundTransaction(txn, txnInfo, sc, config):
     # Construct the STOMP message
     headers = {
         'correlation-id': 'amazon-%s' % orig_txnid,
-        'destination': config.get('Stomp', 'refund-queue'),
+        'destination': _config.get('Stomp', 'refund-queue'),
         'persistent': 'true'
     }
     msg = {
@@ -361,18 +392,42 @@ def remediateRefundTransaction(txn, txnInfo, sc, config):
         "date": dateutil.parser.parse(txnInfo['DateCompleted']).astimezone(dateutil.tz.tzutc()).strftime('%s'),
 
         "gateway":"amazon",
-        "gateway_account": config.get('AwsConfig', 'accountName'),
+        "gateway_account": _config.get('AwsConfig', 'accountName'),
         "payment_method":"amazon",
         "payment_submethod": txn['PaymentMethod'],
     }
 
     # Inject the message
-    sc.send(
+    _stompLink.send(
         json.dumps(msg),
         headers
     )
 
     return ctid
 
+
 if __name__ == "__main__":
-    main()
+    # === Extract options ===
+    parser = OptionParser(usage="usage: %prog [options] <# of seconds to audit>")
+    parser.add_option("-c", "--config", dest='configFile', default=None, help='Path to configuration file')
+    parser.add_option("-g", "--gracePeriod", dest='gracePeriod', default=0, help='Number of seconds from now backwards to ignore')
+    parser.add_option("-i", "--historyFile", dest='historyFile', default=None, help='Stores any pending transactions and the last run time')
+    parser.add_option('-l', "--logFile", dest='logFile', default=None, help='Saves a log of all Amazon transactions')
+    parser.add_option('--auditPayments', dest='auditPayments', action='store_true', default=False, help='Audit payment operations.')
+    parser.add_option('--auditRefunds', dest='auditRefunds', action='store_true', default=False, help='Audit refund operations.')
+    (options, args) = parser.parse_args()
+
+    if len(args) != 1:
+        parser.print_usage()
+        exit()
+
+    # === Launch the application ===
+    main(
+        secondsToAudit=args[0],
+        configFile=options.configFile,
+        gracePeriod=options.gracePeriod,
+        historyFile=options.historyFile,
+        logFile=options.logFile,
+        auditPayments=options.auditPayments,
+        auditRefunds=options.auditRefunds
+    )
