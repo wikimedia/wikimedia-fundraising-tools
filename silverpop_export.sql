@@ -53,7 +53,7 @@ INSERT INTO silverpop_export
   (contact_id, email, first_name, last_name, preferred_language)
   SELECT
     e.contact_id, e.email, c.first_name, c.last_name,
-    SUBSTRING(1, 2, c.preferred_language)
+    SUBSTRING(c.preferred_language, 1, 2)
   FROM civicrm.civicrm_email e, civicrm.civicrm_contact c
   WHERE
     e.email IS NOT NULL AND e.email != '' AND
@@ -133,7 +133,7 @@ INSERT INTO silverpop_export_stat
   SELECT
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
-    SUM(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0), 1, 0),
+    SUM(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
     SUM(IF('2006-07-1' < ct.receive_date AND ct.receive_date < '2007-07-01', 1, 0)),
     SUM(IF('2007-07-1' < ct.receive_date AND ct.receive_date < '2008-07-01', 1, 0)),
     SUM(IF('2008-07-1' < ct.receive_date AND ct.receive_date < '2009-07-01', 1, 0)),
@@ -172,8 +172,7 @@ SET
   latest_currency = SUBSTRING(ct.source, 1, 3),
   latest_native_amount = CONVERT(SUBSTRING(ct.source, 5), decimal(20,2)),
   latest_usd_amount = ct.total_amount,
-  latest_donation = ct.receive_date,
-  latest_is_recurring = IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)
+  latest_donation = ct.receive_date
 WHERE
   ex.last_ctid = ct.id;
 
@@ -190,7 +189,6 @@ UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_countr
 UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
-    tz.tzid IS NULL AND
     ex.postal_code IS NOT NULL AND
     ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
     a.format='post' AND
@@ -218,7 +216,7 @@ UPDATE silverpop_export ex
   WHERE ex.tzoffset is NULL;
   
 -- STEP 9 Normalize some data
-UPDATE silverpop_export SET preferred_language='en' WHERE preferred_langage IS NULL;
+UPDATE silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
 UPDATE silverpop_export SET
     last_ctid = 0,
     highest_usd_amount = 0,
@@ -244,6 +242,8 @@ UPDATE silverpop_export ex SET
   unsub_hash = SHA1(CONCAT(last_ctid, email, XXX));
   
 -- Export some random rows
+-- Run something like this from the command line like so...
+-- mysql -h db1008.eqiad.wmnet -u pcoombe -p mwalker < query.sql | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > out.csv
 SELECT contact_id ContactID, email, first_name firstname, last_name lastname,
   last_ctid ContributionID, country, 
   SUBSTRING(preferred_language, 1, 2) IsoLang, has_recurred_donation, highest_usd_amount,
