@@ -99,7 +99,7 @@ DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_contact
 DROP TABLE silverpop_export_dedupe_contact;
 
 -- STEP 4 Update every email address with every contact and opt them out
-DELETE silverpop_export ex
+DELETE ex
 FROM silverpop_export ex, civicrm.civicrm_email e USE INDEX(UI_email), civicrm.civicrm_contact c
 WHERE
   ex.email = e.email AND e.contact_id = c.id AND c.is_opt_out = 1;
@@ -243,17 +243,25 @@ UPDATE silverpop_export ex SET
   
 -- Export some random rows
 -- Run something like this from the command line like so...
--- mysql -h db1008.eqiad.wmnet -u pcoombe -p mwalker < query.sql | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > out.csv
+-- mysql -h db1008.eqiad.wmnet mwalker < silverpop_export.sql | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > out.csv
 SELECT contact_id ContactID, email, first_name firstname, last_name lastname,
-  last_ctid ContributionID, country, 
-  SUBSTRING(preferred_language, 1, 2) IsoLang, has_recurred_donation, highest_usd_amount,
-  lifetime_usd_total, latest_donation latest_donation_date, latest_usd_amount,
-  latest_currency, latest_native_amount, tzoffset timezone, donation_count,
-  is_2006_donor, is_2007_donor, is_2008_donor, is_2009_donor, is_2010_donor,
-  is_2011_donor, is_2012_donor, is_2013_donor, unsub_hash 
+  last_ctid ContributionID, country, SUBSTRING(preferred_language, 1, 2) IsoLang,
+  IF(has_recurred_donation, 'TRUE', 'FALSE') has_recurred_donation, 
+  highest_usd_amount, lifetime_usd_total,
+  DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
+  latest_usd_amount, latest_currency, latest_native_amount,
+  tzoffset timezone, donation_count,
+  IF(is_2006_donor, 'TRUE', 'FALSE') is_2006_donor, 
+  IF(is_2007_donor, 'TRUE', 'FALSE') is_2007_donor, 
+  IF(is_2008_donor, 'TRUE', 'FALSE') is_2008_donor, 
+  IF(is_2009_donor, 'TRUE', 'FALSE') is_2009_donor, 
+  IF(is_2010_donor, 'TRUE', 'FALSE') is_2010_donor,
+  IF(is_2011_donor, 'TRUE', 'FALSE') is_2011_donor, 
+  IF(is_2012_donor, 'TRUE', 'FALSE') is_2012_donor, 
+  IF(is_2013_donor, 'TRUE', 'FALSE') is_2013_donor, 
+  unsub_hash 
 FROM silverpop_export AS r1 JOIN
   (SELECT (RAND() * (SELECT MAX(id) FROM silverpop_export)) AS id) AS r2
  WHERE r1.id >= r2.id
  ORDER BY r1.id ASC
- LIMIT 200;
-
+ LIMIT 1000;
