@@ -53,7 +53,7 @@ INSERT INTO silverpop_export
   (contact_id, email, first_name, last_name, preferred_language)
   SELECT
     e.contact_id, e.email, c.first_name, c.last_name,
-    SUBSTRING(c.preferred_language, 1, 2)
+    IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2))
   FROM civicrm.civicrm_email e, civicrm.civicrm_contact c
   WHERE
     e.email IS NOT NULL AND e.email != '' AND
