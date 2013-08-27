@@ -1,0 +1,7 @@
+article_url = "http://en.wikipedia.org/wiki/Special:Random?banner=%(banner)s&uselang=%(lang)s&country=%(country)s"
+centralnotice_mw_api = "http://meta.wikimedia.org/w/api.php"
+phantomjs = "/usr/local/phantomjs/phantomjs"
+banner_screenshots_dir = "/tmp/banner_screenshots"
+banner_screenshot_format = "png"
+crop_height = 500
+banner_name_regex = r'^B13_.*_(?P<lang>[a-z]{2})(?P<country>[A-Z0-9]{2})$'

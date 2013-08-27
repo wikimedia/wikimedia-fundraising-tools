@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+import os
+import os.path
+import subprocess
+import re
+import sys
+
+import config
+from mediawiki.centralnotice import get_campaign_logs
+from mediawiki.time_util import str_time_offset
+
+JS_RENDER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rasterize.js")
+
+def reduce_banners(campaign_logs):
+    '''Return a map from banner names to most recent campaign settings.'''
+    banners = dict()
+    for entry in campaign_logs:
+        settings = entry['end']
+        campaign_banners = settings['banners']
+
+        # we only need one country...
+        settings['country'] = "US"
+        if settings['geo'] == "1" and settings['countries']:
+            settings['country'] = settings['countries'][0]
+
+        if hasattr(campaign_banners, 'keys'):
+            banners.update(
+                dict.fromkeys(
+                    campaign_banners.keys(), settings
+                )
+            )
+
+    return banners
+
+def get_screenshot_path(name, lang):
+    return os.path.join(
+        config.banner_screenshots_dir,
+        "%(banner)s/%(banner)s_%(lang)s.%(ext)s" % {
+            "banner": name,
+            "lang": lang,
+            "ext": config.banner_screenshot_format,
+        }
+    )
+
+def banner_screenshot_exists(name, lang):
+    return os.path.exists(get_screenshot_path(name, lang))
+
+def render(name, lang, country):
+    url = config.article_url % { "banner": name, "lang": lang, "country": country }
+    path = get_screenshot_path(name, lang)
+    dir = os.path.dirname(path)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    print "Fetching " + url + " into " + path
+    subprocess.check_call([config.phantomjs, JS_RENDER_SCRIPT, url, path])
+
+def process_banners():
+    banners = reduce_banners(get_campaign_logs(since=str_time_offset(days=-2)))
+    for name, campaign_settings in banners.items():
+        country = "US"
+        m = re.match(config.banner_name_regex, name)
+        if m:
+            explicit_lang = m.group('lang')
+            if explicit_lang != "yy":
+                campaign_settings['languages'] = [ explicit_lang ]
+            explicit_country = m.group('country')
+            if explicit_country != "YY":
+                campaign_settings['country'] = explicit_country
+
+        for lang in campaign_settings['languages']:
+            if not banner_screenshot_exists(name, lang):
+                render(name, lang, campaign_settings['country'])
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        for name in sys.argv[1:]:
+            screenshot_banner(name)
+    else:
+        process_banners()
