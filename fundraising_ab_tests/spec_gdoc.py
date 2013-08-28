@@ -1,6 +1,5 @@
-#import jail
 from spec import FrTestSpec, parse_spec
-from gdocs import Spreadsheet
+from google.gdocs import Spreadsheet
 
 def read_gdoc_spec(doc=None):
     return FrTestSpec(spec=list(parse_spec(Spreadsheet(doc=doc).get_all_rows())))

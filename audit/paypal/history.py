@@ -11,7 +11,7 @@ import re
 import gzip
 import locale
 import dateutil.parser
-import civicrm
+from civicrm.civicrm import Civicrm
 
 def main():
     global config, messaging, options, civi
@@ -36,7 +36,7 @@ def main():
         log("*** Dummy mode! Not injecting stomp messages ***")
 
     messaging = Stomp(config)
-    civi = civicrm.Civicrm(config)
+    civi = Civicrm(config)
 
     locale.setlocale(locale.LC_NUMERIC, "")
 

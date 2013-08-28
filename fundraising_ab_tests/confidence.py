@@ -1,5 +1,5 @@
-import config
-from stats_abba import Experiment
+from process.globals import config
+from stats.stats_abba import Experiment
 
 def add_confidence(results, name_column, successes_column):
     confidence = get_confidence(results, name_column, successes_column)

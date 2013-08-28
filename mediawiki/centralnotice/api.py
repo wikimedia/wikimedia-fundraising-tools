@@ -2,7 +2,7 @@
 Interface to the MediaWiki CentralNotice api
 '''
 
-from mediawiki import mw_call
+from mediawiki.api import mw_call
 
 cached_campaigns = {}
 
@@ -25,6 +25,7 @@ def get_campaign( campaign ):
     } )
 
     if campaign in result:
+        result[campaign]['name'] = campaign
         cached_campaigns[campaign] = result[campaign]
         return cached_campaigns[campaign]
 
@@ -47,10 +48,15 @@ def get_allocations( project=None, language=None, country=None, anonymous=True, 
     } )
     return result['banners']
 
-def get_campaign_logs( since=None ):
-    result = mw_call( {
+def get_campaign_logs( since=None, limit=50, offset=0 ):
+    params = {
         'action': 'query',
         'list': 'centralnoticelogs',
-        'start': since,
-    } )
+        'limit': limit,
+        'offset': offset,
+    }
+    if since:
+        params['start'] = since
+
+    result = mw_call( params )
     return result['logs']

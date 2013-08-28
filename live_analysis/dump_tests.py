@@ -5,8 +5,9 @@
 
 import csv
 import sys
-from fr.tests.spec import FrTestSpec, parse_spec
-from fr.centralnotice import get_campaign_logs
+import mediawiki.centralnotice.api
+
+import process.globals
 
 def is_relevant(entry):
     '''
@@ -33,7 +34,7 @@ def fetch():
     pagesize = 500
 
     while True:
-        logs = get_campaign_logs(limit=pagesize, offset=cur)
+        logs = mediawiki.centralnotice.api.get_campaign_logs(limit=pagesize, offset=cur)
 
         for test in logs:
             if is_relevant(test):
@@ -50,4 +51,6 @@ def fetch():
 
         cur = cur + pagesize
 
-fetch()
+if __name__ == "__main__":
+    process.globals.load_config("config.py")
+    fetch()

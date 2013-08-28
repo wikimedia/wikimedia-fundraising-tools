@@ -7,9 +7,11 @@ TODO: Use anonymized tables
 import os
 import decimal
 
+from process.globals import config
+from database import db
+
 import time_util
 import top_ten
-import config
 
 ct_banner_clause = "LEFT(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1), LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1)))"
 
@@ -36,8 +38,6 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
     '''
     Note that the column names must match a heading in the results spreadsheet.
     '''
-    import db
-
     if not query:
         query = db.Query()
     query.columns.append('SUM(total_amount) AS total')

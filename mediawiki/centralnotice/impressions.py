@@ -1,6 +1,6 @@
-def get_impressions(campaign=None, banner=None, **ignore):
-    import db
+from database import db
 
+def get_impressions(campaign=None, banner=None, **ignore):
     query = db.Query()
     query.columns.append("SUM(count) AS count")
     query.tables.append("pgehres.bannerimpressions")

@@ -6,7 +6,7 @@ import gdata.docs.service
 import gdata.docs.data
 import gdata.spreadsheet.service
 
-import config
+from process.globals import config
 
 # TODO: ExecuteBatch; 2-leg oauth
 # TODO: cache rows locally, operate and then flush

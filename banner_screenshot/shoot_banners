@@ -6,11 +6,13 @@ import subprocess
 import re
 import sys
 
-import config
-from mediawiki.centralnotice import get_campaign_logs
-from mediawiki.time_util import str_time_offset
+from process.globals import load_config
+load_config("config.py")
 
-JS_RENDER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rasterize.js")
+from process.globals import config
+from mediawiki.centralnotice.api import get_campaign_logs
+from mediawiki.centralnotice.time_util import str_time_offset
+from process.lock import begin, end
 
 def reduce_banners(campaign_logs):
     '''Return a map from banner names to most recent campaign settings.'''
@@ -47,6 +49,8 @@ def banner_screenshot_exists(name, lang):
     return os.path.exists(get_screenshot_path(name, lang))
 
 def render(name, lang, country):
+    global JS_RENDER_SCRIPT
+
     url = config.article_url % { "banner": name, "lang": lang, "country": country }
     path = get_screenshot_path(name, lang)
     dir = os.path.dirname(path)
@@ -75,8 +79,15 @@ def process_banners():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        for name in sys.argv[1:]:
-            screenshot_banner(name)
-    else:
-        process_banners()
+    try:
+        begin()
+
+        JS_RENDER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rasterize.js")
+
+        if len(sys.argv) > 1:
+            for name in sys.argv[1:]:
+                screenshot_banner(name)
+        else:
+            process_banners()
+    finally:
+        end()
