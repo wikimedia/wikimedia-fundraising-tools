@@ -13,6 +13,7 @@ import codecs
 _config = None
 _geonamesDB = None
 
+
 def install_schema():
     global _geonamesDB
     cur = _geonamesDB.cursor()
@@ -110,7 +111,7 @@ def import_timezone_file(filename):
         return
 
     # --- Clear the table ---
-    write( "Truncating table... " )
+    write("Truncating table... ")
     cur = _geonamesDB.cursor()
     cur.execute("TRUNCATE timezones")
 
@@ -124,7 +125,7 @@ def import_timezone_file(filename):
             (?P<gmtOffset>[^\t]*)\t
             (?P<dstOffset>[^\t]*)\t
             (?P<utcOffset>[^\t]*)$
-        """,  re.VERBOSE)
+        """, re.VERBOSE)
 
     line = f.readline().strip()    # The first line is a header
     if line != "CountryCode	TimeZoneId	GMT offset 1. Jan 2013	DST offset 1. Jul 2013	rawOffset (independant of DST)":
@@ -160,7 +161,7 @@ def import_features_file(filename):
         return
 
     # --- Clear the table ---
-    write( "Truncating table... " )
+    write("Truncating table... ")
     cur = _geonamesDB.cursor()
     cur.execute("TRUNCATE feature_types")
 
@@ -173,7 +174,7 @@ def import_features_file(filename):
             (?P<code>[A-Z0-9]*)\t
             (?P<name>[^\t]*)\t?
             (?P<desc>.*)
-        $""",  re.VERBOSE)
+        $""", re.VERBOSE)
 
     for line in f:
         line = line[:-1]
@@ -204,7 +205,7 @@ def import_geonames_file(filename):
         return
 
     # --- Clear the table ---
-    write( "Truncating table... " )
+    write("Truncating table... ")
     cur = _geonamesDB.cursor()
     cur.execute("TRUNCATE geonames;")
 
@@ -232,7 +233,7 @@ def import_geonames_file(filename):
             (?P<dem>[^\t]*)\t
             (?P<tz>[^\t]*)\t
             (?P<date>[^\t]*)
-        $""",  re.VERBOSE)
+        $""", re.VERBOSE)
 
     for line in f:
         line = line[:-1]
@@ -249,7 +250,7 @@ def import_geonames_file(filename):
                 SELECT %s, %s, %s, %s, %s, ftid, %s, %s, %s, %s, %s, %s, tzid, %s
                 FROM timezones, feature_types ft WHERE tzname=%s AND ft.class=%s AND ft.code=%s;
             """,
-            (
+            (  # noqa
                 int(m.group('geonameid')),
                 m.group('name'),
                 m.group('asciiname'),
@@ -298,7 +299,7 @@ def import_altnames_file(filename):
         return
 
     # --- Clear the table ---
-    write( "Truncating table... " )
+    write("Truncating table... ")
     cur = _geonamesDB.cursor()
     cur.execute("TRUNCATE altnames;")
 
@@ -318,7 +319,7 @@ def import_altnames_file(filename):
                     altnameid, geonameid, format, altname, is_preferred, is_short, is_colloquial, is_historic
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
             """,
-            (
+            (  # noqa
                 int(m[0]),
                 int(m[1]),
                 m[2],
