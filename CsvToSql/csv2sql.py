@@ -17,6 +17,7 @@ colproto = {
     'f': (lambda x: float(x), 'float')
 }
 
+
 def main(host, user, password, database, tablename, delete, autoindex, schema, filename):
     global colproto
 
@@ -50,7 +51,7 @@ def main(host, user, password, database, tablename, delete, autoindex, schema, f
     schemaStr = ', '.join(schemaStr)
     insertCols = ', '.join(insertCols)
     queryStr = "CREATE TABLE %s (%s);" % (tablename, schemaStr)
-    print("Executing: %s" %queryStr)
+    print("Executing: %s" % queryStr)
 
     cur = db.cursor()
     if delete:
@@ -72,7 +73,7 @@ def main(host, user, password, database, tablename, delete, autoindex, schema, f
         count += 1
         if count % 2500 == 0:
             db.commit()
-            print("%s - %s qps" % (count, 2500/(time()-start)))
+            print("%s - %s qps" % (count, 2500 / (time() - start)))
             start = time()
     print(count)
     db.commit()
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     if options.explainSchema:
         print("A schema is a simple string of characters from the following set that expands into SQL types:")
         for t in colproto:
-            print( "%s - %s" % (t, colproto[t][1]))
+            print("%s - %s" % (t, colproto[t][1]))
         exit()
     elif len(args) != 2:
         parser.print_usage()
