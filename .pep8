@@ -1,0 +1,6 @@
+# This is for back compatibility with pep8 v1.3
+# Please amend tox.ini as well
+ 
+[pep8]
+# E501 line too long (X > 79 characters)
+ignore=E501
