@@ -7,6 +7,7 @@ import os
 import fnmatch
 import json
 
+
 def main():
     # === Extract options ===
     parser = OptionParser(usage="usage: %prog [options]")
@@ -52,7 +53,7 @@ def main():
     print("Banners currently in %s" % hosts[0])
     print("Example URL: %s" % params[0])
     for i in range(0, len(authBanners)):
-        print( "%02d: %s" % (i + 1, authBanners[i]))
+        print("%02d: %s" % (i + 1, authBanners[i]))
     print("\n")
 
     # Now do the rest of them
@@ -87,7 +88,6 @@ def loadPybal(pattern):
     return hosts
 
 
-
 def getSlotContents(host, headers, urls):
     conn = httplib.HTTPConnection(host)
 
@@ -111,7 +111,7 @@ def compareBanners(auth, test, host):
 
     for i in range(0, len(test)):
         if auth[i] != test[i]:
-            print("Slot %02d from %s contains %s" % (i+1, host, test[i]))
+            print("Slot %02d from %s contains %s" % (i + 1, host, test[i]))
 
 
 if __name__ == "__main__":
