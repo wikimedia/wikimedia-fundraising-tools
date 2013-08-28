@@ -11,6 +11,13 @@ def load_config(filename):
     if re.search(r'[.]py$', filename):
         config = import_module(filename[:-3])
     elif re.search(r'[.]ya?ml$', filename):
-        config = load_yaml(file(filename, 'r'))
+        config = DictAsAttrDict(load_yaml(file(filename, 'r')))
     else:
         raise Exception("No config found.")
+
+class DictAsAttrDict(dict):
+    def __getattr__(self, name):
+        value = self[name]
+        if isinstance(value, dict):
+            value = DictAsMember(value)
+        return value
