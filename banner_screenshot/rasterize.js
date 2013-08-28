@@ -8,10 +8,10 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
     phantom.exit();
 } else {
     page.onError = function (msg, trace) {
-	console.log(msg);
-	trace.forEach(function(item) {
-	    console.log('  ', item.file, ':', item.line);
-	})
+        console.log(msg);
+        trace.forEach(function(item) {
+            console.log('  ', item.file, ':', item.line);
+        });
     };
     address = phantom.args[0];
     output = phantom.args[1];
