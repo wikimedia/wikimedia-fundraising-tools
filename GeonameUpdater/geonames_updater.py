@@ -3,7 +3,7 @@
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 import dateutil.parser
-import pytz
+#import pytz
 import MySQLdb as MySQL
 import sys
 import os
