@@ -218,13 +218,13 @@ class %(className)s {
 
     f = codecs.open(outfile, 'w', 'utf-8')
     f.write(skeleton % {
-		'namespace': namespace,
-		'cldrVersion': data[0],
-		'className': className,
-		'currencyData': phpCurrency,
-		'numberData': phpLocaleNumber,
-		'charData': phpLocaleSymbol,
-	})
+        'namespace': namespace,
+        'cldrVersion': data[0],
+        'className': className,
+        'currencyData': phpCurrency,
+        'numberData': phpLocaleNumber,
+        'charData': phpLocaleSymbol,
+    })
     f.close()
 
 
