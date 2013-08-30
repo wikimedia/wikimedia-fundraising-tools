@@ -18,11 +18,11 @@ colproto = {
 }
 
 
-def main(host, user, password, database, tablename, delete, autoindex, schema, filename):
+def main(host, port, user, password, database, tablename, delete, autoindex, schema, filename):
     global colproto
 
     # === Connection to MySQL ===
-    db = MySQL.connect(host, user, password, database)
+    db = MySQL.connect(host=host, port=port, user=user, passwd=password, db=database)
 
     # === Open the file ===
     f = open(filename, 'r')
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     # === Extract options ===
     parser = OptionParser(usage="usage: %prog [options] schema file.csv")
-    parser.add_option("-s", "--host", dest='host', default='localhost', help='MySQL server name')
+    parser.add_option("-s", "--host", dest='host', default='localhost', help='MySQL server name [:port]')
     parser.add_option("-d", "--database", dest='database', default=user, help='MySQL database name')
     parser.add_option("-u", "--user", dest='user', default=user, help='MySQL username')
     parser.add_option("-p", "--password", dest='password', default=None, help='MySQL password, if none will prompt')
@@ -117,9 +117,17 @@ if __name__ == "__main__":
     else:
         tablename = options.tablename
 
+    serverHP = options.host.split(':')
+    hostname = serverHP[0]
+    if len(serverHP) > 1:
+        hostport = int(serverHP[1])
+    else:
+        hostport = 3306
+
     # === Launch the application ===
     main(
-        host=options.host,
+        host=hostname,
+        port=hostport,
         user=options.user,
         password=password,
         database=options.database,
