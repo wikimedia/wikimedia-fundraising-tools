@@ -3,6 +3,8 @@ Mysql wrapper which allows query composition
 '''
 import MySQLdb as Dbi
 
+from process.globals import config
+
 class Connection(object):
     def __init__(self, host=None, user=None, passwd=None, db=None, debug=False):
         self.db_conn = Dbi.connect(host=host, user=user, passwd=passwd, db=db)
@@ -56,8 +58,8 @@ db_conn = False
 
 def get_db():
     '''Convienience'''
-    import config
     global db_conn
+
     if not db_conn:
         db_conn = Connection(**config.db_params)
     return db_conn

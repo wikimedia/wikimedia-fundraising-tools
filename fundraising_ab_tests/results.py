@@ -1,10 +1,10 @@
 import re
 import json
 
-import config
-from fr.contributions import get_totals
-from fr.impressions import get_impressions
-from fr.tests.confidence import add_confidence
+from process.globals import config
+from mediawiki.centralnotice.contributions import get_totals
+from mediawiki.centralnotice.impressions import get_impressions
+from fundraising_ab_tests.confidence import add_confidence
 
 class TestResult(object):
     def __init__(self, criteria=None, results={}):

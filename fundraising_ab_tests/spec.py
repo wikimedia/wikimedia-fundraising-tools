@@ -5,7 +5,7 @@ TODO:
 
 import re
 
-from fr.tests import FrTest
+from fundraising_ab_tests import FrTest
 import campaign_log
 
 def parse_spec(spec):

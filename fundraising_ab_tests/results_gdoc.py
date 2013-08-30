@@ -1,4 +1,4 @@
-from gdocs import Spreadsheet
+from google.gdocs import Spreadsheet
 
 def write_gdoc_results(doc=None, results=[]):
     print "Writing test results to %s" % doc

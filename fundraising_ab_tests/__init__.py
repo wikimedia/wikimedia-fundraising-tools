@@ -4,14 +4,14 @@ Test specifications, cases, and results.
 These are not unit tests ;) they are WMF Fundraising A/B tests.
 '''
 
-from fr.centralnotice import get_campaign
-from fr.tests.results import get_banner_results
+import mediawiki.centralnotice.api
+from results import get_banner_results
 
 class FrTest(object):
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
         print "Warning: ignoring columns: %s" % (", ".join(ignore.keys()), )
 
-        self.campaign = get_campaign(campaign)
+        self.campaign = mediawiki.centralnotice.api.get_campaign(campaign)
         if not self.campaign:
             print "Warning: no such campaign '%s'" % campaign
 

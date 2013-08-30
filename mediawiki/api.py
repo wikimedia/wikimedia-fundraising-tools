@@ -2,7 +2,7 @@
 Dumb interface to the MediaWiki api.
 '''
 
-import config
+from process.globals import config
 
 import json
 
@@ -11,7 +11,7 @@ def mw_call( args ):
 
     wiki = simplemediawiki.MediaWiki(
         config.centralnotice_mw_api,
-        user_agent='bot: fr-screenshots'
+        user_agent='bot: fr-anal'
     )
     result = wiki.call( args )
     if 'error' in result:

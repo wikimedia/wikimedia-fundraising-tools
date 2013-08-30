@@ -11,7 +11,7 @@ import json
 import csv
 import atexit
 
-from db import Connection as DbConnection
+from database.db import Connection as DbConnection
 
 def main():
     global config, options, db

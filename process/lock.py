@@ -9,6 +9,11 @@ import sys
 lockfile = None
 
 def begin(filename=None, failopen=False):
+    if not filename:
+        unique = os.environ['LOGNAME']
+        cmd = os.path.basename(sys.argv[0])
+        filename = "/tmp/%s-%s.lock" % (unique, cmd)
+
     if os.path.exists(filename):
         print "Lockfile found!"
         f = open(filename, "r")
@@ -42,4 +47,7 @@ def begin(filename=None, failopen=False):
 
 def end():
     global lockfile
-    os.unlink(lockfile)
+    if lockfile:
+        os.unlink(lockfile)
+    else:
+        raise RuntimeError("Already unlocked!")

@@ -42,11 +42,8 @@ On Google Drive:
 
 As root:
 
-  pip install virtualenv MySQL-python
+  pip install MySQL-python simplemediawiki kitchen gdata
 
 In this directory:
-
-  virtualenv jailenv
-  PATH=jailenv/bin pip install simplemediawiki kitchen gdata
 
   cp config.py.example config.py # and edit
