@@ -25,11 +25,18 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
             window.setTimeout(function () {
                 page.clipRect = page.evaluate(function() {
                     var cn = $('#centralNotice');
+
+                    // FIXME: workaround for broken dropdown banner css, see FR #1085
+                    var divHeight = cn.height();
+                    if ( divHeight === 0 ) {
+                        divHeight = 728;
+                    }
+
                     return {
                         top: cn.offset().top,
                         left: cn.offset().left,
                         width: cn.width(),
-                        height: cn.height()
+                        height: divHeight
                     };
                 });
                 console.log(page.clipRect.width + " x " + page.clipRect.height);
