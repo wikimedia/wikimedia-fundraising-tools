@@ -1,5 +1,5 @@
 *.pyc
 
-# IDE Files
+# editor tempfiles
 .idea
-
+.*.sw*
