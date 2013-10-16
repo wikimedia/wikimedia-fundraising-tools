@@ -11,7 +11,7 @@ class Autoreview(object):
     UNRELATED = 'U'
 
     REVIEW = Tag.get('Review')
-    AUTOREVIEWED = Tag.get('Autoreviewed')
+    AUTOREVIEWED = Tag.get('Autoreviewed - Unique')
 
     REC_KEEP = Action.get('Autoreview - Recommend keep')
     REC_SPAM = Action.get('Autoreview - Recommend spamblock')
