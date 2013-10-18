@@ -2,6 +2,9 @@ from process.globals import config
 from database import db
 
 class ReviewQueue(object):
+    cached_tagging = True
+    cached_tags = {}
+
     @staticmethod
     def addMatch(job_id, oldId, newId, action, match):
         db.get_db(config.drupal_schema).execute("""
@@ -22,6 +25,34 @@ class ReviewQueue(object):
 
     @staticmethod
     def tag(contact_id, tag):
+        if ReviewQueue.cached_tagging:
+            if tag not in ReviewQueue.cached_tags:
+                ReviewQueue.cached_tags[tag] = []
+
+            ReviewQueue.cached_tags[tag].append(contact_id)
+        else:
+            ReviewQueue.tag_single(contact_id, tag)
+
+    @staticmethod
+    def commit():
+        for tag, contacts in ReviewQueue.cached_tags.items():
+            ReviewQueue.tag_many(contacts, tag)
+
+    @staticmethod
+    def tag_many(contacts, tag):
+        sets = [ "('civicrm_contact', {contact_id}, {tag_id})".format(contact_id=contact_id, tag_id=tag.id)
+            for contact_id in contacts ]
+        values = ", ".join(sets)
+
+        db.get_db(config.civicrm_schema).execute("""
+            INSERT IGNORE INTO civicrm_entity_tag
+                (entity_table, entity_id, tag_id)
+            VALUES
+                %s
+        """ % values)
+
+    @staticmethod
+    def tag_single(contact_id, tag):
         db.get_db(config.civicrm_schema).execute("""
             INSERT IGNORE INTO civicrm_entity_tag
                 SET

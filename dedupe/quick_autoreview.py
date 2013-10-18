@@ -3,6 +3,7 @@
 from process.globals import load_config
 load_config("dedupe")
 from process.globals import config
+import process.lock as lock
 
 from autoreview import Autoreview
 from civicrm.tag import Tag
@@ -18,7 +19,7 @@ class QuickAutoreview(object):
     def __init__(self):
         self.contactCache = TaggedGroup(
             tag=Autoreview.REVIEW,
-            nottag=QuickAutoreview.QUICK_REVIEWED
+            excludetag=QuickAutoreview.QUICK_REVIEWED
         )
         job = ReviewJob("Quick autoreview")
         self.job_id = job.id
@@ -60,5 +61,10 @@ class QuickAutoreview(object):
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
 if __name__ == '__main__':
+    lock.begin()
+
     job = QuickAutoreview()
     job.reviewBatch()
+    ReviewQueue.commit()
+
+    lock.end()
