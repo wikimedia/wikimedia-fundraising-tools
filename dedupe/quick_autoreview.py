@@ -2,6 +2,7 @@
 
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 
+print "imports"
 from process.globals import load_config
 load_config("dedupe")
 from process.globals import config
@@ -15,6 +16,7 @@ from match import EmailMatch
 from review_job import ReviewJob
 from review_queue import ReviewQueue
 
+print "classdef"
 class QuickAutoreview(object):
     QUICK_REVIEWED = Tag.get("Quick autoreviewed")
 
@@ -63,10 +65,16 @@ class QuickAutoreview(object):
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
 if __name__ == '__main__':
+    print "begin"
     lock.begin()
 
+    print "init"
     job = QuickAutoreview()
+    print "review"
     job.reviewBatch()
+    print "commit"
     ReviewQueue.commit()
 
+    print "unlock"
     lock.end()
+    print "done"
