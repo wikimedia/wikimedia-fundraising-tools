@@ -1,7 +1,7 @@
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 
 from process.globals import load_config
-load_config("config.yaml")
+load_config("dedupe")
 from process.globals import config
 
 from autoreview import Autoreview

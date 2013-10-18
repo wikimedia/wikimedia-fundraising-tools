@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from process.globals import load_config
-load_config("config.py")
+load_config("analysis")
 
 from process.lock import begin, end
 from fundraising_ab_tests.spec_gdoc import read_gdoc_spec

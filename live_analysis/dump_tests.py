@@ -52,5 +52,5 @@ def fetch():
         cur = cur + pagesize
 
 if __name__ == "__main__":
-    process.globals.load_config("config.py")
+    process.globals.load_config("analysis")
     fetch()
