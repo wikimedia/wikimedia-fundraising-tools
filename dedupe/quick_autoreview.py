@@ -1,8 +1,11 @@
-#!/usr/bin/env PYTHONPATH=/opt/fundraising/tools python
+#!/usr/bin/env python
 
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 
-print "imports"
+import sys
+sys.path.append('/opt/fundraising/tools')
+
+print "imports\n"
 from process.globals import load_config
 load_config("dedupe")
 from process.globals import config
@@ -16,7 +19,7 @@ from match import EmailMatch
 from review_job import ReviewJob
 from review_queue import ReviewQueue
 
-print "classdef"
+print "classdef\n"
 class QuickAutoreview(object):
     QUICK_REVIEWED = Tag.get("Quick autoreviewed")
 
@@ -65,16 +68,16 @@ class QuickAutoreview(object):
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
 if __name__ == '__main__':
-    print "begin"
+    print "begin\n"
     lock.begin()
 
-    print "init"
+    print "init\n"
     job = QuickAutoreview()
-    print "review"
+    print "review\n"
     job.reviewBatch()
-    print "commit"
+    print "commit\n"
     ReviewQueue.commit()
 
-    print "unlock"
+    print "unlock\n"
     lock.end()
-    print "done"
+    print "done\n"
