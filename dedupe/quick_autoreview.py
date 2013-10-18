@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 
 from process.globals import load_config
