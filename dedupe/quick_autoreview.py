@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env PYTHONPATH=/opt/fundraising/tools python
 
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 

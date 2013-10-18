@@ -17,7 +17,7 @@ class Connection(object):
     def execute(self, sql, params=None):
         cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
 
-        if self.debug:
+        if True or self.debug:
             print sql, params
 
         if params:
