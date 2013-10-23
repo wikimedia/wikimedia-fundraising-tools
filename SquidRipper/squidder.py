@@ -7,6 +7,8 @@ import os
 import fnmatch
 import json
 
+# NOTE: This script requires a set of WMF PyBal configuration files. These may be obtained
+# from fenari:/h/w/conf/pybal.conf. For more details talk to paravoid.
 
 def main():
     # === Extract options ===
@@ -25,7 +27,11 @@ def main():
     if len(args) > 0:
         hosts = args
     else:
-        hosts = loadPybal('text')
+        hosts = set(loadPybal('text'))
+        hosts.union(set(loadPybal('text-squids')))
+        hosts.union(set(loadPybal('text-varnish')))
+        hosts = list(hosts)
+        hosts.sort()
 
     # Construct the URL set
     headers = {
