@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import os
+import os.path
+import re
+import sys
+
+from process.globals import load_config
+load_config("language_audit")
+
+from process.globals import config
+from process.lock import begin, end
+
+from mediawiki.i18n import get_languages
+from mediawiki.page import get_content
+
+def check_pages():
+    for check_spec in config.check_page_languages:
+        api_url = check_spec['api']
+        languages = sorted([ l['code'] for l in get_languages(api=api_url) ])
+        for lang in languages:
+            title = check_spec['page'].format(language=lang)
+            content = get_content(title, api=api_url)
+            description = re.sub(r'^https?://([^/]+)/.*$', r'\1', api_url) + ": " + title
+            if not content:
+                print "MISSING: " + description
+            else:
+                print "found: " + description
+
+if __name__ == "__main__":
+    try:
+        begin()
+
+        check_pages()
+    finally:
+        end()
