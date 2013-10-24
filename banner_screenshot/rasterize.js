@@ -29,7 +29,7 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
                     // workaround for broken banner css
                     var divHeight = cn.height();
                     if ( divHeight === 0 ) {
-                        divHeight = page.viewportSize.height;
+                        divHeight = 728;
                         console.log("No height found, using default of " + divHeight);
                     }
 
