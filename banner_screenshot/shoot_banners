@@ -8,7 +8,7 @@ import sys
 
 from process.logging import Logger as log
 from process.globals import load_config
-load_config("banners")
+load_config("banner_screenshot")
 from process.globals import config
 
 from mediawiki.centralnotice.api import get_campaign_logs

@@ -2,6 +2,8 @@ import re
 import os.path
 from yaml import safe_load as load_yaml
 
+from process.logging import Logger as log
+
 # n.b. Careful not to import `config` by value
 config = dict()
 
@@ -11,10 +13,10 @@ def load_config(app_name):
     search_filenames = [
         os.path.expanduser("~/.fundraising/%s.yaml" % app_name),
         os.path.expanduser("~/.%s.yaml" % app_name),
-        "config.yaml",
+        os.path.dirname(__file__) + "/../%s/config.yaml" % app_name,
         "/etc/fundraising/%s.yaml" % app_name,
         "/etc/%s.yaml" % app_name,
-        "%s.yaml" % app_name,
+        os.path.dirname(__file__) + "/../%s/%s.yaml" % (app_name, app_name,)
     ]
     # TODO: if getops.get(--config/-f): search_filenames.append
 
@@ -22,6 +24,7 @@ def load_config(app_name):
         if not os.path.exists(filename):
             continue
 
+        log.info("Found config file {path}, loading...".format(path=filename))
         config = DictAsAttrDict(load_yaml(file(filename, 'r')))
 
         return
