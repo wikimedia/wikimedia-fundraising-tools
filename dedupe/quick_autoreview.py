@@ -2,6 +2,7 @@
 
 '''Find low-hanging dupe fruits and mark them for the manual review queue'''
 
+from process.logging import Logger as log
 from process.globals import load_config
 load_config("dedupe")
 from process.globals import config
@@ -62,7 +63,15 @@ class QuickAutoreview(object):
 
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
+        if not self.contactCache.contacts:
+            log.warn("Searched an empty batch of contacts!")
+        else:
+            last_seen = self.contactCache.contacts[-1]['id']
+            log.info("End of batch.  Last contact scanned was ID {id}".format(id=last_seen))
+
+
 if __name__ == '__main__':
+    log.info("Begin quick_autoreview deduper")
     lock.begin()
 
     job = QuickAutoreview()
@@ -70,3 +79,4 @@ if __name__ == '__main__':
     ReviewQueue.commit()
 
     lock.end()
+    log.info("End quick_autoreview deduper")

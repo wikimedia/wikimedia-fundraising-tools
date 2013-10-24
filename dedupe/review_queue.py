@@ -1,3 +1,4 @@
+from process.logging import Logger as log
 from process.globals import config
 from database import db
 
@@ -7,6 +8,7 @@ class ReviewQueue(object):
 
     @staticmethod
     def addMatch(job_id, oldId, newId, action, match):
+        log.info("Found a match: {old} -> {new} : {match}".format(old=oldId, new=newId, match=match))
         db.get_db(config.drupal_schema).execute("""
             INSERT INTO donor_review_queue
                 SET
@@ -35,7 +37,9 @@ class ReviewQueue(object):
 
     @staticmethod
     def commit():
+        log.info("Committing tags...")
         for tag, contacts in ReviewQueue.cached_tags.items():
+            log.info("Bulk tagging {num} contacts with tag <{tag}>".format(num=len(contacts), tag=tag.name))
             ReviewQueue.tag_many(contacts, tag)
 
     @staticmethod

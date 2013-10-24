@@ -1,5 +1,6 @@
 '''Optimized retrieval and in-memory storage of a small amount of information across many contacts.'''
 
+from process.logging import Logger as log
 from process.globals import config
 from database import db
 
@@ -75,6 +76,7 @@ class PagedGroup(ContactCache):
 
     def buildQuery(self):
         query = super(PagedGroup, self).buildQuery()
+        log.info("Limiting batch contact retrieval to {num} records.".format(num=self.pagesize))
         query.limit = self.pagesize
         query.offset = self.offset
         return query

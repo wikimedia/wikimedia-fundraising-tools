@@ -1,1 +1,1 @@
-pip install python-Levenshtein MySQL-python
+apt-get install python-yaml python-Levenshtein python-mysqldb

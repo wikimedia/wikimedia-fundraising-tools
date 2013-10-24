@@ -4,6 +4,7 @@ Mysql wrapper which allows query composition
 import MySQLdb as Dbi
 import atexit
 
+from process.logging import Logger as log
 from process.globals import config
 
 class Connection(object):
@@ -18,7 +19,10 @@ class Connection(object):
         cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
 
         if self.debug:
-            print sql, params
+            if params:
+                log.debug(str(sql) + " % " + repr(params))
+            else:
+                log.debug(str(sql))
 
         if params:
             cursor.execute(sql, params)
