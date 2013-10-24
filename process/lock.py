@@ -6,6 +6,8 @@ Self-corrects stale locks unless "failopen" is True.
 import os, os.path
 import sys
 
+from logging import Logger as log
+
 lockfile = None
 
 def begin(filename=None, failopen=False):
@@ -15,7 +17,7 @@ def begin(filename=None, failopen=False):
         filename = "/tmp/%s-%s.lock" % (unique, cmd)
 
     if os.path.exists(filename):
-        print "Lockfile found!"
+        log.warn("Lockfile found!")
         f = open(filename, "r")
         pid = None
         try:
@@ -24,18 +26,18 @@ def begin(filename=None, failopen=False):
             pass
         f.close()
         if not pid:
-            print "Invalid lockfile contents."
+            log.error("Invalid lockfile contents.")
         else:
             try:
                 os.getpgid(pid)
-                print "Aborting! Previous process (%d) is still alive. Remove lockfile manually if in error: %s" % (pid, filename, )
+                log.error("Aborting! Previous process ({pid}) is still alive. Remove lockfile manually if in error: {path}".format(pid=pid, path=filename))
                 sys.exit(1)
             except OSError:
                 if failopen:
-                    print "Aborting until stale lockfile is investigated: %s" % filename
+                    log.fatal("Aborting until stale lockfile is investigated: {path}".format(path=filename))
                     sys.exit(1)
-                print "Lockfile is stale."
-        print "Removing old lockfile."
+                log.error("Lockfile is stale.")
+        log.info("Removing old lockfile.")
         os.unlink(filename)
 
     f = open(filename, "w")

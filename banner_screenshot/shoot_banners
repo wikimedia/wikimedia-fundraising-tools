@@ -6,26 +6,31 @@ import subprocess
 import re
 import sys
 
+from process.logging import Logger as log
 from process.globals import load_config
 load_config("banners")
-
 from process.globals import config
+
 from mediawiki.centralnotice.api import get_campaign_logs
 from mediawiki.centralnotice.time_util import str_time_offset
 from process.lock import begin, end
 
 def reduce_banners(campaign_logs):
-    '''Return a map from banner names to most recent campaign settings.'''
+    '''Return a map of banner names, to their most recent campaign settings.'''
+    # TODO: this would be in error if a banner were linked from different campaigns...
     banners = dict()
     for entry in campaign_logs:
         settings = entry['end']
         campaign_banners = settings['banners']
 
-        # we only need one country...
         settings['country'] = "US"
         if settings['geo'] == "1" and settings['countries']:
+            # FIXME: unfudge country list.  The campaign should specify whether it displays regional variation.
             settings['country'] = settings['countries'][0]
+            if len(settings['countries']) > 1:
+                log.debug("Multi-country campaign found, however, we woefully ignore country-based locale variation.")
 
+        # XXX why not "not empty campaign_banners"?
         if hasattr(campaign_banners, 'keys'):
             banners.update(
                 dict.fromkeys(
@@ -38,34 +43,41 @@ def reduce_banners(campaign_logs):
 def get_screenshot_path(name, lang):
     return os.path.join(
         config.banner_screenshots_dir,
-        "%(banner)s/%(banner)s_%(lang)s.%(ext)s" % {
-            "banner": name,
-            "lang": lang,
-            "ext": config.banner_screenshot_format,
-        }
+        "{banner}", "{banner}_{lang}.{ext}"
+    ).format(
+        banner=name,
+        lang=lang,
+        ext=config.banner_screenshot_format,
     )
 
-def banner_screenshot_exists(name, lang):
-    return os.path.exists(get_screenshot_path(name, lang))
-
 def render(name, lang, country):
+    '''Render a localized banner to file'''
     global JS_RENDER_SCRIPT
 
-    url = config.article_url % { "banner": name, "lang": lang, "country": country }
+    url = config.article_url % {"banner": name, "lang": lang, "country": country}
     path = get_screenshot_path(name, lang)
+    # TODO: option/default to update
+    if os.path.exists(path):
+        log.info("Banner screenshot already saved to {path}, not updating.".format(path=path))
+        return
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
+        log.info("Beginning dumps for banner {banner}".format(banner=name))
         os.makedirs(dir)
 
-    print "Fetching " + url + " into " + path
-    subprocess.check_call([config.phantomjs, JS_RENDER_SCRIPT, url, path])
+    log.info("Fetching {url} into {path}".format(url=url, path=path))
+    cmd = [config.phantomjs, JS_RENDER_SCRIPT, url, path]
+    buf = subprocess.check_output(cmd)
+    log.info("phantom> {output}".format(output=buf))
 
 def process_banners():
+    log.info("Getting campaigns changed in the last two days...")
     banners = reduce_banners(get_campaign_logs(since=str_time_offset(days=-2)))
     for name, campaign_settings in banners.items():
         country = "US"
         m = re.match(config.banner_name_regex, name)
         if m:
+            # "yy" means, "all languages", and "YY" all countries.
             explicit_lang = m.group('lang')
             if explicit_lang != "yy":
                 campaign_settings['languages'] = [ explicit_lang ]
@@ -73,16 +85,23 @@ def process_banners():
             if explicit_country != "YY":
                 campaign_settings['country'] = explicit_country
 
-        for lang in campaign_settings['languages']:
-            if not banner_screenshot_exists(name, lang):
-                render(name, lang, campaign_settings['country'])
+            log.debug("Parsed banner naming magic to get lang={lang}, country={country}".format(lang=explicit_lang, country=explicit_country))
+        else:
+            log.debug("Unrecognized banner naming magic: {name}".format(name=name))
 
+        log.debug("Rendering for languages: {languages}.".format(languages=", ".join(campaign_settings['languages'])))
+        for lang in campaign_settings['languages']:
+            render(name, lang, campaign_settings['country'])
+
+
+# set a magic global
+__dir__ = os.path.dirname(os.path.abspath(__file__))
+JS_RENDER_SCRIPT = os.path.join(__dir__, "rasterize.js")
 
 if __name__ == "__main__":
     try:
+        log.info("Beginning banner scrape")
         begin()
-
-        JS_RENDER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rasterize.js")
 
         if len(sys.argv) > 1:
             for name in sys.argv[1:]:
@@ -91,3 +110,4 @@ if __name__ == "__main__":
             process_banners()
     finally:
         end()
+        log.info("Done.")

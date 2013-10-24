@@ -19,17 +19,18 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
     page.viewportSize = { width: 1024, height: 728 };
     page.open(address, function (status) {
         if (status !== 'success') {
-            console.log('Unable to load the address!');
+            console.error('Unable to load the address!');
         } else {
             //console.log(JSON.stringify(phantom.cookies, null, 2));
             window.setTimeout(function () {
                 page.clipRect = page.evaluate(function() {
                     var cn = $('#centralNotice');
 
-                    // FIXME: workaround for broken dropdown banner css, see FR #1085
+                    // workaround for broken banner css
                     var divHeight = cn.height();
                     if ( divHeight === 0 ) {
-                        divHeight = 728;
+                        divHeight = page.viewportSize.height;
+                        console.log("No height found, using default of " + divHeight);
                     }
 
                     return {
@@ -39,7 +40,7 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
                         height: divHeight
                     };
                 });
-                console.log(page.clipRect.width + " x " + page.clipRect.height);
+                console.debug("#centralNotice was " + page.clipRect.width + "px x " + page.clipRect.height + "px");
                 page.render(output);
                 phantom.exit();
             }, 1000);
