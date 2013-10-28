@@ -5,9 +5,10 @@ from process.globals import config
 from database import db
 
 class ContactCache(object):
-    def __init__(self, **kw):
+    def __init__(self, require_email=False, **kw):
         self.columns = []
         self.contacts = []
+        self.require_email = require_email
 
     def isEmpty(self):
         return not self.contacts.empty()
@@ -52,9 +53,12 @@ class ContactCache(object):
             "state.abbreviation",
             "country.iso_code",
         ])
+        email_clause = "civicrm_email email ON contact.id = email.contact_id"
+        if self.require_email:
+            email_clause += " AND email.email IS NOT NULL"
         query.tables = [
             "civicrm_contact contact",
-            "civicrm_email email ON contact.id = email.contact_id",
+            email_clause,
             "civicrm_address address ON contact.id = address.contact_id",
             "civicrm_country country ON address.country_id = country.id",
             "civicrm_state_province state ON address.state_province_id = state.id",
@@ -96,10 +100,7 @@ class TaggedGroup(PagedGroup):
     def buildQuery(self):
         query = super(TaggedGroup, self).buildQuery()
         query.tables.extend([
-            "civicrm_entity_tag ON civicrm_entity_tag.entity_id = contact.id AND civicrm_entity_tag.tag_id = %(tag_id)s",
-        ])
-        query.where.extend([
-            "civicrm_entity_tag.entity_table = 'civicrm_contact'"
+            "civicrm_entity_tag entity_tag ON entity_tag.entity_id = contact.id AND entity_tag.tag_id = %(tag_id)s AND entity_tag.entity_table = 'civicrm_contact'",
         ])
         query.params.update({
             'tag_id': self.tag.id
@@ -107,7 +108,7 @@ class TaggedGroup(PagedGroup):
 
         if self.excludetag:
             query.tables.extend([
-                "civicrm_entity_tag entity_tag_not ON entity_tag_not.entity_id = contact.id AND entity_tag_not.tag_id = %(excludetag_id)s",
+                "civicrm_entity_tag entity_tag_not ON entity_tag_not.entity_id = contact.id AND entity_tag_not.tag_id = %(excludetag_id)s AND entity_tag_not.entity_table = 'civicrm_contact'",
             ])
             query.where.extend([
                 "entity_tag_not.id IS NULL"

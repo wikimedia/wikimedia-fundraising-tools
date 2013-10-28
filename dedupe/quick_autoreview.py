@@ -22,7 +22,8 @@ class QuickAutoreview(object):
     def __init__(self):
         self.contactCache = TaggedGroup(
             tag=Autoreview.REVIEW,
-            excludetag=QuickAutoreview.QUICK_REVIEWED
+            excludetag=QuickAutoreview.QUICK_REVIEWED,
+            require_email=True
         )
         job = ReviewJob("Quick autoreview")
         self.job_id = job.id
@@ -34,32 +35,30 @@ class QuickAutoreview(object):
 
         self.contactCache.fetch()
         for contact in self.contactCache.contacts:
-            if not contact['email']:
-                continue
+            if contact['email']:
+                query = db.Query()
+                query.columns = [
+                    'MIN(contact_id) AS contact_id',
+                ]
+                query.tables = [
+                    'civicrm_email',
+                ]
+                query.where.extend([
+                    'email = %(email)s',
+                    'contact_id < %(new_id)s',
+                ])
+                query.group_by.extend([
+                    'email',
+                ])
+                query.params = {
+                    'new_id': contact['id'],
+                    'email': contact['email'],
+                }
+                result = db.get_db().execute(query)
 
-            query = db.Query()
-            query.columns = [
-                'MIN(contact_id) AS contact_id',
-            ]
-            query.tables = [
-                'civicrm_email',
-            ]
-            query.where.extend([
-                'email = %(email)s',
-                'contact_id < %(new_id)s',
-            ])
-            query.group_by.extend([
-                'email',
-            ])
-            query.params = {
-                'new_id': contact['id'],
-                'email': contact['email'],
-            }
-            result = db.get_db().execute(query)
-
-            if result:
-                for row in result:
-                    ReviewQueue.addMatch(self.job_id, row['contact_id'], contact['id'], Autoreview.REC_DUP, matchDescription)
+                if result:
+                    for row in result:
+                        ReviewQueue.addMatch(self.job_id, row['contact_id'], contact['id'], Autoreview.REC_DUP, matchDescription)
 
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
