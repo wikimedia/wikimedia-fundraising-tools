@@ -67,7 +67,7 @@ def main():
                     if ptime + (2 * interval) < ctime:
                         for dataline in data[ptime]:
                             sys.stdout.write("%s\t%s\t%s\n" % (
-                                datetime.fromtimestamp(ptime).strftime('%y-%m-%dT%H:%M:%S'),
+                                datetime.fromtimestamp(ptime).strftime('%Y-%m-%d %H:%M:%S'),
                                 colNameSep.join(dataline),
                                 data[ptime][dataline] * multiplier
                             ))
@@ -85,7 +85,7 @@ def main():
         sys.stdout.write("\n")
 
         for ptime in sorted(data.keys()):
-            outline = [datetime.fromtimestamp(ptime).strftime('%y-%m-%dT%H:%M:%S')]
+            outline = [datetime.fromtimestamp(ptime).strftime('%Y-%m-%d %H:%M:%S')]
             for cols in uniqueCols:
                 if cols in data[ptime]:
                     outline.append(str(data[ptime][cols] * multiplier))
