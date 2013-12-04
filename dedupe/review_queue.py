@@ -8,7 +8,7 @@ class ReviewQueue(object):
 
     @staticmethod
     def addMatch(job_id, oldId, newId, action, match):
-        log.info("Found a match: {old} -> {new} : {match}".format(old=oldId, new=newId, match=match))
+        #log.info("Found a match: {old} -> {new} : {match}".format(old=oldId, new=newId, match=match))
         db.get_db(config.drupal_schema).execute("""
             INSERT INTO donor_review_queue
                 SET
