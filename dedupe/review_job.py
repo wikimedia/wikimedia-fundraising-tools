@@ -1,3 +1,4 @@
+from process.logging import Logger as log
 from process.globals import config
 from database import db
 
@@ -9,3 +10,4 @@ class ReviewJob(object):
         dbc = db.get_db(config.drupal_schema)
         dbc.execute(sql, (name, ))
         self.id = dbc.last_insert_id()
+        log.info("This job has ID %d" % self.id)
