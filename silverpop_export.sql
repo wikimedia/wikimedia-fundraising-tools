@@ -1,4 +1,7 @@
+SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
 DROP TABLE IF EXISTS silverpop_export;
+DROP TABLE IF EXISTS silverpop_unsubscribe_export;
 CREATE TABLE silverpop_export(
   id int unsigned PRIMARY KEY AUTO_INCREMENT,
   
@@ -8,6 +11,7 @@ CREATE TABLE silverpop_export(
   last_name varchar(128),
   preferred_language varchar(5),
   email varchar(255),
+  opted_out tinyint(1),
   
   -- Step 5 lifetime statistics
   has_recurred_donation tinyint(1),
@@ -31,9 +35,9 @@ CREATE TABLE silverpop_export(
   latest_donation datetime,
   
   -- Step 7 Address information
-  city varchar(64),
+  city varchar(128),
   country varchar(2),
-  postal_code varchar(16),
+  postal_code varchar(128),
   
   -- Step 8 Geonames lookup of timezone
   tzoffset float,
@@ -46,29 +50,30 @@ CREATE INDEX spex_email ON silverpop_export(email);
 CREATE INDEX spex_city ON silverpop_export(city);
 CREATE INDEX spex_country ON silverpop_export(country);
 CREATE INDEX spex_postal ON silverpop_export(postal_code);
+CREATE INDEX spex_opted_out ON silverpop_export(opted_out);
 
 -- STEP 1: Populate the temporary table with all contacts that have an
 -- email address
 INSERT INTO silverpop_export
-  (contact_id, email, first_name, last_name, preferred_language)
+  (contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
     e.contact_id, e.email, c.first_name, c.last_name,
-    IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2))
+    IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
+    c.is_deleted OR c.is_opt_out
   FROM civicrm.civicrm_email e, civicrm.civicrm_contact c
   WHERE
     e.email IS NOT NULL AND e.email != '' AND
-    e.contact_id = c.id AND
-    c.is_deleted = 0 AND c.is_opt_out = 0;
+    e.contact_id = c.id;
 
 -- STEP 2: Deduplicate rows that have the same email address, we will
 -- have to merge in more data later, but this is >500k rows we're
 -- getting rid of here which is more better than taking them all the way
 -- through.
 CREATE TABLE silverpop_export_dedupe_email
-  (id INT PRIMARY KEY AUTO_INCREMENT, email varchar(255), maxid int);
+  (id INT PRIMARY KEY AUTO_INCREMENT, email varchar(255), maxid int, opted_out tinyint(1));
 
-INSERT INTO silverpop_export_dedupe_email (email, maxid)
-   SELECT email, max(id) maxid FROM silverpop_export
+INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
+   SELECT email, max(id) maxid, max(opted_out) opted_out FROM silverpop_export
      FORCE INDEX (spex_email)
      GROUP BY email
      HAVING count(*) > 1;
@@ -77,16 +82,22 @@ DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_email
   WHERE
     silverpop_export.email = silverpop_export_dedupe_email.email AND
     silverpop_export.id != silverpop_export_dedupe_email.maxid;
-  
+
+UPDATE silverpop_export ex, silverpop_export_dedupe_email de
+  SET ex.opted_out = 1
+  WHERE
+    de.opted_out = 1 AND de.maxid = ex.contact_id;
+
 DROP TABLE silverpop_export_dedupe_email;
 
 -- STEP 3: Deduplicate rows that have the same contact ID because they'll
 -- generate the same result (> 50k rows)
 CREATE TABLE silverpop_export_dedupe_contact
-  (id int PRIMARY KEY AUTO_INCREMENT, contact_id int, maxid int);
+  (id int PRIMARY KEY AUTO_INCREMENT, contact_id int, maxid int, opted_out tinyint(1));
+CREATE INDEX spexdc_optedout ON silverpop_export_dedupe_contact(opted_out);
   
-INSERT INTO silverpop_export_dedupe_contact (contact_id, maxid)
-  SELECT contact_id, max(id) maxid FROM silverpop_export
+INSERT INTO silverpop_export_dedupe_contact (contact_id, maxid, opted_out)
+  SELECT contact_id, max(id) maxid, max(opted_out) opted_out FROM silverpop_export
     FORCE INDEX (spex_contact_id)
   GROUP BY contact_id
   HAVING count(*) > 1;
@@ -96,13 +107,14 @@ DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_contact
     silverpop_export.contact_id = silverpop_export_dedupe_contact.contact_id AND
     silverpop_export.id != silverpop_export_dedupe_contact.maxid;
 
+UPDATE silverpop_export ex, silverpop_export_dedupe_contact dc
+  SET ex.opted_out = 1
+  WHERE
+    dc.opted_out = 1 AND dc.maxid = ex.contact_id;
+
 DROP TABLE silverpop_export_dedupe_contact;
 
--- STEP 4 Update every email address with every contact and opt them out
-DELETE ex
-FROM silverpop_export ex, civicrm.civicrm_email e USE INDEX(UI_email), civicrm.civicrm_contact c
-WHERE
-  ex.email = e.email AND e.contact_id = c.id AND c.is_opt_out = 1;
+-- STEP 4 Was updating opt outs; but I've merged that into steps 2 and 3
 
 -- STEP 5: Create an aggregate table from a full contribution table scan
 DROP TABLE IF EXISTS silverpop_export_stat;
@@ -143,7 +155,7 @@ INSERT INTO silverpop_export_stat
     SUM(IF('2012-07-1' < ct.receive_date AND ct.receive_date < '2013-07-01', 1, 0)),
     SUM(IF('2013-07-1' < ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
   FROM silverpop_export ex, civicrm.civicrm_email e, civicrm.civicrm_contribution ct
-  WHERE e.email=ex.email AND e.contact_id=ct.contact_id
+  WHERE e.email=ex.email AND e.contact_id=ct.contact_id AND ex.opted_out = 0
   GROUP BY e.email;
 
 UPDATE silverpop_export ex, silverpop_export_stat exs
@@ -174,7 +186,8 @@ SET
   latest_usd_amount = ct.total_amount,
   latest_donation = ct.receive_date
 WHERE
-  ex.last_ctid = ct.id;
+  ex.last_ctid = ct.id AND
+  ex.opted_out = 0;
 
 -- STEP 7: Join on address
 UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
@@ -182,13 +195,14 @@ UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_countr
     ex.city = addr.city,
     ex.country = ctry.iso_code,
     ex.postal_code = addr.postal_code
-  WHERE ex.contact_id = addr.contact_id AND addr.country_id = ctry.id;
+  WHERE ex.contact_id = addr.contact_id AND addr.country_id = ctry.id AND ex.opted_out = 0;
 
 -- STEP 8: Geonames lookup of timezone
 -- 8.1 Lookup by post code and country
 UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
+    ex.opted_out = 0 AND
     ex.postal_code IS NOT NULL AND
     ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
     a.format='post' AND
@@ -207,13 +221,14 @@ UPDATE
   ) tz
   SET ex.tzoffset = tz.offset
   WHERE
+    ex.opted_out = 0 AND
     ex.tzoffset is NULL AND
     tz.country_code=ex.country;
     
 -- 8.3 And really otherwise, just set it to 0
 UPDATE silverpop_export ex
   SET ex.tzoffset = 0
-  WHERE ex.tzoffset is NULL;
+  WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
   
 -- STEP 9 Normalize some data
 UPDATE silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
@@ -234,12 +249,13 @@ UPDATE silverpop_export SET
     latest_usd_amount = 0,
     latest_donation = NOW(),
     has_recurred_donation = 0
-  WHERE donation_count IS NULL;
-UPDATE silverpop_export SET country='US' where country IS NULL;
+  WHERE donation_count IS NULL AND ex.opted_out = 0;
+UPDATE silverpop_export SET country='US' where country IS NULL AND ex.opted_out = 0;
 
 -- STEP 10 Create the unsub hash
-UPDATE silverpop_export ex SET
-  unsub_hash = SHA1(CONCAT(last_ctid, email, XXX));
+UPDATE silverpop_export ex
+SET unsub_hash = SHA1(CONCAT(last_ctid, email, XXX))
+WHERE ex.opted_out = 0;
   
 -- Export some random rows
 -- Run something like this from the command line like so...
@@ -265,3 +281,6 @@ FROM silverpop_export AS r1 JOIN
  WHERE r1.id >= r2.id
  ORDER BY r1.id ASC
  LIMIT 1000;
+ 
+-- Also export the unsubscribes
+SELECT email FROM silverpop_export WHERE opted_out=1 LIMIT 1000;
