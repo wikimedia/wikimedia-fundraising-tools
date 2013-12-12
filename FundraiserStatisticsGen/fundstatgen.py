@@ -1,11 +1,17 @@
 #!/usr/bin/python
 
-import sys
+"""
+Fundraiser Statistics Generation
+
+Queries the CiviCRM database to
+"""
+
 import MySQLdb as db
 import csv
 from optparse import OptionParser
 from ConfigParser import SafeConfigParser
-from operator import itemgetter
+import logging
+from logging.handlers import SysLogHandler
 
 def main():
     # Extract any command line options
@@ -32,20 +38,20 @@ def main():
     password = config.get('MySQL', 'password')
     database = config.get('MySQL', 'schema')
 
-    print("Running per year query...")
+    logging.info("Running per year query...")
     stats = getPerYearData(hostname, port, username, password, database)
 
-    print("Pivoting data into year/day form...")
+    logging.info("Pivoting data into year/day form...")
     (years, pivot) = pivotDataByYear(stats)
 
-    print("Writing year data output files...")
+    logging.info("Writing year data output files...")
     createSingleOutFile(stats, 'date', workingDir + '/donationdata-vs-day.csv')
     createOutputFiles(pivot, 'date', workingDir + '/yeardata-day-vs-', years)
 
-    print("Running per campaign query...")
+    logging.info("Running per campaign query...")
     pcStats = getPerCampaignData(hostname, port, username, password, database)
 
-    print("Writing campaign data output files...")
+    logging.info("Writing campaign data output files...")
     createSingleOutFile(pcStats, ('medium', 'campaign'), workingDir + '/campaign-vs-amount.csv')
 
 
@@ -247,4 +253,21 @@ def createSingleOutFile(stats, firstcols, filename, colnames = None):
 
 
 if __name__ == "__main__":
-    main()
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.captureWarnings(True)
+
+    # Log to console
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter('%(levelname)s:%(filename)s:%(lineno)d -- %(message)s'))
+    logging.addHandler(console)
+
+    # Log to syslog
+    syslog = SysLogHandler(address='/dev/log')
+    syslog.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)s:%(filename)s:%(lineno)d -- %(message)s'))
+    logging.addHandler(syslog)
+
+    # Run the program
+    try:
+        main()
+    except Exception as ex:
+        logging.exception('Unexpected exception! Death is me.')
