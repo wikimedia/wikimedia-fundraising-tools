@@ -1,7 +1,10 @@
-SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+SET autocommit = 1;
 
 DROP TABLE IF EXISTS silverpop_export;
 DROP TABLE IF EXISTS silverpop_unsubscribe_export;
+DROP TABLE IF EXISTS silverpop_export_dedupe_email;
+DROP TABLE IF EXISTS silverpop_export_stat;
+
 CREATE TABLE silverpop_export(
   id int unsigned PRIMARY KEY AUTO_INCREMENT,
   
@@ -54,16 +57,20 @@ CREATE INDEX spex_opted_out ON silverpop_export(opted_out);
 
 -- STEP 1: Populate the temporary table with all contacts that have an
 -- email address
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION;
 INSERT INTO silverpop_export
   (contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
     e.contact_id, e.email, c.first_name, c.last_name,
     IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    c.is_deleted OR c.is_opt_out
+    (c.is_deleted OR c.is_opt_out OR c.do_not_mail)
   FROM civicrm.civicrm_email e, civicrm.civicrm_contact c
   WHERE
     e.email IS NOT NULL AND e.email != '' AND
     e.contact_id = c.id;
+COMMIT;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 -- STEP 2: Deduplicate rows that have the same email address, we will
 -- have to merge in more data later, but this is >500k rows we're
@@ -73,10 +80,11 @@ CREATE TABLE silverpop_export_dedupe_email
   (id INT PRIMARY KEY AUTO_INCREMENT, email varchar(255), maxid int, opted_out tinyint(1));
 
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
-   SELECT email, max(id) maxid, max(opted_out) opted_out FROM silverpop_export
-     FORCE INDEX (spex_email)
-     GROUP BY email
-     HAVING count(*) > 1;
+   SELECT email, max(id) maxid, max(opted_out) opted_out
+     FROM silverpop_export
+       FORCE INDEX (spex_email)
+       GROUP BY email
+       HAVING count(*) > 1;
 
 DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_email
   WHERE
@@ -86,9 +94,7 @@ DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_email
 UPDATE silverpop_export ex, silverpop_export_dedupe_email de
   SET ex.opted_out = 1
   WHERE
-    de.opted_out = 1 AND de.maxid = ex.contact_id;
-
-DROP TABLE silverpop_export_dedupe_email;
+    de.opted_out = 1 AND de.maxid = ex.id;
 
 -- STEP 3: Deduplicate rows that have the same contact ID because they'll
 -- generate the same result (> 50k rows)
@@ -110,14 +116,11 @@ DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_contact
 UPDATE silverpop_export ex, silverpop_export_dedupe_contact dc
   SET ex.opted_out = 1
   WHERE
-    dc.opted_out = 1 AND dc.maxid = ex.contact_id;
-
-DROP TABLE silverpop_export_dedupe_contact;
+    dc.opted_out = 1 AND dc.maxid = ex.id;
 
 -- STEP 4 Was updating opt outs; but I've merged that into steps 2 and 3
 
 -- STEP 5: Create an aggregate table from a full contribution table scan
-DROP TABLE IF EXISTS silverpop_export_stat;
 CREATE TABLE silverpop_export_stat (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
@@ -139,6 +142,8 @@ CREATE TABLE silverpop_export_stat (
   cnt_2013 tinyint
 );
 
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION;
 INSERT INTO silverpop_export_stat
   (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation,
     cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013)
@@ -154,9 +159,12 @@ INSERT INTO silverpop_export_stat
     SUM(IF('2011-07-1' < ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
     SUM(IF('2012-07-1' < ct.receive_date AND ct.receive_date < '2013-07-01', 1, 0)),
     SUM(IF('2013-07-1' < ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
-  FROM silverpop_export ex, civicrm.civicrm_email e, civicrm.civicrm_contribution ct
-  WHERE e.email=ex.email AND e.contact_id=ct.contact_id AND ex.opted_out = 0
+  FROM silverpop_export ex
+  LEFT OUTER JOIN civicrm.civicrm_email e ON e.contact_id=ex.contact_id AND e.email=ex.email
+  LEFT OUTER JOIN civicrm.civicrm_contribution ct ON ct.contact_id=ex.contact_id
   GROUP BY e.email;
+COMMIT;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 UPDATE silverpop_export ex, silverpop_export_stat exs
   SET
@@ -175,10 +183,10 @@ UPDATE silverpop_export ex, silverpop_export_stat exs
     ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
-
-DROP TABLE silverpop_export_stat;
   
 -- STEP 6: Populate information about the most recent contribution
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION;
 UPDATE silverpop_export ex, civicrm.civicrm_contribution ct
 SET
   latest_currency = SUBSTRING(ct.source, 1, 3),
@@ -188,18 +196,24 @@ SET
 WHERE
   ex.last_ctid = ct.id AND
   ex.opted_out = 0;
+COMMIT;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 -- STEP 7: Join on address
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION;
 UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
   SET
     ex.city = addr.city,
     ex.country = ctry.iso_code,
     ex.postal_code = addr.postal_code
   WHERE ex.contact_id = addr.contact_id AND addr.country_id = ctry.id AND ex.opted_out = 0;
+COMMIT;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 -- STEP 8: Geonames lookup of timezone
 -- 8.1 Lookup by post code and country
-UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
+UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, dev_geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
     ex.opted_out = 0 AND
@@ -215,7 +229,7 @@ UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.t
 UPDATE
   silverpop_export ex,
   (SELECT g.country_code country_code, tz.offset offset
-    FROM geonames.geonames g, geonames.timezones tz 
+    FROM dev_geonames.geonames g, dev_geonames.timezones tz 
     WHERE g.tzid=tz.tzid 
     GROUP BY g.country_code
   ) tz
