@@ -38,6 +38,8 @@ def main():
     password = config.get('MySQL', 'password')
     database = config.get('MySQL', 'schema')
 
+    logging.debug("Will connect to MySQL using: %s@%s:%d", username, hostname, port)
+
     logging.info("Running per year query...")
     stats = getPerYearData(hostname, port, username, password, database)
 
@@ -94,6 +96,7 @@ def getPerYearData(host, port, username, password, database):
         max = float(max)
 
         if cyear != year:
+            cyear = year
             ytdCreditSum = 0
             ytdRefundSum = 0
         ytdCreditSum += credit_sum
@@ -259,12 +262,12 @@ if __name__ == "__main__":
     # Log to console
     console = logging.StreamHandler()
     console.setFormatter(logging.Formatter('%(levelname)s:%(filename)s:%(lineno)d -- %(message)s'))
-    logging.addHandler(console)
+    logging.getLogger().addHandler(console)
 
     # Log to syslog
     syslog = SysLogHandler(address='/dev/log')
     syslog.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)s:%(filename)s:%(lineno)d -- %(message)s'))
-    logging.addHandler(syslog)
+    logging.getLogger().addHandler(syslog)
 
     # Run the program
     try:
