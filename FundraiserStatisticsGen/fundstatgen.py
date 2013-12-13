@@ -69,16 +69,18 @@ def getPerYearData(host, port, username, password, database):
     cur = con.cursor()
     cur.execute("""
         SELECT
-          DATE_FORMAT(receive_date, "%Y-%m-%d") as receive_date,
-          SUM(IF(total_amount >= 0, total_amount, 0)) as credit,
-          SUM(IF(total_amount >= 0, 1, 0)) as credit_count,
-          SUM(IF(total_amount < 0, total_amount, 0)) as refund,
-          SUM(IF(total_amount < 0, 1, 0)) as refund_count,
-          AVG(IF(total_amount >= 0, total_amount, 0)) as `avg`,
-          MAX(total_amount)
-        FROM civicrm_contribution
-        WHERE receive_date >= '2006-01-01'
-        GROUP BY DATE_FORMAT(receive_date, "%Y-%m-%d") ASC;
+          DATE_FORMAT(con.receive_date, "%Y-%m-%d") as receive_date,
+          SUM(IF(con.total_amount >= 0, total_amount, 0)) as credit,
+          SUM(IF(con.total_amount >= 0, 1, 0)) as credit_count,
+          SUM(IF(con.total_amount < 0, total_amount, 0)) as refund,
+          SUM(IF(con.total_amount < 0, 1, 0)) as refund_count,
+          AVG(IF(con.total_amount >= 0, total_amount, 0)) as `avg`,
+          MAX(con.total_amount)
+        FROM civicrm_contribution con, drupal.contribution_tracking ct
+        WHERE
+          con.id=ct.contribution_id AND
+          receive_date >= '2006-01-01'
+        GROUP BY DATE_FORMAT(con.receive_date, "%Y-%m-%d") ASC;
         """)
 
     data = {}
