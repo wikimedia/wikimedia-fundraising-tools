@@ -1,13 +1,12 @@
 SET autocommit = 1;
 
-DROP TABLE IF EXISTS silverpop_export;
-DROP TABLE IF EXISTS silverpop_unsubscribe_export;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
+DROP TABLE IF EXISTS silverpop_export_dedupe_contact;
 DROP TABLE IF EXISTS silverpop_export_stat;
 
-CREATE TABLE silverpop_export(
-  id int unsigned PRIMARY KEY AUTO_INCREMENT,
-  
+CREATE TABLE IF NOT EXISTS silverpop_export(
+  id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
+
   -- Step 1 exported fields
   contact_id int unsigned,
   first_name varchar(128),
@@ -15,7 +14,7 @@ CREATE TABLE silverpop_export(
   preferred_language varchar(5),
   email varchar(255),
   opted_out tinyint(1),
-  
+
   -- Step 5 lifetime statistics
   has_recurred_donation tinyint(1),
   highest_usd_amount decimal(20,2),
@@ -29,46 +28,54 @@ CREATE TABLE silverpop_export(
   is_2011_donor tinyint(1),
   is_2012_donor tinyint(1),
   is_2013_donor tinyint(1),
-  
+
   -- Step 6 latest contribution
   last_ctid int unsigned,
   latest_currency varchar(3),
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
   latest_donation datetime,
-  
+
   -- Step 7 Address information
   city varchar(128),
   country varchar(2),
   postal_code varchar(128),
-  
+
   -- Step 8 Geonames lookup of timezone
   tzoffset float,
-  
-  -- Step 10 Unsubcribe hash generation
-  unsub_hash varchar(255)
-);
-CREATE INDEX spex_contact_id ON silverpop_export(contact_id);
-CREATE INDEX spex_email ON silverpop_export(email);
-CREATE INDEX spex_city ON silverpop_export(city);
-CREATE INDEX spex_country ON silverpop_export(country);
-CREATE INDEX spex_postal ON silverpop_export(postal_code);
-CREATE INDEX spex_opted_out ON silverpop_export(opted_out);
 
--- STEP 1: Populate the temporary table with all contacts that have an
--- email address
+  -- Step 10 Unsubcribe hash generation
+  unsub_hash varchar(255),
+
+  INDEX spex_contact_id (contact_id),
+  INDEX spex_email (email),
+  INDEX spex_city (city),
+  INDEX spex_country (country),
+  INDEX spex_postal (postal_code),
+  INDEX spex_opted_out (opted_out)
+);
+
+-- STEP 1: Populate, or append to, the storage table all contacts that
+-- have an email address. ID is civicrm_email.id which allows us to
+-- retain work we've already done across runs.
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION;
 INSERT INTO silverpop_export
-  (contact_id, email, first_name, last_name, preferred_language, opted_out)
+  (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
-    e.contact_id, e.email, c.first_name, c.last_name,
+    e.id, e.contact_id, e.email, c.first_name, c.last_name,
     IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
     (c.is_deleted OR c.is_opt_out OR c.do_not_mail)
-  FROM civicrm.civicrm_email e, civicrm.civicrm_contact c
+  FROM civicrm.civicrm_email e
+  LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   WHERE
-    e.email IS NOT NULL AND e.email != '' AND
-    e.contact_id = c.id;
+    e.email IS NOT NULL AND e.email != ''
+  ON DUPLICATE KEY UPDATE
+    email = e.email,
+    first_name = c.first_name,
+    last_name = c.last_name,
+    preferred_language = IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
+    opted_out = (c.is_deleted OR c.is_opt_out OR c.do_not_mail);
 COMMIT;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
@@ -183,7 +190,7 @@ UPDATE silverpop_export ex, silverpop_export_stat exs
     ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
-  
+
 -- STEP 6: Populate information about the most recent contribution
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION;
@@ -207,7 +214,11 @@ UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_countr
     ex.city = addr.city,
     ex.country = ctry.iso_code,
     ex.postal_code = addr.postal_code
-  WHERE ex.contact_id = addr.contact_id AND addr.country_id = ctry.id AND ex.opted_out = 0;
+  WHERE
+    ex.tzoffset IS NULL AND
+    ex.contact_id = addr.contact_id AND
+    addr.country_id = ctry.id AND
+    ex.opted_out = 0;
 COMMIT;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
@@ -217,6 +228,7 @@ UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, de
   SET ex.tzoffset = tz.offset
   WHERE
     ex.opted_out = 0 AND
+    ex.tzoffset is NULL AND
     ex.postal_code IS NOT NULL AND
     ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
     a.format='post' AND
@@ -263,8 +275,8 @@ UPDATE silverpop_export SET
     latest_usd_amount = 0,
     latest_donation = NOW(),
     has_recurred_donation = 0
-  WHERE donation_count IS NULL AND ex.opted_out = 0;
-UPDATE silverpop_export SET country='US' where country IS NULL AND ex.opted_out = 0;
+  WHERE donation_count IS NULL AND opted_out = 0;
+UPDATE silverpop_export SET country='US' where country IS NULL AND opted_out = 0;
 
 -- STEP 10 Create the unsub hash
 UPDATE silverpop_export ex
