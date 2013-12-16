@@ -1,0 +1,20 @@
+# Copy as /etc/fundraising/paypal-audit.yaml, or $HOME/.fundraising/paypal-audit.yaml
+
+sftp:
+    host: reports.paypal.com
+    username: fooness
+    password: "Wicked"
+    host_key: "AAAAB3NzaC1yc2EAAAABIwAAAIEAsWerPjkPXD/EklfIvMKoi+K+DYmNdIJNbuwzm36wWEfGUGdki8+no7PUN3v4iQ2QmYcpiZcxGaUXDs4L6Ko41jtsfVK+DGr8B3p4uWPqJoohIieMYAeKy5dEaAuaa8RVAgaEGa9wi4c1JZFYKgxEqJhJFmpD55VO0DvTmS9JKYM="
+
+archive_path: /home/audit/archive
+incoming_path: /home/audit/incoming
+
+stomp:
+    server: crm.dev
+    port: 61613
+    queues:
+        refund: /queue/refund
+        donations: /queue/donations
+        recurring: /queue/recurring
+
+no_effect: 0

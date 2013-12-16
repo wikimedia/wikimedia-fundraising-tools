@@ -2,7 +2,7 @@
 
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
-import stomp
+from queue.stomp_wrap import Stomp
 import time
 import json
 import csv
@@ -171,42 +171,6 @@ def normalize_refund_msg(line):
     })
 
     return msg
-
-class Stomp(object):
-    def __init__(self, config):
-        host_and_ports = [(config.get('Stomp', 'server'), config.getint('Stomp', 'port'))]
-        self.sc = stomp.Connection(host_and_ports)
-        self.sc.start()
-        self.sc.connect()
-
-    def __del__(self):
-        if self.sc:
-            self.sc.disconnect()
-
-            # Let the STOMP library catch up
-            import time
-            time.sleep(1)
-
-    def send(self, msg, queue_name):
-        global options, config
-
-        if options.noEffect:
-            log("not queueing message. " + json.dumps(msg))
-            return
-
-        headers = {
-            'correlation-id': '%s-%s' % (msg['gateway'], msg['gateway_txn_id']),
-            'destination': config.get('Stomp', '%s-queue' % (queue_name,)),
-            'persistent': 'true',
-        }
-
-        if config.getboolean('Stomp', 'debug'):
-            log("sending %s %s" % (headers, msg))
-
-        self.sc.send(
-            json.dumps(msg),
-            headers
-        )
 
 log_file = None
 

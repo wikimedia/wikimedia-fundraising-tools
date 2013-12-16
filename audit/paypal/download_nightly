@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import os, os.path
+
+from process.logging import Logger as log
+
+from process.globals import load_config
+load_config("paypal-audit")
+
+from process.globals import config
+import process.lock as lock
+import sftp.client
+
+remote_root = "ppreports/outgoing"
+
+def walk_files(paths):
+    result = []
+
+    if not hasattr(paths, 'extend'):
+        paths = [paths]
+
+    for root in paths:
+        for dirpath, dirnames, filenames in os.walk(root):
+            result += filenames
+
+    return result
+
+if __name__ == '__main__':
+    log.info("Begin PayPal nightly audit download")
+    lock.begin()
+
+    local_paths = [
+        config.incoming_path,
+        config.archive_path,
+    ]
+    local_files = walk_files(local_paths)
+
+    remote = sftp.client.Client()
+    remote_files = remote.ls(remote_root)
+
+    for filename in remote_files:
+        if filename in local_files:
+            log.info("Skipping already downloaded file {filename}".format(filename=filename))
+            continue
+
+        log.info("Downloading file {filename}".format(filename=filename))
+        dest_path = os.path.join(config.incoming_path, filename)
+        remote.get(os.path.join(remote_root, filename), dest_path)
+
+    lock.end()
+    log.info("End PayPal nightly audit download")
