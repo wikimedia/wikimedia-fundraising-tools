@@ -4,8 +4,12 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_
 '''
 
 from process.logging import Logger as log
+from process.globals import config
 from queue.stomp_wrap import Stomp
 import ppreport
+
+from civicrm.civicrm import Civicrm
+from paypal_api import PaypalApiClassic
 
 class TrrFile(object):
     VERSION=4
@@ -18,6 +22,7 @@ class TrrFile(object):
 
     def __init__(self, path):
         self.path = path
+        self.crm = Civicrm(config.civicrm_db)
 
     def parse(self):
         ppreport.read(self.path, self.VERSION, self.parse_line)
@@ -93,6 +98,13 @@ class TrrFile(object):
 
             queue = 'refund'
 
+        if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
+            log.debug("Not sending duplicate transaction {id}".format(id=out['gateway_txn_id']))
+            return
+
+        if 'last_name' not in out:
+            out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
+
         if queue:
             self.send(queue, out)
         else:
@@ -127,3 +139,10 @@ class TrrFile(object):
         }
 
         return out
+
+    def fetch_donor_name(self, txn_id):
+        api = PaypalApiClassic()
+        response = api.call('GetTransactionDetails', TRANSACTIONID=txn_id)
+        if 'FIRSTNAME' not in response:
+            raise RuntimeError("Failed to get transaction details for {id}".format(id=txn_id))
+        return (response['FIRSTNAME'][0], response['LASTNAME'][0])

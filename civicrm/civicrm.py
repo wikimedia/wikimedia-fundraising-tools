@@ -1,10 +1,8 @@
-import MySQLdb as Dbi
-
-db_conn = False
+from database.db import Connection
 
 class Civicrm(object):
     def __init__(self, config):
-        self.db = Connection(**dict(config.items("Db")))
+        self.db = Connection(**dict(config))
         self.config = config
 
     def transaction_exists(self, gateway_txn_id, gateway="paypal"):
@@ -16,20 +14,12 @@ SELECT COUNT(*) AS count FROM wmf_contribution_extra
         count = list(self.db.execute(sql, (gateway, gateway_txn_id)))
         return count[0]['count'] > 0
 
-class Connection(object):
-    def __init__(self, host=None, user=None, passwd=None, db=None, debug=False):
-        self.db_conn = Dbi.connect(host=host, user=user, passwd=passwd, db=db)
-        self.debug = debug.lower() in ("true", "1")
+    def subscription_exists(self, subscr_id):
+        # FIXME: trxn_id style is inconsistent between gateways.  This will only work for paypal.
+        sql = """
+SELECT COUNT(*) AS count FROM civicrm_contribution_recur
+    WHERE trxn_id = %s
+        """
 
-    def close(self):
-        #self.db_conn.commit()
-        pass
-
-    def execute(self, sql, params=None):
-        cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
-        if self.debug:
-            print sql, params
-        cursor.execute(str(sql), params)
-        for row in cursor.fetchall():
-            yield row
-        cursor.close()
+        count = list(self.db.execute(sql, (subscr_id, )))
+        return count[0]['count'] > 0

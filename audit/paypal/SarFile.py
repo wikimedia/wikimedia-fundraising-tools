@@ -6,6 +6,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Subs
 from process.logging import Logger as log
 from queue.stomp_wrap import Stomp
 import ppreport
+from civicrm.civicrm import Civicrm
 
 class SarFile(object):
     VERSION=2
@@ -18,6 +19,7 @@ class SarFile(object):
 
     def __init__(self, path):
         self.path = path
+        self.crm = Civicrm(config.civicrm_db)
 
     def parse(self):
         ppreport.read(self.path, self.VERSION, self.parse_line)
@@ -47,6 +49,9 @@ class SarFile(object):
 
         if row['Subscription Action Type'] == 'S0000':
             out['txn_type'] = 'subscr_signup'
+            if self.crm.subscription_exists(out['subscr_id']):
+                log.info("Skipping duplicate subscription signup.")
+                return
         elif row['Subscription Action Type'] == 'S0100':
             log.info("Ignoring subscription modification")
         elif row['Subscription Action Type'] == 'S0200':

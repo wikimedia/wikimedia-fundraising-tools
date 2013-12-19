@@ -17,4 +17,19 @@ stomp:
         donations: /queue/donations
         recurring: /queue/recurring
 
+api:
+    url: "https://api-3t.sandbox.paypal.com/nvp"
+    username: YOURS
+    password: YO
+    # only include one of {signature, certificate_path}
+    signature: PROVIDEDBYPAYPAL
+    #certificate_path:
+
+civicrm_db:
+    host: localhost
+    user: USER
+    passwd: PW
+    db: civicrmYOURS
+    debug: false
+
 no_effect: 0

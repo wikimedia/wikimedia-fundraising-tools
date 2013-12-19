@@ -36,7 +36,7 @@ def main():
         log("*** Dummy mode! Not injecting stomp messages ***")
 
     messaging = Stomp(config)
-    civi = Civicrm(config)
+    civi = Civicrm(config.items('Db'))
 
     locale.setlocale(locale.LC_NUMERIC, "")
 
