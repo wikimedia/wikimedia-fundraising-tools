@@ -8,11 +8,22 @@ dialect = dict(
 )
 
 def read(path, version, callback):
-    with io.open(path, 'r', encoding='utf-16') as csvfile:
+    try:
+        read_encoded(path, version, callback, encoding='utf-16')
+    except UnicodeError:
+        read_encoded(path, version, callback, encoding='utf-8-sig')
+
+def read_encoded(path, version, callback, encoding):
+    # Coerce to a list
+    if not hasattr(version, 'extend'):
+        version = [version]
+
+    with io.open(path, 'r', encoding=encoding) as csvfile:
         plainreader = unicode_csv_reader(csvfile, **dialect)
+
         for row in plainreader:
             if row[0] == 'RH':
-                if int(row[4]) != version:
+                if int(row[4]) not in version:
                     raise RuntimeError("This file uses an unexpected format revision: {version}".format(version=row[4]))
             elif row[0] == 'FH':
                 pass

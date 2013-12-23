@@ -12,7 +12,7 @@ from civicrm.civicrm import Civicrm
 from paypal_api import PaypalApiClassic
 
 class TrrFile(object):
-    VERSION=4
+    VERSION = [4, 8]
     stomp = None
 
     @staticmethod
@@ -58,11 +58,11 @@ class TrrFile(object):
             if row['Fee Currency'] and row['Gross Transaction Currency'] != row['Fee Currency']:
                 raise RuntimeError("Failed to import because multiple currencies for one transaction is not handled.")
 
-        if 'Consumer Given Name' in row:
-            out['first_name'] = row['Consumer Given Name']
+        if 'First Name' in row:
+            out['first_name'] = row['First Name']
 
-        if 'Consumer Family Name' in row:
-            out['last_name'] = row['Consumer Family Name']
+        if 'Last Name' in row:
+            out['last_name'] = row['Last Name']
 
         if 'Payment Source' in row:
             out['payment_method'] = row['Payment Source']
@@ -98,6 +98,10 @@ class TrrFile(object):
 
             queue = 'refund'
 
+        if not queue:
+            log.debug("Ignoring event of class {type}".format(type=event_type))
+            return
+
         if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
             log.debug("Not sending duplicate transaction {id}".format(id=out['gateway_txn_id']))
             return
@@ -105,10 +109,7 @@ class TrrFile(object):
         if 'last_name' not in out:
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
 
-        if queue:
-            self.send(queue, out)
-        else:
-            log.debug("Ignoring event of class {type}".format(type=event_type))
+        self.send(queue, out)
 
     def send(self, queue, msg):
         if not self.stomp:
@@ -125,6 +126,7 @@ class TrrFile(object):
         out = {
             'gateway': 'paypal',
             'txn_type': 'subscr_payment',
+            'gateway_txn_id': msg['gateway_txn_id'],
             'txn_id': msg['gateway_txn_id'],
             'subscr_id': msg['subscr_id'],
             'payment_date': msg['date'],
