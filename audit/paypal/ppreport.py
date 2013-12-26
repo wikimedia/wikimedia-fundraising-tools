@@ -39,6 +39,8 @@ def read_encoded(path, version, callback, encoding):
             row = dict(zip(column_headers, line))
             if row['Column Type'] == 'SB':
                 callback(row)
+                #hack:
+                return
             elif row['Column Type'] in ('SF', 'SC', 'RF', 'RC', 'FF'):
                 pass
             else:
