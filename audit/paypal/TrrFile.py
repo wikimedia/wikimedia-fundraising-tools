@@ -146,5 +146,5 @@ class TrrFile(object):
         api = PaypalApiClassic()
         response = api.call('GetTransactionDetails', TRANSACTIONID=txn_id)
         if 'FIRSTNAME' not in response:
-            raise RuntimeError("Failed to get transaction details for {id}".format(id=txn_id))
+            raise RuntimeError("Failed to get transaction details for {id}, repsonse: {response}".format(id=txn_id, response=response))
         return (response['FIRSTNAME'][0], response['LASTNAME'][0])
