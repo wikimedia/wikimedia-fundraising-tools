@@ -59,6 +59,8 @@ class SarFile(object):
         elif row['Subscription Action Type'] == 'S0300':
             out['txn_type'] = 'subscr_eot'
 
+        out['thankyou_date'] = 0
+
         self.send(out)
 
     def send(self, msg):

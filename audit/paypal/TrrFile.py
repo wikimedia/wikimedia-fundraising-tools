@@ -109,6 +109,8 @@ class TrrFile(object):
         if 'last_name' not in out:
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
 
+        out['thankyou_date'] = 0
+
         self.send(queue, out)
 
     def send(self, queue, msg):
