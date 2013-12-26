@@ -1,5 +1,6 @@
 import sys
 import syslog
+import os.path
 
 class Logger(object):
     
@@ -26,7 +27,8 @@ class Logger(object):
 
     @staticmethod
     def log(message, severity):
-        syslog.openlog()
+        app_name = os.path.basename(sys.argv[0])
+        syslog.openlog(app_name)
         syslog.syslog(severity, message)
         syslog.closelog()
 
