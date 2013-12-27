@@ -5,7 +5,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_
 
 from process.logging import Logger as log
 from process.globals import config
-from queue.stomp_wrap import Stomp
+#from queue.stomp_wrap import Stomp
 import ppreport
 
 from civicrm.civicrm import Civicrm
@@ -13,7 +13,7 @@ from paypal_api import PaypalApiClassic
 
 class TrrFile(object):
     VERSION = [4, 8]
-    stomp = None
+    #stomp = None
 
     @staticmethod
     def handle(path):
@@ -115,10 +115,11 @@ class TrrFile(object):
         self.send(queue, out)
 
     def send(self, queue, msg):
-        if not self.stomp:
-            self.stomp = Stomp()
+        #if not self.stomp:
+        #    self.stomp = Stomp()
 
-        self.stomp.send(msg, queue)
+        #self.stomp.send(msg, queue)
+        print queue, msg
 
     def normalize_recurring(self, msg):
         'Synthesize a raw PayPal message'
