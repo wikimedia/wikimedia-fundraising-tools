@@ -1,6 +1,8 @@
 from process.globals import config
 from process.logging import Logger as log
 
+import os, os.path
+import sys
 import json
 from stompy import Stomp as DistStomp
 
@@ -25,6 +27,8 @@ class Stomp(object):
             return
 
         meta = {
+            'source-app': os.path.basename(sys.argv[0]),
+            'source-pid': os.getpid(),
             'destination': config.stomp.queues[queue_key],
             'persistent': 'true',
         }
