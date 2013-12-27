@@ -133,6 +133,7 @@ class TrrFile(object):
             'subscr_id': msg['subscr_id'],
             'payment_date': msg['date'],
             'payer_email': msg['email'],
+            'mc_currency': msg['currency'],
             'mc_gross': msg['gross'],
             'mc_fee': msg['fee'],
             'address_street': "\n".join([msg['street_address'], msg['supplemental_address_1']]),
