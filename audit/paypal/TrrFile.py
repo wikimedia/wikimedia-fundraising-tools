@@ -104,7 +104,8 @@ class TrrFile(object):
 
         if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
             log.debug("Not sending duplicate transaction {id}".format(id=out['gateway_txn_id']))
-            return
+            #return
+            log.info("duplicate, continuing anyway!")
 
         if 'last_name' not in out:
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])

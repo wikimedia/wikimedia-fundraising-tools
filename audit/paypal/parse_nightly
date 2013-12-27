@@ -51,7 +51,7 @@ if __name__ == '__main__':
         if os.path.isfile(path):
             #begin hack
             filename = os.path.basename(path)
-            if path != 'TRR-20130101.01.004.CSV':
+            if filename != 'TRR-20130101.01.004.CSV':
                 continue
             #end hack
 
