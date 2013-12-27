@@ -20,7 +20,8 @@ class Stomp(object):
             time.sleep(1)
 
     def send(self, msg, queue_key):
-        if config.no_effect:
+        # hack
+        if True or config.no_effect:
             log.info("not queueing message. " + json.dumps(msg))
             return
 
