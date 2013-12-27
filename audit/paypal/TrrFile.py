@@ -109,7 +109,7 @@ class TrrFile(object):
             log.debug("Not sending duplicate transaction {id}".format(id=out['gateway_txn_id']))
             return
 
-        if 'last_name' not in out:
+        if 'last_name' not in out and queue != 'refund':
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
 
         out['thankyou_date'] = 0
