@@ -29,7 +29,7 @@ def parse(path):
     if matches:
         filetype = matches.group('type')
         if filetype in handlers:
-            log.info("Parsing file using {type} handler".format(type=filetype))
+            log.info("Parsing file {path} using {type} handler".format(path=path, type=filetype))
             handlers[filetype](path)
         else:
             log.info("No handler for type {type}".format(type=filetype))

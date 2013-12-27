@@ -57,6 +57,7 @@ class SarFile(object):
             log.info("Ignoring subscription modification")
         elif row['Subscription Action Type'] == 'S0200':
             out['txn_type'] = 'subscr_cancel'
+            out['cancel_date'] = out['subscr_date']
         elif row['Subscription Action Type'] == 'S0300':
             out['txn_type'] = 'subscr_eot'
 
