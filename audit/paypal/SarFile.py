@@ -4,6 +4,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Subs
 '''
 
 from process.logging import Logger as log
+from process.globals import config
 from queue.stomp_wrap import Stomp
 import ppreport
 from civicrm.civicrm import Civicrm
