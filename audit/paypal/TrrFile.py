@@ -95,6 +95,9 @@ class TrrFile(object):
                 out['type'] = 'refund'
             elif row['Transaction Event Code'] == 'T1201':
                 out['type'] = 'chargeback'
+            else:
+                log.info("Not handling auxiliary refund event of type {type}".format(type=row['Transaction Event Code']))
+                return
 
             queue = 'refund'
 
