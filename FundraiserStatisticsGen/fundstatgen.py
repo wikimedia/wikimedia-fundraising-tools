@@ -259,7 +259,12 @@ def createSingleOutFile(stats, firstcols, filename, colnames = None):
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
-    logging.captureWarnings(True)
+
+    try:
+        logging.captureWarnings(True)
+    except:
+        # Damn; python 2.6; just ignore it
+        pass
 
     # Log to console
     console = logging.StreamHandler()
