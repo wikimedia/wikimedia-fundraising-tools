@@ -32,5 +32,7 @@ class Logger(object):
         syslog.syslog(severity, message)
         syslog.closelog()
 
-        if sys.stdout.isatty():
-            print(message)
+        # FIXME:
+        # if sys.stdout.isatty():
+        # or not config.quiet
+        print(message)
