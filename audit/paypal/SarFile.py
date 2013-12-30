@@ -45,16 +45,18 @@ class SarFile(object):
             'gateway': 'paypal',
         }
 
+        # FIXME what historical evil caused...
         if row['Subscription Period 3'] != "1 M":
             raise RuntimeError("Unknown subscription period {period}".format(period=row['Subscription Period 3']))
 
         if row['Subscription Action Type'] == 'S0000':
             out['txn_type'] = 'subscr_signup'
             if self.crm.subscription_exists(out['subscr_id']):
-                log.info("Skipping duplicate subscription signup.")
+                log.info("-Duplicate\t{id}\t{date}\tsubscr_signup".format(id=out['gateway_txn_id'], date=out['subscr_date']))
                 return
         elif row['Subscription Action Type'] == 'S0100':
-            log.info("Ignoring subscription modification")
+            log.info("-Ignored\t{id}\t{date}\tsubscr_modify".format(id=out['subscr_id'], date=out['subscr_date']))
+            return
         elif row['Subscription Action Type'] == 'S0200':
             out['txn_type'] = 'subscr_cancel'
             out['cancel_date'] = out['subscr_date']
@@ -63,6 +65,7 @@ class SarFile(object):
 
         out['thankyou_date'] = 0
 
+        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['subscr_date'], type=out['txn_type']))
         self.send(out)
 
     def send(self, msg):

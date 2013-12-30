@@ -96,24 +96,26 @@ class TrrFile(object):
             elif row['Transaction Event Code'] == 'T1201':
                 out['type'] = 'chargeback'
             else:
-                log.info("Not handling auxiliary refund event of type {type}".format(type=row['Transaction Event Code']))
+                log.info("-Unknown\t{id}\t{date}\t(Refundish type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=row['Transaction Event Code']))
                 return
 
             queue = 'refund'
 
         if not queue:
-            log.debug("Ignoring event of class {type}".format(type=event_type))
+            log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return
 
         if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
-            log.debug("Not sending duplicate transaction {id}".format(id=out['gateway_txn_id']))
+            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=queue))
             return
 
         if 'last_name' not in out and queue != 'refund':
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
 
+        # Magic to suppress a Thank-You email. TODO: flag in a way that is more discoverable
         out['thankyou_date'] = 0
 
+        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=queue))
         self.send(queue, out)
 
     def send(self, queue, msg):

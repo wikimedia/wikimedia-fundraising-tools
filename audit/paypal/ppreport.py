@@ -28,7 +28,8 @@ def read_encoded(path, version, callback, encoding):
             elif row[0] == 'FH':
                 pass
             elif row[0] == 'SH':
-                pass
+                start_date, end_date = row[1:2]
+                log.info("Report file covers date range {start} to {end}".format(start=start_date, end=end_date))
             elif row[0] == 'CH':
                 column_headers = ['Column Type'] + row[1:]
                 break
