@@ -106,7 +106,7 @@ class TrrFile(object):
             return
 
         if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
-            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=queue))
+            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
             return
 
         if 'last_name' not in out and queue != 'refund':
