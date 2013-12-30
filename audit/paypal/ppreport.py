@@ -1,5 +1,6 @@
 import io
 
+from process.logging import Logger as log
 from unicode_csv_reader import unicode_csv_reader
 
 dialect = dict(
