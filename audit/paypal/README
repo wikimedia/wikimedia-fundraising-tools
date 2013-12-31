@@ -1,0 +1,3 @@
+apt-get install python-paramiko python-yaml
+
+cp config.yaml.example /etc/fundraising/paypal-audit.yaml
