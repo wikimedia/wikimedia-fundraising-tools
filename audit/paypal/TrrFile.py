@@ -115,7 +115,7 @@ class TrrFile(object):
         # Magic to suppress a Thank-You email. TODO: flag in a way that is more discoverable
         out['thankyou_date'] = 0
 
-        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=queue))
+        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
         self.send(queue, out)
 
     def send(self, queue, msg):
