@@ -4,10 +4,13 @@ sftp:
     host: reports.paypal.com
     username: fooness
     password: "Wicked"
+    # The real host key, as of 20131230
     host_key: "AAAAB3NzaC1yc2EAAAABIwAAAIEAsWerPjkPXD/EklfIvMKoi+K+DYmNdIJNbuwzm36wWEfGUGdki8+no7PUN3v4iQ2QmYcpiZcxGaUXDs4L6Ko41jtsfVK+DGr8B3p4uWPqJoohIieMYAeKy5dEaAuaa8RVAgaEGa9wi4c1JZFYKgxEqJhJFmpD55VO0DvTmS9JKYM="
 
-archive_path: /home/audit/archive
+# New reports will be downloaded to this directory.
 incoming_path: /home/audit/incoming
+# Processed reports are moved here.
+archive_path: /home/audit/archive
 
 stomp:
     server: crm.dev
@@ -18,13 +21,15 @@ stomp:
         recurring: /queue/recurring
 
 api:
+    # url: "https://api-3t.paypal.com/nvp"
     url: "https://api-3t.sandbox.paypal.com/nvp"
     username: YOURS
     password: YO
-    # only include one of {signature, certificate_path}
+    # NOTE: only include one of {signature, certificate_path}
     signature: PROVIDEDBYPAYPAL
-    #certificate_path:
+    # certificate_path: /file/path
 
+# This is exclusively used for read-only queries, so use a secondary db if possible.
 civicrm_db:
     host: localhost
     user: USER
@@ -32,4 +37,5 @@ civicrm_db:
     db: civicrmYOURS
     debug: false
 
+# Will short-circuit sending queue messages if set to 1.
 no_effect: 0
