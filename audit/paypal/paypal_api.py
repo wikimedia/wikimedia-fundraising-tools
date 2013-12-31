@@ -56,5 +56,5 @@ class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
         # will behave as a constructor
         return self.do_open(self.getConnection, req)
 
-    def getConnection(self, host, timeout=300):
-        return httplib.HTTPSConnection(host, key_file=self.key, cert_file=self.cert)
+    def getConnection(self, host, timeout=20):
+        return httplib.HTTPSConnection(host, key_file=self.key, cert_file=self.cert, timeout=timeout)
