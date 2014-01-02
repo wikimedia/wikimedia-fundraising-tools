@@ -112,8 +112,8 @@ class TrrFile(object):
         if 'last_name' not in out and queue != 'refund':
             out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
 
-        # Magic to suppress a Thank-You email. TODO: flag in a way that is more discoverable
-        out['thankyou_date'] = 0
+        if config.no_thankyou:
+            out['thankyou_date'] = 0
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
         self.send(queue, out)

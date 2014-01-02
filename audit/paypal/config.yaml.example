@@ -39,3 +39,6 @@ civicrm_db:
 
 # Will short-circuit sending queue messages if set to 1.
 no_effect: 0
+
+# Suppress sending thank-you emails if set to 1.
+no_thankyou: 0

@@ -63,7 +63,8 @@ class SarFile(object):
         elif row['Subscription Action Type'] == 'S0300':
             out['txn_type'] = 'subscr_eot'
 
-        out['thankyou_date'] = 0
+        if config.no_thankyou:
+            out['thankyou_date'] = 0
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['subscr_id'], date=out['subscr_date'], type=out['txn_type']))
         self.send(out)
