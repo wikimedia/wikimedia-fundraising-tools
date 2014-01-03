@@ -8,6 +8,7 @@ Queries the CiviCRM database to
 
 import MySQLdb as db
 import csv
+import json
 from optparse import OptionParser
 from ConfigParser import SafeConfigParser
 import logging
@@ -47,14 +48,14 @@ def main():
     (years, pivot) = pivotDataByYear(stats)
 
     logging.info("Writing year data output files...")
-    createSingleOutFile(stats, 'date', workingDir + '/donationdata-vs-day.csv')
+    createSingleOutFile(stats, 'date', workingDir + '/donationdata-vs-day')
     createOutputFiles(pivot, 'date', workingDir + '/yeardata-day-vs-', years)
 
     logging.info("Running per campaign query...")
     pcStats = getPerCampaignData(hostname, port, username, password, database)
 
     logging.info("Writing campaign data output files...")
-    createSingleOutFile(pcStats, ('medium', 'campaign'), workingDir + '/campaign-vs-amount.csv')
+    createSingleOutFile(pcStats, ('medium', 'campaign'), workingDir + '/campaign-vs-amount')
 
 
 def getPerYearData(host, port, username, password, database):
@@ -158,8 +159,8 @@ def getPerCampaignData(host, port, username, password, database):
         usdmax = float(usdmax)
 
         data[(medium, campaign)] = {
-            'start_date': start,
-            'stop_date': stop,
+            'start_date': start.isoformat(),
+            'stop_date': stop.isoformat(),
             'count': count,
             'sum': sum,
             'avg': usdavg,
@@ -218,10 +219,10 @@ def createOutputFiles(stats, firstcol, basename, colnames = None):
     """
     reports = stats.keys()
     for report in reports:
-        createSingleOutFile(stats[report], firstcol, basename + report + '.csv', colnames)
+        createSingleOutFile(stats[report], firstcol, basename + report, colnames)
 
 
-def createSingleOutFile(stats, firstcols, filename, colnames = None):
+def createSingleOutFile(stats, firstcols, basefilename, colnames = None):
     """
     Creates a single report file from a keyed dict
 
@@ -242,10 +243,12 @@ def createSingleOutFile(stats, firstcols, filename, colnames = None):
     else:
         firstcols = list(firstcols)
 
-    f = file(filename, 'w')
+    csvfilename = basefilename + ".csv"
+    f = file(csvfilename, 'w')
     csvf = csv.writer(f)
     csvf.writerow(firstcols + colnames)
 
+    alldata = []
     for linekey in sorted(stats.keys()):
         if isinstance(linekey, basestring):
             linekeyl = [linekey]
@@ -253,9 +256,15 @@ def createSingleOutFile(stats, firstcols, filename, colnames = None):
             linekeyl = list(linekey)
 
         rowdata = [stats[linekey][col] for col in colindices]
+        alldata.append(linekeyl + rowdata)
         csvf.writerow(linekeyl + rowdata)
     f.close()
 
+    jsonfilename = basefilename + ".json"
+    f = file(jsonfilename, 'w')
+    mapstats = [ dict(zip(firstcols + colnames, line)) for line in alldata ]
+    json.dump(mapstats, f)
+    f.close()
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
