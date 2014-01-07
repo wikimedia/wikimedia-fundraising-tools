@@ -1,0 +1,36 @@
+== Overview ==
+This is a collection of scripts which will allow you to turn a wr1 file (which
+is a collection of records of different data types) into something useful. It
+allows you to iterate over the file line-by-line (record-by-record) and gives
+you structured data objects for record types of your choosing.
+
+At the moment, this only processes data records of the type "XON", which are
+records of credit card transactions that have been approved, as well as "+IP",
+which maps to all non-credit card or direct debit payments that have settled.
+
+
+== Usage ==
+First, require Wr1DataRecord.php. Then, instantiate a Wr1DataFileParser object
+with a specified Wr1 file. Then, call Wr1DataRecord->getRecordIterator() which 
+will return an iterable object, which on each iteration, will return the
+subsequent data record in the wr1 file for which we have defined a parser.
+
+Example:
+<?php
+require_once( 'Wr1DataRecord.php' );
+$wr1_parser = new Wr1DataFileParser( '65701332.wr1' );
+foreach( $wr1_parser->getRecordIterator() as $record ) {
+	// do stuff with the record contained in $record
+} 
+?>
+
+== Add data types to parse ==
+In order to extend this to be useful for data types beyond "XON", you will need
+to create a new subclass of Wr1DataRecord. The subclass will need a private 
+object property called '$fieldPositionMap' and a method called 
+'getLocalFieldPositionMap', which returns an array defining the fields and their
+positions in the data record. Use what has been done in 
+Wr1DataRecord_CreditCard_Processed as a guide.
+
+The field mappings from GlobalCollect can be found in the GlobalCollect WDL
+Programmers Guide - Reporting.
