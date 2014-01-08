@@ -57,8 +57,7 @@ def getData(host, port, username, password, database):
         LEFT JOIN civicrm_option_value ov ON
           ov.option_group_id=10 AND ov.value=c.payment_instrument_id
         WHERE
-          c.receive_date >= '2012-12-01' AND
-          c.receive_date <= '2013-02-31'
+          c.receive_date >= '2012-12-01'
         GROUP BY
           DATE_FORMAT(receive_date, "%Y-%m-%dT%H:00:00+0") ASC,
           ov.label,
