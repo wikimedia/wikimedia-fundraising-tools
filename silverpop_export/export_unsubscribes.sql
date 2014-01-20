@@ -1,0 +1,1 @@
+SELECT email FROM silverpop_export WHERE opted_out=1;

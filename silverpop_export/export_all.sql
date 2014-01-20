@@ -1,0 +1,17 @@
+SELECT contact_id ContactID, email, first_name firstname, last_name lastname,
+  last_ctid ContributionID, country, SUBSTRING(preferred_language, 1, 2) IsoLang,
+  IF(has_recurred_donation, 'TRUE', 'FALSE') has_recurred_donation,
+  highest_usd_amount, lifetime_usd_total,
+  DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
+  latest_usd_amount, latest_currency, latest_native_amount,
+  tzoffset timezone, donation_count,
+  IF(is_2006_donor, 'TRUE', 'FALSE') is_2006_donor,
+  IF(is_2007_donor, 'TRUE', 'FALSE') is_2007_donor,
+  IF(is_2008_donor, 'TRUE', 'FALSE') is_2008_donor,
+  IF(is_2009_donor, 'TRUE', 'FALSE') is_2009_donor,
+  IF(is_2010_donor, 'TRUE', 'FALSE') is_2010_donor,
+  IF(is_2011_donor, 'TRUE', 'FALSE') is_2011_donor,
+  IF(is_2012_donor, 'TRUE', 'FALSE') is_2012_donor,
+  IF(is_2013_donor, 'TRUE', 'FALSE') is_2013_donor,
+  unsub_hash
+FROM silverpop_export;

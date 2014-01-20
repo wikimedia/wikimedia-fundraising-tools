@@ -1,3 +1,5 @@
+-- Updates the silverpop_export table
+
 SET autocommit = 1;
 
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
@@ -282,31 +284,3 @@ UPDATE silverpop_export SET country='US' where country IS NULL AND opted_out = 0
 UPDATE silverpop_export ex
 SET unsub_hash = SHA1(CONCAT(last_ctid, email, XXX))
 WHERE ex.opted_out = 0;
-  
--- Export some random rows
--- Run something like this from the command line like so...
--- mysql -h db1008.eqiad.wmnet mwalker < silverpop_export.sql | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > out.csv
-SELECT contact_id ContactID, email, first_name firstname, last_name lastname,
-  last_ctid ContributionID, country, SUBSTRING(preferred_language, 1, 2) IsoLang,
-  IF(has_recurred_donation, 'TRUE', 'FALSE') has_recurred_donation, 
-  highest_usd_amount, lifetime_usd_total,
-  DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
-  latest_usd_amount, latest_currency, latest_native_amount,
-  tzoffset timezone, donation_count,
-  IF(is_2006_donor, 'TRUE', 'FALSE') is_2006_donor, 
-  IF(is_2007_donor, 'TRUE', 'FALSE') is_2007_donor, 
-  IF(is_2008_donor, 'TRUE', 'FALSE') is_2008_donor, 
-  IF(is_2009_donor, 'TRUE', 'FALSE') is_2009_donor, 
-  IF(is_2010_donor, 'TRUE', 'FALSE') is_2010_donor,
-  IF(is_2011_donor, 'TRUE', 'FALSE') is_2011_donor, 
-  IF(is_2012_donor, 'TRUE', 'FALSE') is_2012_donor, 
-  IF(is_2013_donor, 'TRUE', 'FALSE') is_2013_donor, 
-  unsub_hash 
-FROM silverpop_export AS r1 JOIN
-  (SELECT (RAND() * (SELECT MAX(id) FROM silverpop_export)) AS id) AS r2
- WHERE r1.id >= r2.id
- ORDER BY r1.id ASC
- LIMIT 1000;
- 
--- Also export the unsubscribes
-SELECT email FROM silverpop_export WHERE opted_out=1 LIMIT 1000;
