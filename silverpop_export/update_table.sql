@@ -159,7 +159,7 @@ INSERT INTO silverpop_export_stat
   SELECT
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
-    SUM(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
+    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
     SUM(IF('2006-07-1' < ct.receive_date AND ct.receive_date < '2007-07-01', 1, 0)),
     SUM(IF('2007-07-1' < ct.receive_date AND ct.receive_date < '2008-07-01', 1, 0)),
     SUM(IF('2008-07-1' < ct.receive_date AND ct.receive_date < '2009-07-01', 1, 0)),
