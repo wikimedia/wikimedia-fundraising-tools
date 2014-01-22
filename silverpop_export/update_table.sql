@@ -140,15 +140,17 @@ CREATE TABLE silverpop_export_stat (
   max_amount_currency varchar(3),   -- STEP 5
   has_recurred_donation tinyint(1),
   total_usd decimal(20,2),          -- STEP 5
-  cnt_total int,                    -- STEP 5
-  cnt_2006 tinyint,                 -- STEP 5
-  cnt_2007 tinyint,
-  cnt_2008 tinyint,
-  cnt_2009 tinyint,
-  cnt_2010 tinyint,
-  cnt_2011 tinyint,
-  cnt_2012 tinyint,
-  cnt_2013 tinyint
+  cnt_total int unsigned,           -- STEP 5
+  cnt_2006 int unsigned,            -- STEP 5
+  cnt_2007 int unsigned,
+  cnt_2008 int unsigned,
+  cnt_2009 int unsigned,
+  cnt_2010 int unsigned,
+  cnt_2011 int unsigned,
+  cnt_2012 int unsigned,
+  cnt_2013 int unsigned,
+  
+  INDEX spexs_email (email)
 );
 
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -160,17 +162,17 @@ INSERT INTO silverpop_export_stat
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
-    SUM(IF('2006-07-1' < ct.receive_date AND ct.receive_date < '2007-07-01', 1, 0)),
-    SUM(IF('2007-07-1' < ct.receive_date AND ct.receive_date < '2008-07-01', 1, 0)),
-    SUM(IF('2008-07-1' < ct.receive_date AND ct.receive_date < '2009-07-01', 1, 0)),
-    SUM(IF('2009-07-1' < ct.receive_date AND ct.receive_date < '2010-07-01', 1, 0)),
-    SUM(IF('2010-07-1' < ct.receive_date AND ct.receive_date < '2011-07-01', 1, 0)),
-    SUM(IF('2011-07-1' < ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
-    SUM(IF('2012-07-1' < ct.receive_date AND ct.receive_date < '2013-07-01', 1, 0)),
-    SUM(IF('2013-07-1' < ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
-  FROM silverpop_export ex
-  LEFT OUTER JOIN civicrm.civicrm_email e ON e.contact_id=ex.contact_id AND e.email=ex.email
-  LEFT OUTER JOIN civicrm.civicrm_contribution ct ON ct.contact_id=ex.contact_id
+    SUM(IF('2006-07-1' <= ct.receive_date AND ct.receive_date < '2007-07-01', 1, 0)),
+    SUM(IF('2007-07-1' <= ct.receive_date AND ct.receive_date < '2008-07-01', 1, 0)),
+    SUM(IF('2008-07-1' <= ct.receive_date AND ct.receive_date < '2009-07-01', 1, 0)),
+    SUM(IF('2009-07-1' <= ct.receive_date AND ct.receive_date < '2010-07-01', 1, 0)),
+    SUM(IF('2010-07-1' <= ct.receive_date AND ct.receive_date < '2011-07-01', 1, 0)),
+    SUM(IF('2011-07-1' <= ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
+    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	 '2013-07-01', 1, 0)),
+    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
+  FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
+  JOIN silverpop_export ex ON e.email=ex.email
+  JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
   GROUP BY e.email;
 COMMIT;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
