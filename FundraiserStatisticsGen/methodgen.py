@@ -49,7 +49,7 @@ def getData(host, port, username, password, database):
     cur = con.cursor()
     cur.execute("""
         SELECT
-          DATE_FORMAT(c.receive_date, "%Y-%m-%dT%H:00:00+0") as receive_date,
+          DATE_FORMAT(c.receive_date, "%Y-%m-%dT%00:00:00+0") as receive_date,
           ov.label,
           SUBSTR(c.source, 1, 3),
           SUM(IF(c.total_amount >= 0, 1, 0)) as credit_count
@@ -57,9 +57,9 @@ def getData(host, port, username, password, database):
         LEFT JOIN civicrm_option_value ov ON
           ov.option_group_id=10 AND ov.value=c.payment_instrument_id
         WHERE
-          c.receive_date >= '2012-12-01'
+          c.receive_date >= '2012-07-01' AND c.receive_date < '2013-07-01'
         GROUP BY
-          DATE_FORMAT(receive_date, "%Y-%m-%dT%H:00:00+0") ASC,
+          DATE_FORMAT(receive_date, "%Y-%m-%dT%00:00:00+0") ASC,
           ov.label,
           SUBSTR(c.source, 1, 3);
         """)
