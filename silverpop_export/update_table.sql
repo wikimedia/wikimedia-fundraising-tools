@@ -219,6 +219,12 @@ WHERE
 COMMIT;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
+-- STEP 6.5: Remove contacts who apparently have no contributions
+DELETE FROM silverpop_export
+  WHERE
+    silverpop_export.latest_donation IS NULL AND
+    silverpop_export.opted_out=0;
+
 -- STEP 7: Join on address
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION;
