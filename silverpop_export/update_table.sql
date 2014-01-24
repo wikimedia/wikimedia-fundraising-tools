@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX spex_country (country),
   INDEX spex_postal (postal_code),
   INDEX spex_opted_out (opted_out)
-);
+) COLLATE 'utf8_unicode_ci';
 
 -- STEP 1: Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id which allows us to
@@ -85,8 +85,12 @@ SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 -- have to merge in more data later, but this is >500k rows we're
 -- getting rid of here which is more better than taking them all the way
 -- through.
-CREATE TABLE silverpop_export_dedupe_email
-  (id INT PRIMARY KEY AUTO_INCREMENT, email varchar(255), maxid int, opted_out tinyint(1));
+CREATE TABLE silverpop_export_dedupe_email (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  email varchar(255),
+  maxid int,
+  opted_out tinyint(1)
+) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
    SELECT email, max(id) maxid, max(opted_out) opted_out
@@ -107,9 +111,14 @@ UPDATE silverpop_export ex, silverpop_export_dedupe_email de
 
 -- STEP 3: Deduplicate rows that have the same contact ID because they'll
 -- generate the same result (> 50k rows)
-CREATE TABLE silverpop_export_dedupe_contact
-  (id int PRIMARY KEY AUTO_INCREMENT, contact_id int, maxid int, opted_out tinyint(1));
-CREATE INDEX spexdc_optedout ON silverpop_export_dedupe_contact(opted_out);
+CREATE TABLE silverpop_export_dedupe_contact (
+  id int PRIMARY KEY AUTO_INCREMENT,
+  contact_id int,
+  maxid int,
+  opted_out tinyint(1),
+
+  INDEX spexdc_optedout (opted_out)
+) COLLATE 'utf8_unicode_ci';
   
 INSERT INTO silverpop_export_dedupe_contact (contact_id, maxid, opted_out)
   SELECT contact_id, max(id) maxid, max(opted_out) opted_out FROM silverpop_export
@@ -149,9 +158,9 @@ CREATE TABLE silverpop_export_stat (
   cnt_2011 int unsigned,
   cnt_2012 int unsigned,
   cnt_2013 int unsigned,
-  
+
   INDEX spexs_email (email)
-);
+) COLLATE 'utf8_unicode_ci';
 
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION;
