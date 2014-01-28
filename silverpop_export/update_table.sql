@@ -9,7 +9,7 @@ DROP TABLE IF EXISTS silverpop_export_stat;
 CREATE TABLE IF NOT EXISTS silverpop_export(
   id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
 
-  -- Step 1 exported fields
+  -- General information about the contact
   contact_id int unsigned,
   first_name varchar(128),
   last_name varchar(128),
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   email varchar(255),
   opted_out tinyint(1),
 
-  -- Step 5 lifetime statistics
+  -- Lifetime contribution statistics
   has_recurred_donation tinyint(1),
   highest_usd_amount decimal(20,2),
   lifetime_usd_total decimal(20,2),
@@ -31,22 +31,20 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   is_2012_donor tinyint(1),
   is_2013_donor tinyint(1),
 
-  -- Step 6 latest contribution
+  -- Latest contribution statistics
   last_ctid int unsigned,
   latest_currency varchar(3),
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
   latest_donation datetime,
 
-  -- Step 7 Address information
+  -- Address information
   city varchar(128),
   country varchar(2),
   postal_code varchar(128),
-
-  -- Step 8 Geonames lookup of timezone
   tzoffset float,
 
-  -- Step 10 Unsubcribe hash generation
+  -- Unsubcribe hash
   unsub_hash varchar(255),
 
   INDEX spex_contact_id (contact_id),
@@ -57,11 +55,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX spex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
 
--- STEP 1: Populate, or append to, the storage table all contacts that
+-- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id which allows us to
 -- retain work we've already done across runs.
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION;
 INSERT INTO silverpop_export
   (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
@@ -78,18 +74,45 @@ INSERT INTO silverpop_export
     last_name = c.last_name,
     preferred_language = IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
     opted_out = (c.is_deleted OR c.is_opt_out OR c.do_not_mail);
-COMMIT;
-SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
--- STEP 2: Deduplicate rows that have the same email address, we will
--- have to merge in more data later, but this is >500k rows we're
+-- Populate data from contribution tracking; because that's fairly
+-- reliable. Do this before deduplication so we can attempt to make
+-- intelligent fallbacks in case of null data
+UPDATE
+    silverpop_export ex,
+    civicrm.civicrm_contribution ct,
+    drupal.contribution_tracking dct
+  SET
+    ex.preferred_language = dct.language
+  WHERE
+    ex.contact_id = ct.contact_id AND
+    dct.contribution_id = ct.id AND
+    dct.language IS NOT NULL;
+
+UPDATE
+    silverpop_export ex,
+    civicrm.civicrm_contribution ct,
+    drupal.contribution_tracking dct
+  SET
+    ex.country = dct.country
+  WHERE
+    ex.contact_id = ct.contact_id AND
+    dct.contribution_id = ct.id AND
+    dct.country IS NOT NULL;
+
+-- Deduplicate rows that have the same email address, we will
+-- have to merge in more data later, but this is ~1.5M rows we're
 -- getting rid of here which is more better than taking them all the way
 -- through.
 CREATE TABLE silverpop_export_dedupe_email (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
   maxid int,
-  opted_out tinyint(1)
+  preferred_language varchar(5),
+  country varchar(2),
+  opted_out tinyint(1),
+
+  INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
@@ -99,18 +122,37 @@ INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
        GROUP BY email
        HAVING count(*) > 1;
 
+-- We pull in language/country from the parent table so that we
+-- can preserve them and not propogate nulls
+UPDATE silverpop_export_dedupe_email exde, silverpop_export ex
+  SET
+    exde.preferred_language = ex.preferred_language
+  WHERE
+    ex.email = exde.email AND
+    ex.preferred_language IS NOT NULL;
+
+UPDATE silverpop_export_dedupe_email exde, silverpop_export ex
+  SET
+    exde.country = ex.country
+  WHERE
+    ex.email = exde.email AND
+    ex.country IS NOT NULL;
+
 DELETE silverpop_export FROM silverpop_export, silverpop_export_dedupe_email
   WHERE
     silverpop_export.email = silverpop_export_dedupe_email.email AND
     silverpop_export.id != silverpop_export_dedupe_email.maxid;
 
-UPDATE silverpop_export ex, silverpop_export_dedupe_email de
-  SET ex.opted_out = 1
+UPDATE silverpop_export ex, silverpop_export_dedupe_email exde
+  SET
+    ex.opted_out = exde.opted_out,
+    ex.preferred_language = exde.preferred_language,
+    ex.country = exde.country
   WHERE
-    de.opted_out = 1 AND de.maxid = ex.id;
+    exde.maxid = ex.id;
 
--- STEP 3: Deduplicate rows that have the same contact ID because they'll
--- generate the same result (> 50k rows)
+-- Deduplicate rows that have the same contact ID because they'll
+-- generate the same result (~120 rows)
 CREATE TABLE silverpop_export_dedupe_contact (
   id int PRIMARY KEY AUTO_INCREMENT,
   contact_id int,
@@ -136,9 +178,7 @@ UPDATE silverpop_export ex, silverpop_export_dedupe_contact dc
   WHERE
     dc.opted_out = 1 AND dc.maxid = ex.id;
 
--- STEP 4 Was updating opt outs; but I've merged that into steps 2 and 3
-
--- STEP 5: Create an aggregate table from a full contribution table scan
+-- Create an aggregate table from a full contribution table scan
 CREATE TABLE silverpop_export_stat (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
@@ -162,8 +202,6 @@ CREATE TABLE silverpop_export_stat (
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION;
 INSERT INTO silverpop_export_stat
   (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation,
     cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013)
@@ -183,8 +221,6 @@ INSERT INTO silverpop_export_stat
   JOIN silverpop_export ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
   GROUP BY e.email;
-COMMIT;
-SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 UPDATE silverpop_export ex, silverpop_export_stat exs
   SET
@@ -204,9 +240,7 @@ UPDATE silverpop_export ex, silverpop_export_stat exs
   WHERE
     ex.id = exs.exid;
 
--- STEP 6: Populate information about the most recent contribution
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION;
+-- Populate information about the most recent contribution
 UPDATE silverpop_export ex, civicrm.civicrm_contribution ct
 SET
   latest_currency = SUBSTRING(ct.source, 1, 3),
@@ -216,33 +250,54 @@ SET
 WHERE
   ex.last_ctid = ct.id AND
   ex.opted_out = 0;
-COMMIT;
-SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
--- STEP 6.5: Remove contacts who apparently have no contributions
+-- Remove contacts who apparently have no contributions
 DELETE FROM silverpop_export
   WHERE
     silverpop_export.latest_donation IS NULL AND
-    silverpop_export.opted_out=0;
+    silverpop_export.opted_out = 0;
 
--- STEP 7: Join on address
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION;
+-- Join on civicrm address where we do not already have a geolocated
+-- address from contribution tracking
 UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
   SET
     ex.city = addr.city,
     ex.country = ctry.iso_code,
     ex.postal_code = addr.postal_code
   WHERE
+    ex.country IS NULL AND
     ex.tzoffset IS NULL AND
     ex.contact_id = addr.contact_id AND
     addr.country_id = ctry.id AND
     ex.opted_out = 0;
-COMMIT;
-SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
--- STEP 8: Geonames lookup of timezone
--- 8.1 Lookup by post code and country
+-- And now updated by civicrm address where we have a country but no
+-- city from contribution tracking; the countries must match
+UPDATE silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
+  SET
+    ex.city = addr.city,
+    ex.postal_code = addr.postal_code
+  WHERE
+    ex.country = ctry.iso_code AND
+    ex.city IS NULL AND
+    ex.tzoffset IS NULL AND
+    ex.contact_id = addr.contact_id AND
+    addr.country_id = ctry.id AND
+    ex.opted_out = 0;
+
+-- Reconstruct the donors likely language from their country if it
+-- exists from a table of major language to country.
+UPDATE silverpop_export ex, silverpop_countrylangs cl
+  SET ex.preferred_language = cl.lang
+  WHERE
+    ex.country IS NOT NULL AND
+    ex.preferred_language IS NULL AND
+    ex.tzoffset IS NULL AND
+    ex.country = cl.country AND
+    ex.opted_out = 0;
+
+-- Lookup timezone by country and post code -- for countries that span
+-- multiple timezones.
 UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, dev_geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
@@ -256,7 +311,8 @@ UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, de
     a.geonameid = g.geonameid AND
     tz.tzid=g.tzid;
 
--- 8.2 Otherwise just by country
+-- Lookup timezones by country (mostly for those that do not have
+-- multiple timezones.)
 UPDATE
   silverpop_export ex,
   (SELECT g.country_code country_code, tz.offset offset
@@ -270,12 +326,12 @@ UPDATE
     ex.tzoffset is NULL AND
     tz.country_code=ex.country;
     
--- 8.3 And really otherwise, just set it to 0
+-- If we have no TZ information; set it to UTC
 UPDATE silverpop_export ex
   SET ex.tzoffset = 0
   WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
   
--- STEP 9 Normalize some data
+-- Normalize the data prior to final export
 UPDATE silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
 UPDATE silverpop_export SET
     last_ctid = 0,
@@ -296,8 +352,3 @@ UPDATE silverpop_export SET
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export SET country='US' where country IS NULL AND opted_out = 0;
-
--- STEP 10 Create the unsub hash
-UPDATE silverpop_export ex
-SET unsub_hash = SHA1(CONCAT(last_ctid, email, XXX))
-WHERE ex.opted_out = 0;
