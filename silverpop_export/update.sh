@@ -14,10 +14,10 @@ echo "Start" >> log.log
 date >> log.log
 
 echo "Regenerating db table"
-mysql mwalker < $LPATH/update_table.sql > /dev/null
+mysql mwalker < $LPATH/update_table.sql >> log.log
 
 echo "Writing the unsubscribe hash information"
-mysql -e "UPDATE silverpop_export ex SET unsub_hash = SHA1(CONCAT(last_ctid, email, $HASHPASS ));" mwalker > /dev/null
+mysql -e "UPDATE silverpop_export ex SET unsub_hash = SHA1(CONCAT(last_ctid, email, '$HASHPASS' ));" mwalker >> log.log
 
 echo "Exporting whole table"
 mysql mwalker < $LPATH/export_all.sql > DatabaseUpdate.tsv
@@ -27,6 +27,7 @@ mysql mwalker < $LPATH/export_unsubscribes.sql > Unsubscribes.tsv
 
 echo "Archiving files"
 DATE=$(date +"%Y%m%d_%H%M")
+mkdir -p old
 cp DatabaseUpdate.tsv old/full_$DATE.tsv
 cp Unsubscribes.tsv old/unsub_$DATE.tsv
 
