@@ -1,5 +1,6 @@
-#!/usr/bin/bash
+#!/bin/bash
 
+LPATH=$(dirname $(readlink -f $0))
 EMAIL=${1:-$(whoami)"@wikimedia.org"}
 if [ -f ./hashpass ]
   then
@@ -13,16 +14,16 @@ echo "Start" >> log.log
 date >> log.log
 
 echo "Regenerating db table"
-mysql mwalker < update_table.sql > /dev/null
+mysql mwalker < $LPATH/update_table.sql > /dev/null
 
 echo "Writing the unsubscribe hash information"
 mysql -e "UPDATE silverpop_export ex SET unsub_hash = SHA1(CONCAT(last_ctid, email, $HASHPASS ));" mwalker > /dev/null
 
 echo "Exporting whole table"
-mysql mwalker < export_all.sql > DatabaseUpdate.tsv
+mysql mwalker < $LPATH/export_all.sql > DatabaseUpdate.tsv
 
 echo "Exporting unsubscribes"
-mysql mwalker < export_unsubscribes.sql > Unsubscribes.tsv
+mysql mwalker < $LPATH/export_unsubscribes.sql > Unsubscribes.tsv
 
 echo "Archiving files"
 DATE=$(date +"%Y%m%d_%H%M")
