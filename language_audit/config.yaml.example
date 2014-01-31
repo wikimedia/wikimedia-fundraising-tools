@@ -1,0 +1,8 @@
+centralnotice_mw_api:
+    "http://meta.wikimedia.org/w/api.php"
+check_page_languages:
+    -
+        api: "https://wikimediafoundation.org/w/api.php"
+        page: "Thank_You/{language}"
+debug:
+    1

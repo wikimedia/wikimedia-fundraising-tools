@@ -6,11 +6,11 @@ from process.globals import config
 
 import json
 
-def mw_call( args ):
+def mw_call(args, api=config.centralnotice_mw_api):
     import simplemediawiki
 
     wiki = simplemediawiki.MediaWiki(
-        config.centralnotice_mw_api,
+        api,
         user_agent='bot: fr-anal'
     )
     result = wiki.call( args )
