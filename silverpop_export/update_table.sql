@@ -63,7 +63,7 @@ INSERT INTO silverpop_export
   SELECT
     e.id, e.contact_id, e.email, c.first_name, c.last_name,
     IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    (c.is_deleted OR c.is_opt_out OR c.do_not_mail)
+    (c.is_opt_out OR c.do_not_mail)
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   WHERE
@@ -73,7 +73,7 @@ INSERT INTO silverpop_export
     first_name = c.first_name,
     last_name = c.last_name,
     preferred_language = IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    opted_out = (c.is_deleted OR c.is_opt_out OR c.do_not_mail);
+    opted_out = (c.is_opt_out OR c.do_not_mail);
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
