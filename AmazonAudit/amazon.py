@@ -157,7 +157,7 @@ class Amazon:
         params = {
             'TransactionId':transactionId
         }
-        dom = self.doTransaction( 'GetTransaction', Amazon.AWS_FPS_VERSION_1, params)
+        dom = self.doTransaction('GetTransaction', Amazon.AWS_FPS_VERSION_1, params)
 
         return self.treeToDict(dom.getElementsByTagName("Transaction")[0])
 
@@ -240,6 +240,36 @@ class Amazon:
                 print("%s - %s" % (nextStart, len(transactions)))
 
         return transactions
+
+    def getTransactionsForSubscription(self, subscriptionId):
+        """Obtain a list of transaction details for a given subscription id.
+
+        Return value is a list of dictionaries with the following keys:
+           Description, TransactionDate, TransactionSerialNumber, TransactionId, TransactionAmount, TransactionStatus
+        """
+        params = {
+            'SubscriptionId': subscriptionId
+        }
+        dom = self.doTransaction('GetTransactionsForSubscription', Amazon.AWS_FPS_VERSION_1, params)
+        tree = self.treeToDict(dom.getElementsByTagName('GetTransactionsForSubscriptionResult')[0])
+        return tree['SubscriptionTransaction']
+
+
+    def getSubscriptionDetails(self, subscriptionId):
+        """Obtain the status and detailed information about a given subscription id.
+
+        Return value is a dictionary with keys:
+          StartDate, NumberOfPromotionalTransactions, Description, NumberOfTransactionsProcessed
+          NextTransactionDate, SubscriptionStatus, SenderEmail, RecipientEmail, SubscriptionFrequency
+          SubscriptionAmount, RecipientName, SubscriptionId, SenderName, NextTransactionAmount
+        """
+        params = {
+            'SubscriptionId': subscriptionId
+        }
+        dom = self.doTransaction('GetSubscriptionDetails', Amazon.AWS_FPS_VERSION_1, params)
+        tree = self.treeToDict(dom.getElementsByTagName('SubscriptionDetails')[0])
+        return tree
+
 
     def treeToDict(self, domTree):
         """Convert a DOM tree to something a little more useful. Assumes that tree elements have no attributes
