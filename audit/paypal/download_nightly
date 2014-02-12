@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os, os.path
+import re
 
 from process.logging import Logger as log
 
