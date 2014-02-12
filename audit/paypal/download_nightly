@@ -12,6 +12,7 @@ import process.lock as lock
 import sftp.client
 
 remote_root = "ppreports/outgoing"
+valid_file_pattern = r"^.+[.]CSV$"
 
 def walk_files(paths):
     result = []
@@ -41,6 +42,10 @@ if __name__ == '__main__':
     for filename in remote_files:
         if filename in local_files:
             log.info("Skipping already downloaded file {filename}".format(filename=filename))
+            continue
+
+        if not re.match(valid_file_pattern, filename):
+            log.info("Skipping nonsense file {filename}".format(filename=filename))
             continue
 
         log.info("Downloading file {filename}".format(filename=filename))
