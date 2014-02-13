@@ -36,7 +36,8 @@ class Stomp(object):
         msg = {
             'destination': config.stomp.queues[queue_key],
             'persistent': 'true',
-        } + Stomp.source_meta()
+        }
+        msg.update(Stomp.source_meta())
 
         if 'gateway' in body and 'gateway_txn_id' in body:
             msg['correlation-id'] = '{gw}-{id}'.format(gw=body['gateway'], id=body['gateway_txn_id'])
