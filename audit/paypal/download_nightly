@@ -13,7 +13,7 @@ import process.lock as lock
 import sftp.client
 
 remote_root = "ppreports/outgoing"
-valid_file_pattern = r"^(TRR|SAR).+[.]CSV$"
+valid_file_pattern = r"^.+[.]CSV$"
 
 def walk_files(paths):
     result = []
