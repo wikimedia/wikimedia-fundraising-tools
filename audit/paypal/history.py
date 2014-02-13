@@ -95,7 +95,7 @@ def handle_refund(line):
         log("Refund missing parent: %s" % (json.dumps(msg), ))
     elif not civi.transaction_exists(txn_id):
         log("Queueing refund %s" % (txn_id, ))
-        messaging.send(msg, "refund")
+        messaging.send("refund", msg)
     else:
         log("Refund already exists: %s" % (txn_id, ))
 
@@ -112,7 +112,7 @@ def handle_payment(line):
 
     if not civi.transaction_exists(txn_id):
         log("Queueing payment %s" % (txn_id, ))
-        messaging.send(msg, "payment")
+        messaging.send("payment", msg)
     else:
         log("Payment already exists: %s" % (txn_id, ))
 

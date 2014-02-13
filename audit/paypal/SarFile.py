@@ -73,4 +73,4 @@ class SarFile(object):
         if not self.stomp:
             self.stomp = Stomp()
 
-        self.stomp.send(msg, 'recurring')
+        self.stomp.send('recurring', msg)

@@ -122,7 +122,7 @@ class TrrFile(object):
         if not self.stomp:
             self.stomp = Stomp()
 
-        self.stomp.send(msg, queue)
+        self.stomp.send(queue, msg)
 
     def normalize_recurring(self, msg):
         'Synthesize a raw PayPal message'
