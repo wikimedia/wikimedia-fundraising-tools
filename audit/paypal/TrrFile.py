@@ -80,6 +80,11 @@ class TrrFile(object):
             if row['Transaction Event Code'] == 'T0002':
                 queue = 'recurring'
                 out = self.normalize_recurring(out)
+            elif row['Transaction  Debit or Credit'] == 'DR':
+                # sic: double-space is coming from the upstream
+                log.info(-"Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date'])
+                # This payment is from us!  Do not send to the CRM.
+                return
             else:
                 queue = 'donations'
         elif event_type in ('T11', 'T12'):
