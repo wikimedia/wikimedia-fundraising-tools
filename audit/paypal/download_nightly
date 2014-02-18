@@ -53,6 +53,7 @@ if __name__ == '__main__':
         dest_path = os.path.join(config.incoming_path, filename)
         remote.get(os.path.join(remote_root, filename), dest_path)
         if os.path.getsize(dest_path) == 0:
+            os.unlink(dest_path)
             raise RuntimeError("Stupid file did not download correctly.")
 
     lock.end()
