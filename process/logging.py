@@ -19,7 +19,6 @@ class Logger(object):
     @staticmethod
     def error(message):
         Logger.log(message, syslog.LOG_ERR)
-        print >>sys.stderr, message
 
     @staticmethod
     def fatal(message):
@@ -33,6 +32,7 @@ class Logger(object):
         syslog.syslog(severity, message)
         syslog.closelog()
 
-        # FIXME: or not config.quiet
-        if sys.stdin.isatty():
-            print(message)
+        # FIXME:
+        # if sys.stdout.isatty():
+        # or not config.quiet
+        print(message)
