@@ -31,6 +31,11 @@ def load_config(app_name):
 
     raise Exception("No config found, searched " + ", ".join(search_filenames))
 
+def get_config():
+    """Procedural way to get the config, to workaround early bootstrapping fluctuations"""
+    global config
+    return config
+
 class DictAsAttrDict(dict):
     def __getattr__(self, name):
         value = self[name]
