@@ -32,7 +32,11 @@ class Logger(object):
         syslog.syslog(severity, message)
         syslog.closelog()
 
-        # FIXME:
-        # if sys.stdout.isatty():
-        # or not config.quiet
-        print(message)
+        # Echo to stdout?
+        config = get_config()
+        if sys.stdout.isatty() or (not hasattr(config, 'quiet') or not config.quiet):
+            print(message)
+
+
+# Late import to deal with circular dependency
+from process.globals import get_config
