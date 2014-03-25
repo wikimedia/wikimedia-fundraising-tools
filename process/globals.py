@@ -24,8 +24,8 @@ def load_config(app_name):
         if not os.path.exists(filename):
             continue
 
-        log.info("Found config file {path}, loading...".format(path=filename))
         config = DictAsAttrDict(load_yaml(file(filename, 'r')))
+        log.info("Loaded config from {path}.".format(path=filename))
 
         return
 
