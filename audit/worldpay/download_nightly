@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TODO: generalize
 
 import os, os.path
 import re
@@ -6,14 +7,13 @@ import re
 from process.logging import Logger as log
 
 from process.globals import load_config
-load_config("paypal-audit")
+load_config("worldpay-audit")
 
 from process.globals import config
 import process.lock as lock
 import sftp.client
 
-remote_root = "ppreports/outgoing"
-valid_file_pattern = r"^.+[.]CSV$"
+remote_root = "/"
 
 def walk_files(paths):
     result = []
@@ -28,7 +28,7 @@ def walk_files(paths):
     return result
 
 if __name__ == '__main__':
-    log.info("Begin PayPal nightly audit download")
+    log.info("Begin WorldPay nightly audit download")
     lock.begin()
 
     local_paths = [
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     ]
     local_files = walk_files(local_paths)
 
-    remote = sftp.client.Client(host_rsa_key=config.sftp.host_key)
+    remote = sftp.client.Client(host_dss_key=config.sftp.host_key)
     remote_files = remote.ls(remote_root)
 
     for filename in remote_files:
@@ -45,16 +45,15 @@ if __name__ == '__main__':
             log.info("Skipping already downloaded file {filename}".format(filename=filename))
             continue
 
-        if not re.match(valid_file_pattern, filename):
-            log.info("Skipping nonsense file {filename}".format(filename=filename))
-            continue
-
         log.info("Downloading file {filename}".format(filename=filename))
         dest_path = os.path.join(config.incoming_path, filename)
         remote.get(os.path.join(remote_root, filename), dest_path)
+
+		# Assert that the file is not empty
         if os.path.getsize(dest_path) == 0:
             os.unlink(dest_path)
-            raise RuntimeError("Stupid file did not download correctly.")
+            log.warn("Stupid file was empty, removing locally: {path}".format(path=dest_path))
+            #raise RuntimeError("Stupid file did not download correctly.")
 
     lock.end()
-    log.info("End PayPal nightly audit download")
+    log.info("End WorldPay nightly audit download")

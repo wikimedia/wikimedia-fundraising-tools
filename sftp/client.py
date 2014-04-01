@@ -6,8 +6,11 @@ from process.logging import Logger as log
 from process.globals import config
 
 class Client(object):
-    def __init__(self):
-        self.host_public_key = paramiko.RSAKey(data=base64.decodestring(config.sftp.host_key))
+    def __init__(self, host_rsa_key=None, host_dss_key=None):
+        if host_dss_key:
+            self.host_public_key = paramiko.DSSKey(data=base64.decodestring(host_dss_key))
+        elif host_rsa_key:
+            self.host_public_key = paramiko.RSAKey(data=base64.decodestring(host_rsa_key))
 
         self.connect()
 
