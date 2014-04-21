@@ -7,8 +7,8 @@ import urlparse
 
 
 class PaypalApiClassic(object):
-    # pseudo-random guess
-    VERSION = '98.0'
+    # See https://developer.paypal.com/docs/classic/release-notes/
+    VERSION = '124.0'
 
     def call(self, cmd, **kw):
         params = {
