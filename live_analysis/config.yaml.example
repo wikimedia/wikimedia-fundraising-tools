@@ -25,6 +25,11 @@ gdocs:
     passwd: ""
     private_key: ./api-key.p12
 
+# If any columns not listed below are encountered, emit warnings about unexpected document structure.
+ignored_columns:
+    - notes
+    - ""
+
 centralnotice_mw_api: "http://meta.wikimedia.org/w/api.php"
 centralnotice_history_days: 14
 

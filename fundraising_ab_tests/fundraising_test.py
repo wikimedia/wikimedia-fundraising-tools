@@ -1,10 +1,15 @@
 import mediawiki.centralnotice.api
-from results import get_banner_results
 from process.logging import Logger as log
+from process.globals import config
+from results import get_banner_results
 
 class FrTest(object):
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
-        log.warn("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
+        for key in config.ignored_columns:
+            if key in ignore:
+                ignore.pop(key)
+        if ignore:
+            log.warn("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
 
         self.campaign = mediawiki.centralnotice.api.get_campaign(campaign)
         if not self.campaign:
