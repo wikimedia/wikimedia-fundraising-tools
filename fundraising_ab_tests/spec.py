@@ -7,6 +7,8 @@ import re
 
 from fundraising_ab_tests import FrTest
 import campaign_log
+from process.globals import config
+from process.logging import Logger as log
 
 def parse_spec(spec):
     for row in spec:
@@ -18,8 +20,13 @@ def compare_test_fuzzy(a, b):
 
 def is_fr_test(test):
     if test.label and test.banners and test.campaign:
-        is_chapter = re.search(r'(_|\b)WM[A-Z]{2}(_|\b)', test.banners[0])
+        is_chapter = re.search(config.fr_chapter_test, test.banners[0])
+        if is_chapter:
+            log.debug("Determined banner {banner} belongs to a chapter".format(banner=test.banners[0]))
+        else:
+            log.debug("Determined banner {banner} belongs to Fundraising".format(banner=test.banners[0]))
         return not is_chapter
+    log.warn("missing data for test {banner}".format(banner=test.banners[0]))
 
 
 class FrTestSpec(object):

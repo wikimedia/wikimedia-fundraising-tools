@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from process.logging import Logger as log
 from process.globals import load_config
 load_config("analysis")
 
@@ -11,7 +12,7 @@ from process.globals import config
 
 begin()
 
-print "Reading test specifications from %s" % (config.test_spec_url, )
+log.info("Reading test specifications from {url}".format(url=config.test_spec_url))
 tests = read_gdoc_spec(doc=config.test_spec_url)
 
 # Compile statistics from the database
@@ -20,7 +21,7 @@ for test in tests.spec:
     if not test.enabled:
         continue
     test.load_results()
-    print "DEBUG: ", test.results
+    log.debug(test.results)
     # Flatten results into a list
     results.extend([r.__dict__ for r in test.results])
     #results.extend(test.results)

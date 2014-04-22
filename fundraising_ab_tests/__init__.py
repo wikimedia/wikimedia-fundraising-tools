@@ -6,14 +6,15 @@ These are not unit tests ;) they are WMF Fundraising A/B tests.
 
 import mediawiki.centralnotice.api
 from results import get_banner_results
+from process.logging import Logger as log
 
 class FrTest(object):
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
-        print "Warning: ignoring columns: %s" % (", ".join(ignore.keys()), )
+        log.warn("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
 
         self.campaign = mediawiki.centralnotice.api.get_campaign(campaign)
         if not self.campaign:
-            print "Warning: no such campaign '%s'" % campaign
+            log.warn("no such campaign '{campaign}'".format(campaign=campaign))
 
         self.type = type.lower()
 
@@ -59,10 +60,10 @@ class FrTest(object):
         if self.is_country_test:
             #results = [ calculate_result(country=code) for code in campaign['countries'] ]
             #self.results.extend(results)
-            print "country test type not implemented"
+            log.warn("country test type not implemented")
 
         if self.is_lp_test:
-            print "LP test type not implemented"
+            log.warn("LP test type not implemented")
 
     def get_case(self, **kw):
         conditions = {

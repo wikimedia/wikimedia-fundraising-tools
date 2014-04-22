@@ -19,6 +19,7 @@ class Logger(object):
     @staticmethod
     def error(message):
         Logger.log(message, syslog.LOG_ERR)
+        print >>sys.stderr, message
 
     @staticmethod
     def fatal(message):
