@@ -5,7 +5,7 @@ TODO:
 
 import re
 
-from fundraising_ab_tests import FrTest
+from fundraising_ab_tests.fundraising_test import FrTest
 import campaign_log
 from process.globals import config
 from process.logging import Logger as log

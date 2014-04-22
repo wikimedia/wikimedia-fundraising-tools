@@ -3,14 +3,20 @@ of each test are stored in a database (in this case, a Google spreadsheet), and
 results aggregated from private databases.
 
 There are two jobs which can be scheduled or disabled independently:
+
 * update_specs - suggested interval, 5 minutes
     Sync CN logs to the test description database.  The algorithm is roughly,
 If the campaign change would result in a different end-user experience (usually,
 an enable or disable event), create or update the new test regime which is begun
 by this change.  Also, mark a test matching the previous state as ending at this
 time.
-* publish_results - suggested 1 or 2 minutes
+
+* publish_results - suggested interval, every 1 or 2 minutes
     Click and contribution results are generated or updated from test cases.
+
+Also, helper scripts
+* dump_tests.py - retrieve a dump of meta.wikimedia.org campaign logs as a CSV
+
 Columns must be present in the results worksheet if they are to be populated,
 the scripts do not create their own schema or headers.  See the README.
 

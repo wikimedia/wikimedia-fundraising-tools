@@ -26,6 +26,7 @@ gdocs:
     private_key: ./api-key.p12
 
 centralnotice_mw_api: "http://meta.wikimedia.org/w/api.php"
+centralnotice_history_days: 14
 
 # Connection information for the CRM database
 db_params:
