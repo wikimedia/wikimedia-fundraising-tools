@@ -36,22 +36,26 @@ centralnotice_history_days: 14
 # Connection information for the CRM database
 db_params:
     host: localhost
-    db: wmf_civi
+    db: civicrm
     user: wmf
     passwd: ggg
-    debug: True
+    debug: False
 
 # if any tables are not in the civicrm database, specify the db name and prefix here.
 #scratch_db_prefix = 'test.%s_' % os.environ['LOGNAME']
 public_reporting_prefix: ""
 contribution_tracking_prefix: drupal.
+impressions_prefix: pgehres.
 spec_prefix: ""
 results_prefix: ""
+
+screenshot_format: "http://frdata.wikimedia.org/banner/{banner}/{banner}_{language}.png"
+preview_format: "http://{language}.wikipedia.org/wiki/Special:Random?banner={banner}&country={country}&uselang={language}&reset=1&force=1"
 
 # FIXME: what is this?
 reference_day: 20121116000000
 
-fr_banner_naming: B1[3-4]_\d+_(?P<testname>[^_]+)_(?P<variation>[^_]+)_(?P<dropdown>[^_]+)_(?P<language>[a-z]{2})(?P<country>[A-Z]{2})
+#fr_banner_naming: B1[3-4]_\d+_(?P<testname>[^_]+)_(?P<variation>[^_]+)_(?P<dropdown>[^_]+)_(?P<language>[a-z]{2})(?P<country>[A-Z]{2})
 fr_chapter_test: (_|\b)WM[A-Z]{2}(_|\b)
 
 fudge_trials: 100000

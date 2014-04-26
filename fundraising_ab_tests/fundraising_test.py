@@ -4,6 +4,10 @@ from process.globals import config
 from results import get_banner_results
 
 class FrTest(object):
+    """Single N-way test
+    
+    Currently, only banner tests are supported."""
+
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
         for key in config.ignored_columns:
             if key in ignore:
@@ -51,7 +55,9 @@ class FrTest(object):
             for name in self.banners:
                 test_case = self.get_case(
                     campaign=self.campaign['name'],
-                    banner=name
+                    banner=name,
+                    languages=self.campaign['languages'],
+                    countries=self.campaign['countries'],
                 )
                 cases.append(test_case)
 
