@@ -16,6 +16,7 @@ config = None
 messaging = None
 options = None
 civi = None
+log_file = None
 
 def main():
     global config, messaging, options, civi
@@ -176,7 +177,6 @@ def normalize_refund_msg(line):
 
     return msg
 
-log_file = None
 
 def log(msg):
     global options, log_file
