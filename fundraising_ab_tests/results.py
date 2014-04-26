@@ -1,5 +1,5 @@
-import re
 import json
+import re
 
 from process.globals import config
 from mediawiki.centralnotice.contributions import get_totals

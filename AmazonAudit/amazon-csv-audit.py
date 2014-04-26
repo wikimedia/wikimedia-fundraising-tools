@@ -4,7 +4,6 @@
 
 import csv
 import sys
-from dateutil.parser import parse as dparse
 import MySQLdb as MySQL
 
 if len(sys.argv) != 5:

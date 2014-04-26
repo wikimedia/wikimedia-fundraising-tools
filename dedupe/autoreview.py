@@ -61,8 +61,7 @@ class Autoreview(object):
             result['name'] = Autoreview.compareNames(contact['name'], other['name'])
             result['email'] = Autoreview.compareEmails(contact['email'], other['email'])
             result['address'] = Autoreview.compareAddresses(contact['address'], other['address'])
-            action = self.determineAction(result)
-            #XXX
+            #TODO action = self.determineAction(result)
 
     @staticmethod
     def compareNames(a, b):
@@ -130,7 +129,7 @@ class Autoreview(object):
             tag = Autoreview.REC_KEEP
         else:
             queue = Autoreview.REVIEW
-            tag = Autoreview.actionLookup[concat]
+            tag = Autoreview.actionLookup[concatKey]
 
         return {
             'queue': queue,

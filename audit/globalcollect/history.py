@@ -7,11 +7,14 @@ Results are kept in a scratch table.
 
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
-import json
 import csv
 import atexit
 
 from database.db import Connection as DbConnection
+
+config = None
+options = None
+args = None
 
 def main():
     global config, options, db

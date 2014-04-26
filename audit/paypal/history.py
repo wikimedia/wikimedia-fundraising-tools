@@ -3,7 +3,6 @@
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from queue.stomp_wrap import Stomp
-import time
 import json
 import csv
 import atexit
@@ -12,6 +11,11 @@ import gzip
 import locale
 import dateutil.parser
 from civicrm.civicrm import Civicrm
+
+config = None
+messaging = None
+options = None
+civi = None
 
 def main():
     global config, messaging, options, civi

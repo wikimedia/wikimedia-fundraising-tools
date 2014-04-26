@@ -22,7 +22,6 @@ class Stomp(object):
             self.conn.disconnect()
 
             # Let the STOMP library catch up
-            import time
             time.sleep(1)
 
     def send(self, queue_key, body):
