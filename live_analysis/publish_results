@@ -12,8 +12,8 @@ from process.globals import config
 
 begin()
 
-log.info("Reading test specifications from {url}".format(url=config.test_spec_url))
-tests = read_gdoc_spec(doc=config.test_spec_url)
+log.info("Reading test specifications from {url}".format(url=config.spec_db.spec.url))
+tests = read_gdoc_spec(doc=config.spec_db.spec.url)
 
 # Compile statistics from the database
 results = []
@@ -21,12 +21,12 @@ for test in tests.spec:
     if not test.enabled:
         continue
     test.load_results()
-    log.debug(test.results)
+    #log.debug(test.results)
     # Flatten results into a list
     results.extend([r.__dict__ for r in test.results])
     #results.extend(test.results)
 
 # store in gdocs spreadsheet
-update_gdoc_results(doc=config.test_results_url, results=results)
+update_gdoc_results(doc=config.spec_db.results.url, results=results)
 
 end()

@@ -48,7 +48,7 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
     query.columns.append('COUNT(cc.id) AS donations')
 
     query.tables.append(config.contribution_tracking_prefix + 'contribution_tracking ct')
-    query.tables.append("LEFT JOIN civicrm_contribution cc ON cc.id = ct.contribution_id")
+    query.tables.append("civicrm_contribution cc ON cc.id = ct.contribution_id")
 
     if wheres:
         query.where.extend(wheres)
