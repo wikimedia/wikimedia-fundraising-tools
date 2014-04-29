@@ -1,8 +1,10 @@
-'''
+"""
+Specification for a list of tests
+
 TODO:
 * lots of refinement and clarification around test vs spec
 * match start_time to discriminate between mutations of an otherwise identical test...
-'''
+"""
 
 import re
 
@@ -12,10 +14,12 @@ from process.globals import config
 from process.logging import Logger as log
 
 def parse_spec(spec):
+    """Turn each row of a specification source into test objects"""
     for row in spec:
         yield FrTest(**row)
 
 def compare_test_fuzzy(a, b):
+    """Check whether the tests match closely enough to be considered identical."""
     if a.campaign['name'] == b.campaign['name'] and a.banners == b.banners:
         return True
 
@@ -47,6 +51,7 @@ class FrTestSpec(object):
             self.spec.append(test)
 
     def find_test(self, test):
+        """Search for a given test in the specification so far.  If it exists, return the list index."""
         for index, existing in enumerate(self.spec):
             if compare_test_fuzzy(test, existing):
                 return index
