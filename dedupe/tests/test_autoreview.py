@@ -16,30 +16,30 @@ class TestAutoreview(unittest.TestCase):
         self.assertEqual(Autoreview.UNRELATED, Autoreview.compareEmails('elem@ant', 'foo@bar'))
 
     def test_compareAddresses(self):
-		oldAddress = {
-			'street_address': '1701 Flightless Bird',
-			'postal_code': '112233 BFF',
-			'city': 'Dent',
-			'country': 'UK',
-			'state': 'Eastside',
-		}
-		nearAddress = {
-			'street_address': '1710 F. Bd.',
-			'postal_code': '112233 BFF',
-			'city': 'Dent',
-			'country': 'UK',
-			'state': 'Eastside',
-		}
-		otherAddress = {
-			'street_address': '1 Uptown',
-			'postal_code': '323232',
-			'city': 'Dent',
-			'country': 'UK',
-			'state': 'Eastside',
-		}
-		self.assertEqual(Autoreview.IDENTICAL, Autoreview.compareAddresses(oldAddress, oldAddress))
-		self.assertEqual(Autoreview.SIMILAR, Autoreview.compareAddresses(nearAddress, oldAddress))
-		self.assertEqual(Autoreview.UNRELATED, Autoreview.compareAddresses(otherAddress, oldAddress))
+        oldAddress = {
+            'street_address': '1701 Flightless Bird',
+            'postal_code': '112233 BFF',
+            'city': 'Dent',
+            'country': 'UK',
+            'state': 'Eastside',
+        }
+        nearAddress = {
+            'street_address': '1710 F. Bd.',
+            'postal_code': '112233 BFF',
+            'city': 'Dent',
+            'country': 'UK',
+            'state': 'Eastside',
+        }
+        otherAddress = {
+            'street_address': '1 Uptown',
+            'postal_code': '323232',
+            'city': 'Dent',
+            'country': 'UK',
+            'state': 'Eastside',
+        }
+        self.assertEqual(Autoreview.IDENTICAL, Autoreview.compareAddresses(oldAddress, oldAddress))
+        self.assertEqual(Autoreview.SIMILAR, Autoreview.compareAddresses(nearAddress, oldAddress))
+        self.assertEqual(Autoreview.UNRELATED, Autoreview.compareAddresses(otherAddress, oldAddress))
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()
