@@ -17,6 +17,7 @@ class FrTest(object):
 
         self.type = type.lower()
 
+        self.banners = []
         if self.type.count('banner') > 0:
             self.is_banner_test = True
             if banners:
