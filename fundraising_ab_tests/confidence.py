@@ -39,7 +39,7 @@ def get_confidence(results, name_column=None, successes_column=None, trials=None
 
     cases = []
     for result in results:
-        name = result.results[name_column]
+        #name = result.results[name_column]
         successes = result.results[successes_column]
         if hasattr(trials, 'encode'):
             trials = result.results[trials]

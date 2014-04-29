@@ -4,14 +4,12 @@ Aggregate contribution data.
 TODO: Use anonymized tables
 '''
 
-import os
 import decimal
 
 from process.globals import config
 from database import db
 
 import time_util
-import top_ten
 
 ct_banner_clause = "LEFT(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1), LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1)))"
 

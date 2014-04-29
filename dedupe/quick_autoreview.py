@@ -5,7 +5,6 @@
 from process.logging import Logger as log
 from process.globals import load_config
 load_config("dedupe")
-from process.globals import config
 import process.lock as lock
 
 from autoreview import Autoreview
