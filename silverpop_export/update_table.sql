@@ -2,6 +2,7 @@
 
 SET autocommit = 1;
 
+DROP TABLE IF EXISTS silverpop_export;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS silverpop_export_dedupe_contact;
 DROP TABLE IF EXISTS silverpop_export_stat;
@@ -56,8 +57,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 ) COLLATE 'utf8_unicode_ci';
 
 -- Populate, or append to, the storage table all contacts that
--- have an email address. ID is civicrm_email.id which allows us to
--- retain work we've already done across runs.
+-- have an email address. ID is civicrm_email.id.
 INSERT INTO silverpop_export
   (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
@@ -67,13 +67,7 @@ INSERT INTO silverpop_export
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   WHERE
-    e.email IS NOT NULL AND e.email != ''
-  ON DUPLICATE KEY UPDATE
-    email = e.email,
-    first_name = c.first_name,
-    last_name = c.last_name,
-    preferred_language = IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    opted_out = (c.is_opt_out OR c.do_not_email);
+    e.email IS NOT NULL AND e.email != '';
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
