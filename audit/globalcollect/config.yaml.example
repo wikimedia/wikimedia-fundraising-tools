@@ -1,0 +1,26 @@
+# Deploy as /etc/fundraising/globalcollect-audit.yaml or $HOME/.fundraising/globalcollect-audit.yaml
+
+# Local path where unprocessed files land
+#
+incoming_path: /var/spool/audit/globalcollect/incoming
+
+# After processing (or being skipped), audit files are stored here
+archive_path: /archive/audit/globalcollect/archive
+
+# Connection parameters
+sftp:
+    # [sic]
+    host: sft.globalcollect.com
+    username: foo
+
+    # Keep synchronized with all files under this root directory
+    remote_root: /out
+
+    # User's private key (TODO: file vs inline)
+    private_key: |-
+        -----BEGIN RSA PRIVATE KEY-----
+        SHMonsense===
+        -----END RSA PRIVATE KEY-----
+
+    host_key: |-
+        ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAnXjYViquj/D24VEtlOqP1Rg/C0WNSuRTJ89G2PqpvhrSwzg49NsFmn/JylMgyR8egwVr8jucuNavfxh1G0cKuC1OOHSxbQ9CBc7Hkrnhzkv4DLCwruvbSlB20u8VCLxMw7CekpIKNmLiatak8BsHZSJtKOXU4CHfmzp/rHLOos4OggBUokD4fhMgIWIZviQwsKbZIj2MdyesEaBMp16sF6B893WvV3iH/ztBXw9c1/yNSEWcd2ixxCnjhtphY+6wCdABly8uGM+/9XNbSeqDuYz1ZJtbBqpQAi4q6YCZZDV4NX0+IzqhMwpqBlHlL4Fz33y4WFal/wehDaPY8ThJrw==
