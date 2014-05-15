@@ -26,6 +26,7 @@ handlers = {
 }
 
 def parse(path):
+    filename = os.path.basename(path)
     matches = re.match(filename_re, filename)
     if matches:
         filetype = matches.group('type')

@@ -5,8 +5,10 @@ import urllib
 import urllib2
 import urlparse
 
+
 class PaypalApiClassic(object):
-    VERSION = '98.0' # pseudo-random guess
+    # pseudo-random guess
+    VERSION = '98.0'
 
     def call(self, cmd, **kw):
         params = {

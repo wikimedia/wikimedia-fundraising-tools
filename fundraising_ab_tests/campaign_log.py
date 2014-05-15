@@ -1,4 +1,5 @@
-from fundraising_ab_tests import FrTest
+from fundraising_ab_tests.fundraising_test import FrTest
+from process.globals import config
 
 def tests_from_entry(entry):
     '''
@@ -47,5 +48,5 @@ def get_relevant_events():
         if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
             return True
 
-    logs = get_campaign_logs(since=time_util.str_time_offset(days=-1))
+    logs = get_campaign_logs(since=time_util.str_time_offset(days=-config.centralnotice_history_days))
     return [ tests_from_entry(e) for e in reversed(logs) if is_relevant(e) ]

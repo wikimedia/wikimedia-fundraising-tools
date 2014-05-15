@@ -1,7 +1,8 @@
 from google.gdocs import Spreadsheet
+from process.logging import Logger as log
 
 def write_gdoc_results(doc=None, results=[]):
-    print "Writing test results to %s" % doc
+    log.info("Writing test results to {url}".format(url=doc))
     doc = Spreadsheet(doc=doc)
     for result in results:
         props = {}
@@ -10,7 +11,7 @@ def write_gdoc_results(doc=None, results=[]):
         doc.append_row(props)
 
 def update_gdoc_results(doc=None, results=[]):
-    print "Updating results in %s" % doc
+    log.info("Updating results in {url}".format(url=doc))
     doc = Spreadsheet(doc=doc)
     existing = list(doc.get_all_rows())
 
@@ -43,7 +44,7 @@ def update_gdoc_results(doc=None, results=[]):
             doc.append_row(props)
         else:
             if len(matching) > 1:
-                print "WARNING: more than one result row %s matches criteria: %s" % (matching, result['criteria'], )
+                log.warn("more than one result row {match} matches criteria: {criteria}".format(match=matching, criteria=result['criteria']))
             index = matching[-1]
-            print "DEBUG: updating row %d with %s" % (index, result['criteria']['banner'])
+            log.debug("updating row {rownum} with {banner}".format(rownum=index, banner=result['criteria']['banner']))
             doc.update_row(props, index=index)

@@ -86,8 +86,10 @@ class PagedGroup(ContactCache):
         return query
 
     def next(self):
-        query.offset += self.pagesize
-        self.fetch()
+        #TODO:
+        #query.offset += self.pagesize
+        #self.fetch()
+        raise Exception("unimplemented")
 
 class TaggedGroup(PagedGroup):
     """Select contacts based on included and excluded tags."""

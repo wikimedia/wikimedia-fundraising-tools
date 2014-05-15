@@ -131,7 +131,7 @@ class Spreadsheet(object):
 
     def get_all_rows(self):
         '''
-        Dump entire spreadsheet to json
+        Dump entire spreadsheet and return as a list of dicts
         '''
         feed = self.client.GetListFeed( self.doc_key, wksht_id=self.worksheet_id )
         for line in feed.entry:

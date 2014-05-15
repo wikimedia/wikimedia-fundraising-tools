@@ -3,7 +3,6 @@
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from queue.stomp_wrap import Stomp
-import time
 import json
 import csv
 import atexit
@@ -12,6 +11,12 @@ import gzip
 import locale
 import dateutil.parser
 from civicrm.civicrm import Civicrm
+
+config = None
+messaging = None
+options = None
+civi = None
+log_file = None
 
 def main():
     global config, messaging, options, civi
@@ -172,7 +177,6 @@ def normalize_refund_msg(line):
 
     return msg
 
-log_file = None
 
 def log(msg):
     global options, log_file

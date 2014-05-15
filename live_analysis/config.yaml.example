@@ -1,0 +1,62 @@
+# // vim: ft=yaml
+
+spec_db:
+    spec:
+        # TODO
+        #format: json
+        #path: ./spec.json
+
+        url: https://docs.google.com/a/wikimedia.org/spreadsheet/ccc?key=0AvYeJET4NyTPdHp4MFdORDVId1puQUd2MGxEYnU1anc#gid=0
+        #FIXME: classname constant
+        #- Mysql
+
+    results:
+        #format: json
+        #path: ./results.json
+        url: https://docs.google.com/a/wikimedia.org/spreadsheet/ccc?key=0AvYeJET4NyTPdHp4MFdORDVId1puQUd2MGxEYnU1anc#gid=1
+        #- mysql
+
+
+# (in the future) this string will appear as the author of changes
+app_name: "bot: FR"
+
+gdocs:
+    email: ""
+    passwd: ""
+    private_key: ./api-key.p12
+
+# If any columns not listed below are encountered, emit warnings about unexpected document structure.
+ignored_columns:
+    - notes
+    - ""
+
+centralnotice_mw_api: "http://meta.wikimedia.org/w/api.php"
+centralnotice_history_days: 14
+
+# Connection information for the CRM database
+db_params:
+    host: localhost
+    db: civicrm
+    user: wmf
+    passwd: ggg
+    debug: False
+
+# if any tables are not in the civicrm database, specify the db name and prefix here.
+#scratch_db_prefix = 'test.%s_' % os.environ['LOGNAME']
+public_reporting_prefix: ""
+contribution_tracking_prefix: drupal.
+impressions_prefix: pgehres.
+spec_prefix: ""
+results_prefix: ""
+
+screenshot_format: "http://frdata.wikimedia.org/banner/{banner}/{banner}_{language}.png"
+preview_format: "http://{language}.wikipedia.org/wiki/Special:Random?banner={banner}&country={country}&uselang={language}&reset=1&force=1"
+
+# FIXME: what is this?
+reference_day: 20121116000000
+
+#fr_banner_naming: B1[3-4]_\d+_(?P<testname>[^_]+)_(?P<variation>[^_]+)_(?P<dropdown>[^_]+)_(?P<language>[a-z]{2})(?P<country>[A-Z]{2})
+fr_chapter_test: (_|\b)WM[A-Z]{2}(_|\b)
+
+fudge_trials: 100000
+confidence_level: 0.95

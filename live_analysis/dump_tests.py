@@ -5,9 +5,13 @@
 
 import csv
 import sys
-import mediawiki.centralnotice.api
 
-import process.globals
+from process.logging import Logger as log
+from process.globals import load_config
+load_config("analysis")
+
+import mediawiki.centralnotice.api
+from process.globals import config
 
 def is_relevant(entry):
     '''
@@ -52,5 +56,4 @@ def fetch():
         cur = cur + pagesize
 
 if __name__ == "__main__":
-    process.globals.load_config("analysis")
     fetch()

@@ -1,11 +1,9 @@
 #!/usr/bin/python
 
-import sys
 import MySQLdb as db
 import csv
 from optparse import OptionParser
 from ConfigParser import SafeConfigParser
-from operator import itemgetter
 
 def main():
     # Extract any command line options

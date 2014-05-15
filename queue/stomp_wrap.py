@@ -2,12 +2,14 @@ from process.globals import config
 from process.logging import Logger as log
 import process.version_stamp
 
-import os, os.path
+import os
+import os.path
 import sys
 import json
 import socket
 import time
 from stompy import Stomp as DistStomp
+
 
 class Stomp(object):
     conn = None
@@ -22,7 +24,6 @@ class Stomp(object):
             self.conn.disconnect()
 
             # Let the STOMP library catch up
-            import time
             time.sleep(1)
 
     def send(self, queue_key, body):
