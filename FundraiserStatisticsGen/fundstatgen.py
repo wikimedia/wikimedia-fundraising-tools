@@ -290,3 +290,4 @@ if __name__ == "__main__":
         main()
     except Exception as ex:
         logging.exception('Unexpected exception! Death is me.')
+        exit(1)
