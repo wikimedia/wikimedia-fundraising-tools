@@ -12,9 +12,11 @@ def load_config(app_name):
     search_filenames = [
         os.path.expanduser("~/.fundraising/%s.yaml" % app_name),
         os.path.expanduser("~/.%s.yaml" % app_name),
+        # FIXME: relative path fail
         os.path.dirname(__file__) + "/../%s/config.yaml" % app_name,
         "/etc/fundraising/%s.yaml" % app_name,
         "/etc/%s.yaml" % app_name,
+        # FIXME: relative path fail
         os.path.dirname(__file__) + "/../%s/%s.yaml" % (app_name, app_name,)
     ]
     # TODO: if getops.get(--config/-f): search_filenames.append
