@@ -72,7 +72,8 @@ class Crawler(object):
                 # Defaults to PANIC
                 if hasattr(config, 'panic_on_empty') and not config.panic_on_empty:
                     log.warn("Stupid file was empty, removing locally: {path}".format(path=dest_path))
-                raise RuntimeError("Stupid file did not download correctly.")
+                else:
+                    raise RuntimeError("Stupid file did not download correctly.")
 
 def walk_files(paths):
     '''List all files under these path(s)
