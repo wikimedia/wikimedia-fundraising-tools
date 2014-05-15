@@ -1,0 +1,39 @@
+# Deploy as /etc/fundraising/worldpay-audit.yaml, or $HOME/.fundraising/worldpay-audit.yaml
+# vim: ft=yaml
+
+# Directory to which audit files will be downloaded.
+incoming_path: /tmp/incoming
+
+# Directory to which processed files will be moved.
+archive_path: /tmp/archive
+
+# They say that empty audit files are normal...
+panic_on_empty: 0
+
+# Login credentials for the audit server
+sftp:
+    host: 70.35.172.60
+    username: foo
+    password: "lissp#"
+
+    remote_root: /
+
+    host_key: |-
+        ssh-dss AAAAB3NzaC1kc3MAAACBAPbaI76upAq1NTiGf+nzYyBCQ9fPCKjp8CdspqXW1TKyVwu2kXchSCBW6vvhBLs/9LvaWawEsAzGTut4NWHZ/spprElp454+V2uQGly704nT6VlQO47Bb7tNdO/M7TlCufFb9HbctdShxE7/q2U4t/eNv2KvN/msD4Qo7HcupqpzAAAAFQDkXcpGBxCSb9mT2saStbBT78EclQAAAIAOFexPd/1kygtdLxKOmhlCtHjPSUYFz5o43cAdgL5IjuFyiINEACCFiiDo/ugpUy5JNgJFMmt0F9CsW6/HjNw/CDcoPjLANHHdHlaoZhqYuMbhCd5kq8rtoMFLu6XBwAVbN/0hOhH8ELdG3ckc4iTC2fcLRdty8mmgiTmzDcxS5QAAAIBdTntCTP1R5RlQSg9H/CZjsnb8OpN3U7Yje/ffp1uSG569UvArF/SS5ANGq/ufcVixKSW+y4ltbQ6pFrizl3Q1PykNfX5Jw6gAkIkSBATATgOuOs0B+aGIvfTbUacPqq3OhVwffSkbGt8+MWt9Gmaic37TdVlVB8s/XDcdCDPBoQ==
+
+civicrm_db:
+    host: localhost
+    user: civi
+    passwd: "barl!"
+    db: civicrm
+    debug: false
+
+stomp:
+    server: localhost
+    port: 61613
+    queues:
+        refund: /queue/refund
+        donations: /queue/donations
+        recurring: /queue/recurring
+
+no_effect: 1

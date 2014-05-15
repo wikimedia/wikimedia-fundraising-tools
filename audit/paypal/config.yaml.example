@@ -1,16 +1,24 @@
-# Copy as /etc/fundraising/paypal-audit.yaml, or $HOME/.fundraising/paypal-audit.yaml
+# Deploy as /etc/fundraising/paypal-audit.yaml, or $HOME/.fundraising/paypal-audit.yaml
+
+# Only download files matching this pattern
+valid_file_pattern: "^.+[.]CSV$"
+
+# New reports will be downloaded to this directory.
+incoming_path: /var/log/spool/audit/paypal/incoming
+
+# Processed reports are moved here.
+archive_path: /archive/audit/paypal/archive
 
 sftp:
     host: reports.paypal.com
-    username: fooness
-    password: "Wicked"
-    # The real host key, as of 20131230
-    host_key: "AAAAB3NzaC1yc2EAAAABIwAAAIEAsWerPjkPXD/EklfIvMKoi+K+DYmNdIJNbuwzm36wWEfGUGdki8+no7PUN3v4iQ2QmYcpiZcxGaUXDs4L6Ko41jtsfVK+DGr8B3p4uWPqJoohIieMYAeKy5dEaAuaa8RVAgaEGa9wi4c1JZFYKgxEqJhJFmpD55VO0DvTmS9JKYM="
+    username: Noogie
+    password: "^Ful2x"
 
-# New reports will be downloaded to this directory.
-incoming_path: /home/audit/incoming
-# Processed reports are moved here.
-archive_path: /home/audit/archive
+    remote_root: /ppreports/outgoing
+
+    # The real host key, as of 20140515
+    host_key: |-
+        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDHDBjNezkG40FluT09yGTiNH2zzB3PnvfzX0Dj+A1UiV2buDNF0fOlGxu/vMCrnUHnuxjHlJ2ieBRwMl/0NiFd4uL/HtmsyFkT/EbUjZF9Ky2u4TVHHVRuZYnipidCtJ5RABBRwjToeg60C185CJpHGciFTwwGKDrZDZaGbMpKRZB7z0Nt3/Wuk8pO3fvbUGaIC4pAPe2ljyIPp/LuEE4QNlER8Hexs8XHKbo+a22vb0/hrcV38saLFZfm0O62sYkJ8t8bFDN1k/3c+2/0TfMZc6qbWA6sD872zcqaRHM2BtntWn9TuZP36/SclC0k3h1S0M5lQ2Mp5TAKqXtwgCnl
 
 stomp:
     server: crm.dev
