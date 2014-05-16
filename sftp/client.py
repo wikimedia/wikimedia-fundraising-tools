@@ -56,6 +56,7 @@ class Crawler(object):
 
         remote = Client()
         remote_files = remote.ls(config.sftp.remote_root)
+        empty_failures = []
 
         for filename in remote_files:
             if filename in local_files:
@@ -69,11 +70,14 @@ class Crawler(object):
             # Assert that the file is not empty
             if os.path.getsize(dest_path) == 0:
                 os.unlink(dest_path)
-                # Defaults to PANIC
-                if hasattr(config, 'panic_on_empty') and not config.panic_on_empty:
-                    log.warn("Stupid file was empty, removing locally: {path}".format(path=dest_path))
-                else:
-                    raise RuntimeError("Stupid file did not download correctly.")
+                empty_failures.append(filename)
+                log.warn("Stupid file was empty, removing locally: {path}".format(path=dest_path))
+
+        if empty_failures:
+            log.error("The following files were empty, please contact your provider: {failures}".format(failures=", ".join(empty_failures)))
+
+            if hasattr(config, 'panic_on_empty') and config.panic_on_empty:
+                raise RuntimeError("Stupid files did not download correctly.")
 
 def walk_files(paths):
     '''List all files under these path(s)
