@@ -52,6 +52,8 @@ class Crawler(object):
             config.incoming_path,
             config.archive_path,
         ]
+        if hasattr(config, 'extra_paths'):
+            local_paths.extend(config.extra_paths)
         local_files = walk_files(local_paths)
 
         remote = Client()
