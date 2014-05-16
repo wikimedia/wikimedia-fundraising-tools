@@ -102,6 +102,9 @@ class Wr1DataFile_Iterator implements Iterator {
 		$this->setFilePath( $filePath );
 		// open file
 		$this->fh = fopen( $this->getFilePath(), 'r' );
+		if ( $this->fh === false ) {
+			throw new Exception( "Failed to open '{$this->getFilePath()}'" );
+		}
 	}
 	
 	/**
