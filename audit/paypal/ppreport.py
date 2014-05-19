@@ -1,5 +1,6 @@
 import io
 
+from failmail.mailer import FailMailer
 from process.logging import Logger as log
 from unicode_csv_reader import unicode_csv_reader
 
@@ -40,7 +41,10 @@ def read_encoded(path, version, callback, encoding):
         for line in plainreader:
             row = dict(zip(column_headers, line))
             if row['Column Type'] == 'SB':
-                callback(row)
+                try:
+                    callback(row)
+                except:
+                    FailMailer.mail('BAD_AUDIT_LINE', data=row, print_exception=True)
             elif row['Column Type'] in ('SF', 'SC', 'RF', 'RC', 'FF'):
                 pass
             else:
