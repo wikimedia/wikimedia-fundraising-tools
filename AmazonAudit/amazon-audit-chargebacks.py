@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 from amazon import Amazon
-import stomp
+# FIXME: reuse stomp_wrap
+from stompy import Stomp as DistStomp
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from datetime import datetime
@@ -40,9 +41,7 @@ def main():
     config.read(fileList)
 
     # === Open up ze STOMP ===
-    host_and_ports = (config.get('Stomp', 'server'), config.getint('Stomp', 'port'))
-    sc = stomp.Connection(host_and_ports=[host_and_ports])
-    sc.start()
+    sc = DistStomp(config.get('Stomp', 'server'), config.getint('Stomp', 'port'))
     sc.connect()
 
     # === Connection to Amazon ===
@@ -302,11 +301,12 @@ def remediateTransaction(txn, txnInfo, sc, config):
         "recurring":""
     }
 
+    frame = {}
+    frame.update(headers)
+    frame['body'] = json.dumps(msg)
+
     # Inject the message
-    sc.send(
-        json.dumps(msg),
-        headers
-    )
+    sc.send(frame)
 
     return ctid
 

@@ -1,7 +1,8 @@
 #!/usr/bin/python2
 
 from amazon import Amazon
-import stomp
+# FIXME: reuse stomp_wrap
+from stompy import Stomp as DistStomp
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from datetime import datetime
@@ -41,10 +42,7 @@ def main(secondsToAudit, configFile, gracePeriod, historyFile, logFile, auditPay
     _config.read(fileList)
 
     # === Open up ze STOMP ===
-    host_and_ports = (_config.get('Stomp', 'server'), _config.getint('Stomp', 'port'))
-    print(host_and_ports)
-    _stompLink = stomp.Connection(host_and_ports=[host_and_ports])
-    _stompLink.start()
+    _stompLink = DistStomp(config.get('Stomp', 'server'), config.getint('Stomp', 'port'))
     _stompLink.connect()
     
     # === Connection to Amazon ===
@@ -343,11 +341,11 @@ def injectPaymentMessage(txn, txnInfo):
         "recurring":""
     }
 
+    frame = headers
+    frame['body'] = json.dumps(msg)
+
     # Inject the message
-    _stompLink.send(
-        json.dumps(msg),
-        headers
-    )
+    _stompLink.send(frame)
 
     return ctid
 

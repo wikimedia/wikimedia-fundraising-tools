@@ -1,9 +1,7 @@
 -- Amazon Auditing Script --
 
 INSTALLATION
-The python stomp library must be installed for use. This can be obtained
-from http://code.google.com/p/stomppy/. This software was developed originally
-on the 3.X series of the library.
+apt-get install python-stompy
 
 CONFIGURATION
 The amazon-audit.cfg script is provided as a base template. Although this file
