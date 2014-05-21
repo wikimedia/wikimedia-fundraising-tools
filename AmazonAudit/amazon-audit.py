@@ -42,7 +42,7 @@ def main(secondsToAudit, configFile, gracePeriod, historyFile, logFile, auditPay
     _config.read(fileList)
 
     # === Open up ze STOMP ===
-    _stompLink = DistStomp(config.get('Stomp', 'server'), config.getint('Stomp', 'port'))
+    _stompLink = DistStomp(_config.get('Stomp', 'server'), _config.getint('Stomp', 'port'))
     _stompLink.connect()
     
     # === Connection to Amazon ===
