@@ -54,7 +54,7 @@ class PayFlowAudit {
 
 	// Civi lookup function
 	public function inCivi( $id ) {
-		$conf = parse_ini_file( 'auth.cfg' );
+		$conf = parse_ini_file( '/etc/fundraising/auth.cfg' );
 
 		$db = mysql_connect( $conf['db_server'], $conf['db_user'], $conf['db_pass']);
 		if ( ! $db ) {
