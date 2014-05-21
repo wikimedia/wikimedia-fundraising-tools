@@ -28,6 +28,8 @@ def load_config(app_name):
         config = DictAsAttrDict(load_yaml(file(filename, 'r')))
         log.info("Loaded config from {path}.".format(path=filename))
 
+        config.app_name = app_name
+
         return
 
     raise Exception("No config found, searched " + ", ".join(search_filenames))
