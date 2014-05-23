@@ -16,7 +16,7 @@ class FailMailer(object):
             body = body + exception_info
         if data:
             if not isinstance(data, basestring):
-                data = yaml.safe_dump([data], default_flow_style=False)
+                data = yaml.safe_dump([data], default_flow_style=False, allow_unicode=True)
             body = body + "\n\nWhile processing:\n{data}".format(data=data)
 
         log.error("sending failmail: " + body)
