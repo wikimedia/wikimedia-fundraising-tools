@@ -351,7 +351,7 @@ class PayflowQuery {
 	}
 
 	public function loadAuthData() {
-		$config = 'auth.cfg';
+		$config = '/etc/fundraising/auth.cfg';
 		$auth = parse_ini_file( $config );
 
 		$this->vendor = $auth['vendor'];

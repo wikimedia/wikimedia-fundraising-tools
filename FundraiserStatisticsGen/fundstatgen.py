@@ -14,6 +14,8 @@ from ConfigParser import SafeConfigParser
 import logging
 from logging.handlers import SysLogHandler
 
+CONFIG_DEFAULT_PATH = "/etc/fundraising/fundstatgen.cfg"
+
 def main():
     # Extract any command line options
     parser = OptionParser(usage="usage: %prog [options] <working directory>")
@@ -27,8 +29,8 @@ def main():
 
     # Load the configuration from the file
     config = SafeConfigParser()
-    fileList = ['./fundstatgen.cfg']
-    if options.configFile is not None:
+    fileList = [CONFIG_DEFAULT_PATH]
+    if options.configFile:
         fileList.append(options.configFile)
     config.read(fileList)
 

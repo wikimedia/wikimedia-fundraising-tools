@@ -38,6 +38,6 @@ if __name__ == '__main__':
         path = os.path.join(config.incoming_path, filename)
         if os.path.isfile(path):
             parse(path)
-            #archive(path)
+            archive(path)
 
     lock.end()
