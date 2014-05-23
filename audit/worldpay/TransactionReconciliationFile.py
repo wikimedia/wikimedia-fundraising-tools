@@ -256,6 +256,8 @@ class TransactionReconciliationFile(object):
         if queue == "refund":
             msg["gross_currency"] = msg["currency"]
             msg["gateway_parent_id"] = msg["gateway_txn_id"]
+            # Note that we do not have a new txn id for the refund
+            msg["gateway_refund_id"] = msg["gateway_txn_id"]
             # FIXME: chargeback vs refund info is not available in this file.
             msg["type"] = "refund"
             log.info("+Sending\t{id}\t{date}\t{type}".format(id=msg["gateway_parent_id"], date=iso_date, type=msg["type"]))
