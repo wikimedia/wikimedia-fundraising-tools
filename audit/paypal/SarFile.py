@@ -26,6 +26,21 @@ class SarFile(object):
         ppreport.read(self.path, self.VERSION, self.parse_line)
 
     def parse_line(self, row):
+        required_fields = [
+            "Period 3 Amount",
+            "Subscription Currency",
+            "Subscription ID",
+            "Subscription Payer Name",
+            "Subscription Period 3",
+        ]
+
+        missing_fields = []
+        for field in required_fields:
+            if not field in row or row[field] == '':
+                missing_fields.append(field)
+        if missing_fields:
+            raise RuntimeError("Message is missing some important fields: [{fields}]".format(fields=", ".join(missing_fields)))
+
         names = row['Subscription Payer Name'].split(' ')
 
         out = {
