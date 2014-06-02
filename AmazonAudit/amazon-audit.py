@@ -395,11 +395,11 @@ def injectRefundTransaction(txn, txnInfo):
         "payment_submethod": txn['PaymentMethod'],
     }
 
+    frame = headers
+    frame['body'] = json.dumps(msg)
+
     # Inject the message
-    _stompLink.send(
-        json.dumps(msg),
-        headers
-    )
+    _stompLink.send(frame)
 
     return ctid
 
