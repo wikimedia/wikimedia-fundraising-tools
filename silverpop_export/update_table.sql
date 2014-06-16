@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   is_2011_donor tinyint(1),
   is_2012_donor tinyint(1),
   is_2013_donor tinyint(1),
+  is_2014_donor tinyint(1),
 
   -- Latest contribution statistics
   last_ctid int unsigned,
@@ -192,13 +193,14 @@ CREATE TABLE silverpop_export_stat (
   cnt_2011 int unsigned,
   cnt_2012 int unsigned,
   cnt_2013 int unsigned,
+  cnt_2014 int unsigned,
 
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO silverpop_export_stat
   (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation,
-    cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013)
+    cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013, cnt_2014)
   SELECT
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
@@ -209,8 +211,9 @@ INSERT INTO silverpop_export_stat
     SUM(IF('2009-07-1' <= ct.receive_date AND ct.receive_date < '2010-07-01', 1, 0)),
     SUM(IF('2010-07-1' <= ct.receive_date AND ct.receive_date < '2011-07-01', 1, 0)),
     SUM(IF('2011-07-1' <= ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
-    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	 '2013-07-01', 1, 0)),
-    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
+    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	'2013-07-01', 1, 0)),
+    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0)),
+    SUM(IF('2014-07-1' <= ct.receive_date AND ct.receive_date < '2015-07-01', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
@@ -230,7 +233,8 @@ UPDATE silverpop_export ex, silverpop_export_stat exs
     ex.is_2010_donor = IF(exs.cnt_2010 > 0, 1, 0),
     ex.is_2011_donor = IF(exs.cnt_2011 > 0, 1, 0),
     ex.is_2012_donor = IF(exs.cnt_2012 > 0, 1, 0),
-    ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0)
+    ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0),
+    ex.is_2014_donor = IF(exs.cnt_2014 > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
 
@@ -339,6 +343,7 @@ UPDATE silverpop_export SET
     is_2011_donor = 0,
     is_2012_donor = 0,
     is_2013_donor = 0,
+    is_2014_donor = 0,
     latest_currency = 'USD',
     latest_native_amount = 0,
     latest_usd_amount = 0,
