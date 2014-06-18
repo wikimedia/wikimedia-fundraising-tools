@@ -42,6 +42,10 @@ class Client(object):
                 os.unlink(dest_path)
             raise
 
+    def put(self, localpath, remotepath):
+        self.client.put(localpath, remotepath)
+
+
 class Crawler(object):
     @staticmethod
     def pull():

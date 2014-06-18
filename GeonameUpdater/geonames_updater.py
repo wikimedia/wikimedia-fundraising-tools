@@ -44,7 +44,7 @@ def install_schema():
           INDEX idx_country_code (country_code),
           INDEX idx_admin1 (country_code, admin1),
           INDEX idx_admin12 (country_code, admin1, admin2)
-        ) ENGINE InnoDB CHARACTER SET utf8;
+        ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_unicode_ci;
     """)
 
     cur.execute("DROP TABLE IF EXISTS altnames;")
@@ -64,7 +64,7 @@ def install_schema():
           INDEX idx_geonameid (geonameid),
           INDEX idx_altname (altname),
           INDEX idx_format (format)
-        ) ENGINE InnoDB CHARACTER SET utf8;
+        ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_unicode_ci;
     """)
 
     cur.execute("DROP TABLE IF EXISTS timezones;")
@@ -78,7 +78,7 @@ def install_schema():
           INDEX idx_cc (country_code),
           INDEX idx_timezone (tzname),
           INDEX idx_offset (offset)
-        ) ENGINE InnoDB CHARACTER SET utf8;
+        ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_unicode_ci;
     """)
 
     cur.execute("DROP TABLE IF EXISTS feature_types;")
@@ -93,7 +93,7 @@ def install_schema():
           INDEX idx_feature_class (class),
           INDEX idx_feature_code (code),
           INDEX idx_feature_composite (class, code)
-        ) ENGINE InnoDB CHARACTER SET utf8;
+        ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_unicode_ci;
     """)
 
     cur.close()

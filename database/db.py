@@ -36,8 +36,53 @@ class Connection(object):
         cursor.close()
         return out
 
+    def execute_paged(self, query, pageIndex, pageSize = 1000, dir = 'ASC'):
+        """ Execute a paged query. This will yield a dictionary of the results
+        until there are no more results to yield. The pageIndex will be added
+        to the order by automatically. If the Query already has a limit, it will
+        be respected (only that many rows will be returned.)
+
+        :param query: The Query object to run
+        :param pageIndex: Name of the column to page over (should be numeric)
+        :param pageSize: Number of rows to return per page
+        :param dir: 'ASC' or 'DESC'; should the index be iterated in a positive or negative direction
+        :return:
+        """
+        if not isinstance(query, Query):
+            raise Exception('Paged query must start as a Query object')
+
+        if query.limit:
+            count = query.limit
+        else:
+            count = 0
+
+        query.limit = pageSize
+        query.order_by.append("%s %s" % (pageIndex, dir))
+
+        lastId = None
+        while True:
+            results = self.execute(query)
+            if len(results) == 0:
+                break
+
+            for result in results:
+                yield result
+                count -= 1
+                if count == 0:
+                    break
+
+            if lastId is not None:
+                del query.where[-1]
+            lastId = result[pageIndex]
+            if dir == 'ASC':
+                query.where.append("%s > %s" % (pageIndex, lastId))
+            else:
+                query.where.append("%s < %s" % (pageIndex, lastId))
+
+
     def last_insert_id(self):
         return self.db_conn.insert_id()
+
 
 class Query(object):
     def __init__(self):

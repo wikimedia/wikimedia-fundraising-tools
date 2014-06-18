@@ -296,7 +296,7 @@ UPDATE silverpop_export ex, silverpop_countrylangs cl
 
 -- Lookup timezone by country and post code -- for countries that span
 -- multiple timezones.
-UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, dev_geonames.timezones tz
+UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
     ex.opted_out = 0 AND
@@ -314,7 +314,7 @@ UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, de
 UPDATE
   silverpop_export ex,
   (SELECT g.country_code country_code, tz.offset offset
-    FROM dev_geonames.geonames g, dev_geonames.timezones tz 
+    FROM geonames.geonames g, geonames.timezones tz 
     WHERE g.tzid=tz.tzid 
     GROUP BY g.country_code
   ) tz
@@ -351,3 +351,35 @@ UPDATE silverpop_export SET
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export SET country='US' where country IS NULL AND opted_out = 0;
+
+-- Create a nice view to export from
+CREATE OR REPLACE VIEW silverpop_export_view AS
+  SELECT
+    contact_id ContactID,
+    email,
+    IFNULL(first_name, '') firstname,
+    IFNULL(last_name, '') lastname,
+    last_ctid ContributionID,
+    country,
+    SUBSTRING(preferred_language, 1, 2) IsoLang,
+    IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
+    highest_usd_amount,
+    lifetime_usd_total,
+    DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
+    latest_usd_amount,
+    latest_currency,
+    latest_native_amount,
+    tzoffset timezone,
+    donation_count,
+    IF(is_2006_donor, 'YES', 'NO') is_2006_donor,
+    IF(is_2007_donor, 'YES', 'NO') is_2007_donor,
+    IF(is_2008_donor, 'YES', 'NO') is_2008_donor,
+    IF(is_2009_donor, 'YES', 'NO') is_2009_donor,
+    IF(is_2010_donor, 'YES', 'NO') is_2010_donor,
+    IF(is_2011_donor, 'YES', 'NO') is_2011_donor,
+    IF(is_2012_donor, 'YES', 'NO') is_2012_donor,
+    IF(is_2013_donor, 'YES', 'NO') is_2013_donor,
+    unsub_hash
+  FROM silverpop_export
+  WHERE opted_out=0;
+
