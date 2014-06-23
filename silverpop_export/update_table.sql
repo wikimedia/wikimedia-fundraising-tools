@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   is_2011_donor tinyint(1),
   is_2012_donor tinyint(1),
   is_2013_donor tinyint(1),
+  is_2014_donor tinyint(1),
 
   -- Latest contribution statistics
   last_ctid int unsigned,
@@ -192,13 +193,14 @@ CREATE TABLE silverpop_export_stat (
   cnt_2011 int unsigned,
   cnt_2012 int unsigned,
   cnt_2013 int unsigned,
+  cnt_2014 int unsigned,
 
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO silverpop_export_stat
   (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation,
-    cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013)
+    cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013, cnt_2014)
   SELECT
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
@@ -209,8 +211,9 @@ INSERT INTO silverpop_export_stat
     SUM(IF('2009-07-1' <= ct.receive_date AND ct.receive_date < '2010-07-01', 1, 0)),
     SUM(IF('2010-07-1' <= ct.receive_date AND ct.receive_date < '2011-07-01', 1, 0)),
     SUM(IF('2011-07-1' <= ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
-    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	 '2013-07-01', 1, 0)),
-    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0))
+    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	'2013-07-01', 1, 0)),
+    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0)),
+    SUM(IF('2014-07-1' <= ct.receive_date AND ct.receive_date < '2015-07-01', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
@@ -230,7 +233,8 @@ UPDATE silverpop_export ex, silverpop_export_stat exs
     ex.is_2010_donor = IF(exs.cnt_2010 > 0, 1, 0),
     ex.is_2011_donor = IF(exs.cnt_2011 > 0, 1, 0),
     ex.is_2012_donor = IF(exs.cnt_2012 > 0, 1, 0),
-    ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0)
+    ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0),
+    ex.is_2014_donor = IF(exs.cnt_2014 > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
 
@@ -292,7 +296,7 @@ UPDATE silverpop_export ex, silverpop_countrylangs cl
 
 -- Lookup timezone by country and post code -- for countries that span
 -- multiple timezones.
-UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, dev_geonames.timezones tz
+UPDATE silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
   SET ex.tzoffset = tz.offset
   WHERE
     ex.opted_out = 0 AND
@@ -310,7 +314,7 @@ UPDATE silverpop_export ex, dev_geonames.geonames g, dev_geonames.altnames a, de
 UPDATE
   silverpop_export ex,
   (SELECT g.country_code country_code, tz.offset offset
-    FROM dev_geonames.geonames g, dev_geonames.timezones tz 
+    FROM geonames.geonames g, geonames.timezones tz 
     WHERE g.tzid=tz.tzid 
     GROUP BY g.country_code
   ) tz
@@ -339,6 +343,7 @@ UPDATE silverpop_export SET
     is_2011_donor = 0,
     is_2012_donor = 0,
     is_2013_donor = 0,
+    is_2014_donor = 0,
     latest_currency = 'USD',
     latest_native_amount = 0,
     latest_usd_amount = 0,
@@ -346,3 +351,35 @@ UPDATE silverpop_export SET
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export SET country='US' where country IS NULL AND opted_out = 0;
+
+-- Create a nice view to export from
+CREATE OR REPLACE VIEW silverpop_export_view AS
+  SELECT
+    contact_id ContactID,
+    email,
+    IFNULL(first_name, '') firstname,
+    IFNULL(last_name, '') lastname,
+    last_ctid ContributionID,
+    country,
+    SUBSTRING(preferred_language, 1, 2) IsoLang,
+    IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
+    highest_usd_amount,
+    lifetime_usd_total,
+    DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
+    latest_usd_amount,
+    latest_currency,
+    latest_native_amount,
+    tzoffset timezone,
+    donation_count,
+    IF(is_2006_donor, 'YES', 'NO') is_2006_donor,
+    IF(is_2007_donor, 'YES', 'NO') is_2007_donor,
+    IF(is_2008_donor, 'YES', 'NO') is_2008_donor,
+    IF(is_2009_donor, 'YES', 'NO') is_2009_donor,
+    IF(is_2010_donor, 'YES', 'NO') is_2010_donor,
+    IF(is_2011_donor, 'YES', 'NO') is_2011_donor,
+    IF(is_2012_donor, 'YES', 'NO') is_2012_donor,
+    IF(is_2013_donor, 'YES', 'NO') is_2013_donor,
+    unsub_hash
+  FROM silverpop_export
+  WHERE opted_out=0;
+
