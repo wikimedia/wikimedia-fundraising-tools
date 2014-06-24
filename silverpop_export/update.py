@@ -51,7 +51,7 @@ def run_export_query(db, query, path, index):
     f = open(path, 'wb')
     w = CsvWriter(f)
 
-    gen = db.execute_paged(query, index)
+    gen = db.execute_paged(query=query, pageIndex=index, pageSize=10000)
 
     # Make sure we've got the table headers
     try:
