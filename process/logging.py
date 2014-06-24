@@ -37,6 +37,7 @@ class Logger(object):
         config = get_config()
         if sys.stdout.isatty() or (not hasattr(config, 'quiet') or not config.quiet):
             print(message)
+            sys.stdout.flush()
 
 
 # Late import to deal with circular dependency
