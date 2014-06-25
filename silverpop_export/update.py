@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from csv import writer as CsvWriter
+import errno
 import re
 import time
 import os
@@ -70,6 +71,7 @@ def run_export_query(db, query, path, index):
     f.flush()
     f.close()
 
+
 def order_keyed_row(keys, row):
     result = []
     for key in keys:
@@ -77,10 +79,20 @@ def order_keyed_row(keys, row):
     return result
 
 
+def make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+
 if __name__ == '__main__':
     global config
     log.info("Begin Silverpop Export")
     lock.begin()
+
+    make_sure_path_exists(config.working_path)
 
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
@@ -123,13 +135,14 @@ if __name__ == '__main__':
     sftpc.put(os.path.join(config.working_path, unsubfile), unsubfile)
 
     # Clean up after ourselves
-    now = time.time()
-    for f in os.listdir(config.working_path):
-        path = os.path.join(config.working_path, f)
-        if os.stat(path).st_mtime < (now - config.days_to_keep_files * 86400):
-            if os.path.isfile(path):
-                log.info("Removing old file %s" % path)
-                os.remove(path)
+    if config.days_to_keep_files:
+        now = time.time()
+        for f in os.listdir(config.working_path):
+            path = os.path.join(config.working_path, f)
+            if os.stat(path).st_mtime < (now - config.days_to_keep_files * 86400):
+                if os.path.isfile(path):
+                    log.info("Removing old file %s" % path)
+                    os.remove(path)
 
     lock.end()
     log.info("End Silverpop Export")
