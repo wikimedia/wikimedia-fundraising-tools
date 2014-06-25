@@ -51,7 +51,7 @@ def run_export_query(db, query, path, index):
     f = open(path, 'wb')
     w = CsvWriter(f)
 
-    gen = db.execute_paged(query, index)
+    gen = db.execute_paged(query=query, pageIndex=index, pageSize=10000)
 
     # Make sure we've got the table headers
     try:
@@ -106,6 +106,7 @@ if __name__ == '__main__':
     unsubfile = 'Unsubscribes-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
     exportq = DbQuery()
     exportq.tables.append('silverpop_export')
+    exportq.columns.append('contact_id')
     exportq.columns.append('email')
     exportq.where.append('opted_out=1')
     run_export_query(
