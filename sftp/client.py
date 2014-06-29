@@ -43,7 +43,7 @@ class Client(object):
             raise
 
     def put(self, localpath, remotepath):
-        self.client.put(localpath, remotepath)
+        self.client.put(localpath, os.path.join(config.sftp.remote_root, remotepath))
 
 
 class Crawler(object):
