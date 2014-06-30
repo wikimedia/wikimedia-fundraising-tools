@@ -379,6 +379,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IF(is_2011_donor, 'YES', 'NO') is_2011_donor,
     IF(is_2012_donor, 'YES', 'NO') is_2012_donor,
     IF(is_2013_donor, 'YES', 'NO') is_2013_donor,
+    IF(is_2014_donor, 'YES', 'NO') is_2014_donor,
     unsub_hash
   FROM silverpop_export
   WHERE opted_out=0;
