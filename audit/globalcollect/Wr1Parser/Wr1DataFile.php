@@ -51,6 +51,7 @@ class Wr1DataFile_Iterator implements Iterator {
 		'+IP' => 'Wr1DataRecord_InvoicePayment_Settled',
 		'-CB' => 'Wr1DataRecord_CreditCard_Chargeback',
 		'-CR' => 'Wr1DataRecord_CreditCard_Refund',
+		'+AP' => 'Wr1DataRecord_DirectDebitPayment_Settled',
 	);
 	
 	/** 
