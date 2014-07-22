@@ -8,8 +8,8 @@ from process.logging import Logger as log
 from process.globals import config
 
 class Connection(object):
-    def __init__(self, host=None, user=None, passwd=None, db=None, debug=False):
-        self.db_conn = Dbi.connect(host=host, user=user, passwd=passwd, db=db)
+    def __init__(self, debug=False, **kw):
+        self.db_conn = Dbi.connect(**kw)
         self.debug = debug
 
     def close(self):
