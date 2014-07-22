@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from csv import writer as CsvWriter
 import errno
 import re
 import time
@@ -13,6 +12,7 @@ from process.globals import config
 
 from sftp.client import Client as SftpClient
 from database.db import Connection as DbConnection, Query as DbQuery
+import unicode_csv_writer
 
 import process.lock as lock
 
@@ -55,7 +55,7 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
     if not hasattr(output, 'write'):
         output = open(output, 'wb')
 
-    w = CsvWriter(output)
+    w = unicode_csv_writer.UnicodeCsvWriter(output)
 
     gen = db.execute_paged(query=query, pageIndex=sort_by_index, pageSize=10000)
 
