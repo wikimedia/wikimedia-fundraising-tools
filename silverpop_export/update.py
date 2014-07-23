@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from csv import writer as CsvWriter
 import errno
 import re
 import time
@@ -13,6 +12,7 @@ from process.globals import config
 
 from sftp.client import Client as SftpClient
 from database.db import Connection as DbConnection, Query as DbQuery
+import unicode_csv_writer
 
 import process.lock as lock
 
@@ -48,11 +48,16 @@ def run_queries(db, queries):
         i += 1
 
 
-def run_export_query(db, query, path, index):
-    f = open(path, 'wb')
-    w = CsvWriter(f)
+def run_export_query(db=None, query=None, output=None, sort_by_index=None):
+    """Export query results as a CSV file"""
 
-    gen = db.execute_paged(query=query, pageIndex=index, pageSize=10000)
+    # Get a file-like object
+    if not hasattr(output, 'write'):
+        output = open(output, 'wb')
+
+    w = unicode_csv_writer.UnicodeCsvWriter(output)
+
+    gen = db.execute_paged(query=query, pageIndex=sort_by_index, pageSize=10000)
 
     # Make sure we've got the table headers
     try:
@@ -68,8 +73,8 @@ def run_export_query(db, query, path, index):
     except StopIteration:
         pass
 
-    f.flush()
-    f.close()
+    output.flush()
+    output.close()
 
 
 def order_keyed_row(keys, row):
@@ -108,10 +113,10 @@ if __name__ == '__main__':
     exportq.tables.append('silverpop_export_view')
     exportq.columns.append('*')
     run_export_query(
-        db,
-        exportq,
-        os.path.join(config['working_path'], updatefile),
-        "ContactID"
+        db=db,
+        query=exportq,
+        output=os.path.join(config['working_path'], updatefile),
+        sort_by_index="ContactID"
     )
 
     log.info("Starting unsubscribe data export")
@@ -122,10 +127,10 @@ if __name__ == '__main__':
     exportq.columns.append('email')
     exportq.where.append('opted_out=1')
     run_export_query(
-        db,
-        exportq,
-        os.path.join(config.working_path, unsubfile),
-        "contact_id"
+        db=db,
+        query=exportq,
+        output=os.path.join(config.working_path, unsubfile),
+        sort_by_index="contact_id"
     )
 
     log.info("Uploading updates to silverpop")
