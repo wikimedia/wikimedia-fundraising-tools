@@ -64,9 +64,10 @@ INSERT INTO silverpop_export
   SELECT
     e.id, e.contact_id, e.email, c.first_name, c.last_name,
     IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold)
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR d.do_not_solicit)
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
+  LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != '';
 
