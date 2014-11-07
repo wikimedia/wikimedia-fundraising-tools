@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX spex_country (country),
   INDEX spex_postal (postal_code),
   INDEX spex_opted_out (opted_out)
+  INDEX spex_is_2006_donor (is_2006_donor),
+  INDEX spex_is_2007_donor (is_2007_donor),
+  INDEX spex_is_2008_donor (is_2008_donor),
+  INDEX spex_is_2009_donor (is_2009_donor),
+  INDEX spex_is_2010_donor (is_2010_donor),
+  INDEX spex_is_2011_donor (is_2011_donor),
+  INDEX spex_is_2012_donor (is_2012_donor),
+  INDEX spex_is_2013_donor (is_2013_donor),
+  INDEX spex_is_2014_donor (is_2014_donor),
 ) COLLATE 'utf8_unicode_ci';
 
 -- Populate, or append to, the storage table all contacts that
