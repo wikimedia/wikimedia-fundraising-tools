@@ -54,7 +54,16 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX spex_city (city),
   INDEX spex_country (country),
   INDEX spex_postal (postal_code),
-  INDEX spex_opted_out (opted_out)
+  INDEX spex_opted_out (opted_out),
+  INDEX spex_is_2006_donor (is_2006_donor),
+  INDEX spex_is_2007_donor (is_2007_donor),
+  INDEX spex_is_2008_donor (is_2008_donor),
+  INDEX spex_is_2009_donor (is_2009_donor),
+  INDEX spex_is_2010_donor (is_2010_donor),
+  INDEX spex_is_2011_donor (is_2011_donor),
+  INDEX spex_is_2012_donor (is_2012_donor),
+  INDEX spex_is_2013_donor (is_2013_donor),
+  INDEX spex_is_2014_donor (is_2014_donor)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Populate, or append to, the storage table all contacts that
@@ -64,7 +73,7 @@ INSERT INTO silverpop_export
   SELECT
     e.id, e.contact_id, e.email, c.first_name, c.last_name,
     IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR d.do_not_solicit)
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(d.do_not_solicit, 0))
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
