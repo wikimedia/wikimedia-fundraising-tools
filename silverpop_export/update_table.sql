@@ -42,6 +42,7 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   -- Address information
   city varchar(128),
   country varchar(2),
+  state varchar(64),
   postal_code varchar(128),
   tzoffset float,
 
@@ -231,30 +232,35 @@ DELETE FROM temp_silverpop_export
 
 -- Join on civicrm address where we do not already have a geolocated
 -- address from contribution tracking
-UPDATE temp_silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
+UPDATE temp_silverpop_export ex
+  JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
+  JOIN civicrm.civicrm_country ctry ON addr.country_id = ctry.id
+  LEFT JOIN civicrm.civicrm_state_province st ON addr.state_province_id = st.id
   SET
     ex.city = addr.city,
     ex.country = ctry.iso_code,
-    ex.postal_code = addr.postal_code
+    ex.postal_code = addr.postal_code,
+    ex.state = st.name
   WHERE
     ex.country IS NULL AND
     ex.tzoffset IS NULL AND
-    ex.contact_id = addr.contact_id AND
-    addr.country_id = ctry.id AND
     ex.opted_out = 0;
 
 -- And now updated by civicrm address where we have a country but no
 -- city from contribution tracking; the countries must match
-UPDATE temp_silverpop_export ex, civicrm.civicrm_address addr, civicrm.civicrm_country ctry
+UPDATE temp_silverpop_export ex
+  JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
+  JOIN civicrm.civicrm_country ctry
+       ON addr.country_id = ctry.id
+       AND ex.country = ctry.iso_code
+  LEFT JOIN civicrm.civicrm_state_province st ON addr.state_province_id = st.id
   SET
     ex.city = addr.city,
-    ex.postal_code = addr.postal_code
+    ex.postal_code = addr.postal_code,
+    ex.state = st.name
   WHERE
-    ex.country = ctry.iso_code AND
     ex.city IS NULL AND
     ex.tzoffset IS NULL AND
-    ex.contact_id = addr.contact_id AND
-    addr.country_id = ctry.id AND
     ex.opted_out = 0;
 
 -- Reconstruct the donors likely language from their country if it
@@ -364,6 +370,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   -- Address information
   city varchar(128),
   country varchar(2),
+  state varchar(24),
   postal_code varchar(128),
   tzoffset float,
 
@@ -400,6 +407,8 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(last_name, '') lastname,
     last_ctid ContributionID,
     country,
+    state,
+    postal_code,
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     highest_usd_amount,
