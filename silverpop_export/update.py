@@ -14,7 +14,7 @@ import process.lock as lock
 
 
 def load_queries(file):
-    prefix = "-- Silverpop Export Script, %s" % file
+    prefix = "SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;-- Silverpop Export Script, %s" % file
     script_path = os.path.dirname(__file__)
     qbuf = [prefix]
     queries = []
