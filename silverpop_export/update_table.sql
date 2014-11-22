@@ -247,10 +247,10 @@ SET
   latest_usd_amount = ct.total_amount,
   latest_donation = ct.receive_date
 WHERE
-  ex.last_ctid = ct.id AND
-  ex.opted_out = 0;
+  ex.last_ctid = ct.id;
 
 -- Remove contacts who apparently have no contributions
+-- Leave opted out non-contributors so we don't spam anyone
 DELETE FROM temp_silverpop_export
   WHERE
     temp_silverpop_export.latest_donation IS NULL AND
