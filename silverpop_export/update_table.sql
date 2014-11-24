@@ -69,6 +69,7 @@ INSERT INTO temp_silverpop_export
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != '';
+    AND c.is_deleted = 0;
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
