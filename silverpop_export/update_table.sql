@@ -4,7 +4,6 @@ SET autocommit = 1;
 
 DROP TABLE IF EXISTS temp_silverpop_export;
 DROP TABLE IF EXISTS temp_silverpop_export_dedupe_email;
-DROP TABLE IF EXISTS temp_silverpop_export_dedupe_contact;
 DROP TABLE IF EXISTS temp_silverpop_export_stat;
 
 CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
@@ -146,33 +145,6 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_dedupe_email exde
     ex.country = exde.country
   WHERE
     exde.maxid = ex.id;
-
--- Deduplicate rows that have the same contact ID because they'll
--- generate the same result (~120 rows)
-CREATE TEMPORARY TABLE temp_silverpop_export_dedupe_contact (
-  id int PRIMARY KEY AUTO_INCREMENT,
-  contact_id int,
-  maxid int,
-  opted_out tinyint(1),
-
-  INDEX spexdc_optedout (opted_out)
-) COLLATE 'utf8_unicode_ci';
-  
-INSERT INTO temp_silverpop_export_dedupe_contact (contact_id, maxid, opted_out)
-  SELECT contact_id, max(id) maxid, max(opted_out) opted_out FROM temp_silverpop_export
-    FORCE INDEX (spex_contact_id)
-  GROUP BY contact_id
-  HAVING count(*) > 1;
-
-DELETE temp_silverpop_export FROM temp_silverpop_export, temp_silverpop_export_dedupe_contact
-  WHERE
-    temp_silverpop_export.contact_id = temp_silverpop_export_dedupe_contact.contact_id AND
-    temp_silverpop_export.id != temp_silverpop_export_dedupe_contact.maxid;
-
-UPDATE temp_silverpop_export ex, temp_silverpop_export_dedupe_contact dc
-  SET ex.opted_out = 1
-  WHERE
-    dc.opted_out = 1 AND dc.maxid = ex.id;
 
 -- Create an aggregate table from a full contribution table scan
 CREATE TEMPORARY TABLE temp_silverpop_export_stat (
