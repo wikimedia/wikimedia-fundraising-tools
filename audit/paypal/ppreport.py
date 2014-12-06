@@ -9,13 +9,13 @@ dialect = dict(
     quotechar='"'
 )
 
-def read(path, version, callback):
+def read(path, version, callback, column_headers):
     try:
-        read_encoded(path, version, callback, encoding='utf-16')
+        read_encoded(path, version, callback, column_headers, encoding='utf-16')
     except UnicodeError:
-        read_encoded(path, version, callback, encoding='utf-8-sig')
+        read_encoded(path, version, callback, column_headers, encoding='utf-8-sig')
 
-def read_encoded(path, version, callback, encoding):
+def read_encoded(path, version, callback, column_headers, encoding):
     # Coerce to a list
     if not hasattr(version, 'extend'):
         version = [version]
@@ -24,28 +24,24 @@ def read_encoded(path, version, callback, encoding):
         plainreader = unicode_csv_reader(csvfile, **dialect)
 
         for row in plainreader:
-            if row[0] == 'RH':
+            column_type = row[0]
+            if column_type == 'RH':
                 if int(row[4]) not in version:
                     raise RuntimeError("This file uses an unexpected format revision: {version}".format(version=row[4]))
-            elif row[0] == 'FH':
+            elif column_type == 'FH':
                 pass
-            elif row[0] == 'SH':
+            elif column_type == 'SH':
                 start_date, end_date = row[1:3]
                 log.info("Report file covers date range {start} to {end}".format(start=start_date, end=end_date))
-            elif row[0] == 'CH':
+            elif column_type == 'CH':
                 column_headers = ['Column Type'] + row[1:]
-                break
-            else:
-                raise RuntimeError("Unexpected row type: {type}".format(type=row[0]))
-
-        for line in plainreader:
-            row = dict(zip(column_headers, line))
-            if row['Column Type'] == 'SB':
+            elif column_type == 'SB':
+                record = dict(zip(column_headers, row))
                 try:
-                    callback(row)
+                    callback(record)
                 except:
-                    FailMailer.mail('BAD_AUDIT_LINE', data=row, print_exception=True)
-            elif row['Column Type'] in ('SF', 'SC', 'RF', 'RC', 'FF'):
+                    FailMailer.mail('BAD_AUDIT_LINE', data=record, print_exception=True)
+            elif column_type in ('SF', 'SC', 'RF', 'RC', 'FF'):
                 pass
             else:
-                raise RuntimeError("Section ended and crazy stuff began: {type}".format(type=row['Column Type']))
+                raise RuntimeError("Unknown column type: {type}".format(type=column_type))

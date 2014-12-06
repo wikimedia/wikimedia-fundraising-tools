@@ -12,6 +12,33 @@ from civicrm.civicrm import Civicrm
 class SarFile(object):
     VERSION=2
     stomp = None
+    column_headers = [
+        "Column Type",
+        "Subscription ID",
+        "Subscription Action Type",
+        "Subscription Currency",
+        "Subscription Creation Date",
+        "Subscription Period 1",
+        "Period 1 Amount",
+        "Subscription Period 2",
+        "Period 2 Amount",
+        "Subscription Period 3",
+        "Period 3 Amount",
+        "Recurring",
+        "Recurrence number",
+        "Subscription Payer PayPal Account ID",
+        "Subscription Payer email address",
+        "Subscription Payer Name",
+        "Subscription Payer Business Name",
+        "Shipping Address Line1",
+        "Shipping Address City",
+        "Shipping Address State",
+        "Shipping Address Zip",
+        "Shipping Address Country",
+        "Subscription Description",
+        "Subscription Memo",
+        "Subscription Custom Field",
+    ]
 
     @staticmethod
     def handle(path):
@@ -23,7 +50,7 @@ class SarFile(object):
         self.crm = Civicrm(config.civicrm_db)
 
     def parse(self):
-        ppreport.read(self.path, self.VERSION, self.parse_line)
+        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers)
 
     def parse_line(self, row):
         required_fields = [
