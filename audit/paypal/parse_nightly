@@ -43,6 +43,8 @@ def archive(path):
     dest_path = os.path.join(config.archive_path, filename)
 
     log.info("Archiving {orig} to {new}".format(orig=path, new=dest_path))
+    if os.path.exists(dest_path):
+        raise Exception("Failed to archive file because destination path already exists: " + dest_path)
     shutil.move(path, dest_path)
 
 if __name__ == '__main__':
