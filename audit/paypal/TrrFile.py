@@ -14,6 +14,64 @@ from paypal_api import PaypalApiClassic
 class TrrFile(object):
     VERSION = [4, 8]
     stomp = None
+    # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
+    column_headers = [
+        "Column Type",
+        "Transaction ID",
+        "Invoice ID",
+        "PayPal Reference ID",
+        "PayPal Reference ID Type",
+        "Transaction Event Code",
+        "Transaction Initiation Date",
+        "Transaction Completion Date",
+        "Transaction  Debit or Credit",
+        "Gross Transaction Amount",
+        "Gross Transaction Currency",
+        "Fee Debit or Credit",
+        "Fee Amount",
+        "Fee Currency",
+        "Transactional Status",
+        "Insurance Amount",
+        "Sales Tax Amount",
+        "Shipping Amount",
+        "Transaction Subject",
+        "Transaction Note",
+        "Payer's Account ID",
+        "Payer Address Status",
+        "Item Name",
+        "Item ID",
+        "Option 1 Name",
+        "Option 1 Value",
+        "Option 2 Name",
+        "Option 2 Value",
+        "Auction Site",
+        "Auction Buyer ID",
+        "Auction Closing Date",
+        "Shipping Address Line1",
+        "Shipping Address Line2",
+        "Shipping Address City",
+        "Shipping Address State",
+        "Shipping Address Zip",
+        "Shipping Address Country",
+        "Shipping Method",
+        "Custom Field",
+        "Billing Address Line1",
+        "Billing Address Line2",
+        "Billing Address City",
+        "Billing Address State",
+        "Billing Address Zip",
+        "Billing Address Country",
+        "Consumer ID",
+        "First Name",
+        "Last Name",
+        "Consumer Business Name",
+        "Card Type",
+        "Payment Source",
+        "Shipping Name",
+        "Authorization Review Status",
+        "Protection Eligibility",
+        "Payment Tracking ID",
+    ]
 
     @staticmethod
     def handle(path):
@@ -25,7 +83,8 @@ class TrrFile(object):
         self.crm = Civicrm(config.civicrm_db)
 
     def parse(self):
-        ppreport.read(self.path, self.VERSION, self.parse_line)
+        # FIXME: encapsulation issues
+        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers)
 
     def parse_line(self, row):
         if row['Billing Address Line1']:
