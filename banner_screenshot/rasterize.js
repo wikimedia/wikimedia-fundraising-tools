@@ -17,6 +17,7 @@ if (phantom.args.length < 2 || phantom.args.length > 3) {
     output = phantom.args[1];
     //page.customHeaders = { 'Referer': address };
     page.viewportSize = { width: 1024, height: 728 };
+    page.settings.userAgent = 'WMF Fundraising banner screenshot bot (fr-tech@wikimedia.org)';
     page.open(address, function (status) {
         if (status !== 'success') {
             console.error('Unable to load the address!');
