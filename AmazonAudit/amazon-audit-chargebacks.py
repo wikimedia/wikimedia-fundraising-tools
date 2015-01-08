@@ -266,8 +266,6 @@ def remediateTransaction(txn, txnInfo, sc, config):
         "last_name_2":"",
 
         "currency": txnInfo['TransactionAmount']['CurrencyCode'],
-        "original_currency": txnInfo['TransactionAmount']['CurrencyCode'],
-        "original_gross": txnInfo['TransactionAmount']['Value'],
         "fee":"0",
         "gross": txnInfo['TransactionAmount']['Value'],
         "net": txnInfo['TransactionAmount']['Value'],
