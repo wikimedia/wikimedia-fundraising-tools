@@ -3,7 +3,9 @@ Mysql wrapper which allows query composition
 '''
 import MySQLdb as Dbi
 import atexit
+import os
 
+from signal import signal, SIGTERM, SIG_DFL
 from process.logging import Logger as log
 from process.globals import config
 
@@ -17,7 +19,7 @@ class Connection(object):
 
     def execute(self, sql, params=None):
         cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
-
+	
         if self.debug:
             if params:
                 log.debug(str(sql) + " % " + repr(params))
@@ -137,4 +139,11 @@ def close_all():
     for conn in db_conn.values():
         conn.close()
 
+def handle_sigterm(signum, stack_frame):
+    close_all()
+    signal(SIGTERM, SIG_DFL)
+    os.kill(os.getpid(), signum)
+
 atexit.register(close_all)
+signal(SIGTERM, handle_sigterm)
+

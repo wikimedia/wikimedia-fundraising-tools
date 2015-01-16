@@ -145,8 +145,6 @@ def normalize_msg(line):
         'comment': line['Note'],
         # somthing with: line['Subscription Number'],
 
-        'original_currency': line['Currency'],
-
         'gross_currency': line['Currency'],
         'gross': round(locale.atof(line['Gross']), 2),
         'fee': round(locale.atof(line['Fee']), 2),
