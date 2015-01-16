@@ -3,8 +3,9 @@ Mysql wrapper which allows query composition
 '''
 import MySQLdb as Dbi
 import atexit
+import os
 
-from signal import signal, SIGTERM
+from signal import signal, SIGTERM, SIG_DFL
 from process.logging import Logger as log
 from process.globals import config
 
@@ -139,7 +140,9 @@ def close_all():
         conn.close()
 
 def handle_sigterm(signum, stack_frame):
-    exit(1)
+    close_all()
+    signal(SIGTERM, SIG_DFL)
+    os.kill(os.getpid(), signum)
 
 atexit.register(close_all)
 signal(SIGTERM, handle_sigterm)
