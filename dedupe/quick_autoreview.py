@@ -32,6 +32,7 @@ class QuickAutoreview(object):
 
         matchDescription = EmailMatch("Exact match").json()
 
+        matched = 0
         self.contactCache.fetch()
         for contact in self.contactCache.contacts:
             if contact['email']:
@@ -58,6 +59,7 @@ class QuickAutoreview(object):
                 if result:
                     for row in result:
                         ReviewQueue.addMatch(self.job_id, row['contact_id'], contact['id'], Autoreview.REC_DUP, matchDescription)
+                        matched += 1
 
             ReviewQueue.tag(contact['id'], QuickAutoreview.QUICK_REVIEWED)
 
@@ -66,6 +68,7 @@ class QuickAutoreview(object):
         else:
             last_seen = self.contactCache.contacts[-1]['id']
             log.info("End of batch.  Last contact scanned was ID {id}".format(id=last_seen))
+            log.info("Marked {matched} contacts as potential duplicates.".format(matched=matched))
 
 
 if __name__ == '__main__':
