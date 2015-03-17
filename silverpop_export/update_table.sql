@@ -44,7 +44,6 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  tzoffset float,
 
   -- Unsubcribe hash
   unsub_hash varchar(255),
@@ -53,7 +52,6 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   INDEX spex_email (email),
   INDEX spex_city (city),
   INDEX spex_country (country),
-  INDEX spex_postal (postal_code),
   INDEX spex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
 
@@ -243,7 +241,6 @@ UPDATE temp_silverpop_export ex
     ex.state = st.name
   WHERE
     ex.country IS NULL AND
-    ex.tzoffset IS NULL AND
     ex.opted_out = 0;
 
 -- And now updated by civicrm address where we have a country but no
@@ -260,7 +257,6 @@ UPDATE temp_silverpop_export ex
     ex.state = st.name
   WHERE
     ex.city IS NULL AND
-    ex.tzoffset IS NULL AND
     ex.opted_out = 0;
 
 -- Reconstruct the donors likely language from their country if it
@@ -270,45 +266,9 @@ UPDATE temp_silverpop_export ex, silverpop_countrylangs cl
   WHERE
     ex.country IS NOT NULL AND
     ex.preferred_language IS NULL AND
-    ex.tzoffset IS NULL AND
     ex.country = cl.country AND
     ex.opted_out = 0;
 
--- Lookup timezone by country and post code -- for countries that span
--- multiple timezones.
-UPDATE temp_silverpop_export ex, geonames.geonames g, geonames.altnames a, geonames.timezones tz
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    ex.postal_code IS NOT NULL AND
-    ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
-    a.format='post' AND
-    ex.country = g.country_code AND
-    a.altname = ex.postal_code AND
-    a.geonameid = g.geonameid AND
-    tz.tzid=g.tzid;
-
--- Lookup timezones by country (mostly for those that do not have
--- multiple timezones.)
-UPDATE
-  temp_silverpop_export ex,
-  (SELECT g.country_code country_code, tz.offset offset
-    FROM geonames.geonames g, geonames.timezones tz 
-    WHERE g.tzid=tz.tzid 
-    GROUP BY g.country_code
-  ) tz
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    tz.country_code=ex.country;
-    
--- If we have no TZ information; set it to UTC
-UPDATE temp_silverpop_export ex
-  SET ex.tzoffset = 0
-  WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
-  
 -- Normalize the data prior to final export
 UPDATE temp_silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
 UPDATE temp_silverpop_export SET
@@ -395,8 +355,57 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the temp table into the persistent one
-INSERT INTO silverpop_export
-SELECT * FROM temp_silverpop_export;
+INSERT INTO silverpop_export (
+  id,contact_id,first_name,last_name,preferred_language,email,opted_out,
+  has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
+  is_2006_donor,is_2007_donor,is_2008_donor,is_2009_donor,is_2010_donor,
+  is_2011_donor,is_2012_donor,is_2013_donor,is_2014_donor,last_ctid,
+  latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
+  city,country,state,postal_code,unsub_hash )
+SELECT id,contact_id,first_name,last_name,preferred_language,email,opted_out,
+  has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
+  is_2006_donor,is_2007_donor,is_2008_donor,is_2009_donor,is_2010_donor,
+  is_2011_donor,is_2012_donor,is_2013_donor,is_2014_donor,last_ctid,
+  latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
+  city,country,state,postal_code,unsub_hash
+FROM temp_silverpop_export;
+
+-- Set timezone offsets on the persistent table.  No joining to CiviCRM
+-- source tables, so no worry about locking them.
+-- Lookup timezone by country and post code -- for countries that span
+-- multiple timezones.
+UPDATE silverpop_export ex
+  JOIN geonames.altnames a ON a.altname = ex.postal_code
+  JOIN geonames.geonames g ON ex.country = g.country_code
+                          AND g.geonameid = a.geonameid
+  JOIN geonames.timezones tz ON tz.tzid=g.tzid
+
+  SET ex.tzoffset = tz.offset
+  WHERE
+    ex.opted_out = 0 AND
+    ex.tzoffset is NULL AND
+    ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
+    a.format='post';
+
+-- Lookup timezones by country (mostly for those that do not have
+-- multiple timezones.)
+UPDATE
+  silverpop_export ex,
+  (SELECT g.country_code country_code, tz.offset offset
+    FROM geonames.geonames g, geonames.timezones tz
+    WHERE g.tzid=tz.tzid
+    GROUP BY g.country_code
+  ) tz
+  SET ex.tzoffset = tz.offset
+  WHERE
+    ex.opted_out = 0 AND
+    ex.tzoffset is NULL AND
+    tz.country_code=ex.country;
+
+-- If we have no TZ information; set it to UTC
+UPDATE silverpop_export ex
+  SET ex.tzoffset = 0
+  WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
