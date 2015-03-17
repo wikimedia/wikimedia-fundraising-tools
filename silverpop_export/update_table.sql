@@ -332,7 +332,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   country varchar(2),
   state varchar(24),
   postal_code varchar(128),
-  tzoffset float,
 
   -- Unsubcribe hash
   unsub_hash varchar(255),
@@ -370,43 +369,6 @@ SELECT id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   city,country,state,postal_code,unsub_hash
 FROM temp_silverpop_export;
 
--- Set timezone offsets on the persistent table.  No joining to CiviCRM
--- source tables, so no worry about locking them.
--- Lookup timezone by country and post code -- for countries that span
--- multiple timezones.
-UPDATE silverpop_export ex
-  JOIN geonames.altnames a ON a.altname = ex.postal_code
-  JOIN geonames.geonames g ON ex.country = g.country_code
-                          AND g.geonameid = a.geonameid
-  JOIN geonames.timezones tz ON tz.tzid=g.tzid
-
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
-    a.format='post';
-
--- Lookup timezones by country (mostly for those that do not have
--- multiple timezones.)
-UPDATE
-  silverpop_export ex,
-  (SELECT g.country_code country_code, tz.offset offset
-    FROM geonames.geonames g, geonames.timezones tz
-    WHERE g.tzid=tz.tzid
-    GROUP BY g.country_code
-  ) tz
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    tz.country_code=ex.country;
-
--- If we have no TZ information; set it to UTC
-UPDATE silverpop_export ex
-  SET ex.tzoffset = 0
-  WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
-
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
   SELECT
@@ -426,7 +388,6 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_usd_amount,
     latest_currency,
     latest_native_amount,
-    tzoffset timezone,
     donation_count,
     IF(is_2006_donor, 'YES', 'NO') is_2006_donor,
     IF(is_2007_donor, 'YES', 'NO') is_2007_donor,
