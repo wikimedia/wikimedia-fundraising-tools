@@ -22,15 +22,6 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   highest_usd_amount decimal(20,2),
   lifetime_usd_total decimal(20,2),
   donation_count int,
-  is_2006_donor tinyint(1),
-  is_2007_donor tinyint(1),
-  is_2008_donor tinyint(1),
-  is_2009_donor tinyint(1),
-  is_2010_donor tinyint(1),
-  is_2011_donor tinyint(1),
-  is_2012_donor tinyint(1),
-  is_2013_donor tinyint(1),
-  is_2014_donor tinyint(1),
 
   -- Latest contribution statistics
   last_ctid int unsigned,
@@ -44,9 +35,6 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-
-  -- Unsubcribe hash
-  unsub_hash varchar(255),
 
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
@@ -157,36 +145,17 @@ CREATE TEMPORARY TABLE temp_silverpop_export_stat (
   max_amount_currency varchar(3),   -- STEP 5
   has_recurred_donation tinyint(1),
   total_usd decimal(20,2),          -- STEP 5
-  cnt_total int unsigned,           -- STEP 5
-  cnt_2006 int unsigned,            -- STEP 5
-  cnt_2007 int unsigned,
-  cnt_2008 int unsigned,
-  cnt_2009 int unsigned,
-  cnt_2010 int unsigned,
-  cnt_2011 int unsigned,
-  cnt_2012 int unsigned,
-  cnt_2013 int unsigned,
-  cnt_2014 int unsigned,
+  cnt_total int unsigned,
 
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO temp_silverpop_export_stat
-  (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation,
-    cnt_2006, cnt_2007, cnt_2008, cnt_2009, cnt_2010, cnt_2011, cnt_2012, cnt_2013, cnt_2014)
+  (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
   SELECT
     e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
-    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
-    SUM(IF('2006-07-1' <= ct.receive_date AND ct.receive_date < '2007-07-01', 1, 0)),
-    SUM(IF('2007-07-1' <= ct.receive_date AND ct.receive_date < '2008-07-01', 1, 0)),
-    SUM(IF('2008-07-1' <= ct.receive_date AND ct.receive_date < '2009-07-01', 1, 0)),
-    SUM(IF('2009-07-1' <= ct.receive_date AND ct.receive_date < '2010-07-01', 1, 0)),
-    SUM(IF('2010-07-1' <= ct.receive_date AND ct.receive_date < '2011-07-01', 1, 0)),
-    SUM(IF('2011-07-1' <= ct.receive_date AND ct.receive_date < '2012-07-01', 1, 0)),
-    SUM(IF('2012-07-1' <= ct.receive_date AND ct.receive_date <	'2013-07-01', 1, 0)),
-    SUM(IF('2013-07-1' <= ct.receive_date AND ct.receive_date < '2014-07-01', 1, 0)),
-    SUM(IF('2014-07-1' <= ct.receive_date AND ct.receive_date < '2015-07-01', 1, 0))
+    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN temp_silverpop_export ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
@@ -198,16 +167,7 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
     ex.highest_usd_amount = exs.max_amount_usd,
     ex.lifetime_usd_total = exs.total_usd,
     ex.donation_count = exs.cnt_total,
-    ex.has_recurred_donation = IF(exs.has_recurred_donation > 0, 1, 0),
-    ex.is_2006_donor = IF(exs.cnt_2006 > 0, 1, 0),
-    ex.is_2007_donor = IF(exs.cnt_2007 > 0, 1, 0),
-    ex.is_2008_donor = IF(exs.cnt_2008 > 0, 1, 0),
-    ex.is_2009_donor = IF(exs.cnt_2009 > 0, 1, 0),
-    ex.is_2010_donor = IF(exs.cnt_2010 > 0, 1, 0),
-    ex.is_2011_donor = IF(exs.cnt_2011 > 0, 1, 0),
-    ex.is_2012_donor = IF(exs.cnt_2012 > 0, 1, 0),
-    ex.is_2013_donor = IF(exs.cnt_2013 > 0, 1, 0),
-    ex.is_2014_donor = IF(exs.cnt_2014 > 0, 1, 0)
+    ex.has_recurred_donation = IF(exs.has_recurred_donation > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
 
@@ -276,14 +236,6 @@ UPDATE temp_silverpop_export SET
     highest_usd_amount = 0,
     lifetime_usd_total = 0,
     donation_count = 0,
-    is_2007_donor = 0,
-    is_2008_donor = 0,
-    is_2009_donor = 0,
-    is_2010_donor = 0,
-    is_2011_donor = 0,
-    is_2012_donor = 0,
-    is_2013_donor = 0,
-    is_2014_donor = 0,
     latest_currency = 'USD',
     latest_native_amount = 0,
     latest_usd_amount = 0,
@@ -310,18 +262,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   highest_usd_amount decimal(20,2),
   lifetime_usd_total decimal(20,2),
   donation_count int,
-  is_2006_donor tinyint(1),
-  is_2007_donor tinyint(1),
-  is_2008_donor tinyint(1),
-  is_2009_donor tinyint(1),
-  is_2010_donor tinyint(1),
-  is_2011_donor tinyint(1),
-  is_2012_donor tinyint(1),
-  is_2013_donor tinyint(1),
-  is_2014_donor tinyint(1),
 
   -- Latest contribution statistics
-  last_ctid int unsigned,
   latest_currency varchar(3),
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
@@ -332,80 +274,26 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   country varchar(2),
   state varchar(24),
   postal_code varchar(128),
-  tzoffset float,
-
-  -- Unsubcribe hash
-  unsub_hash varchar(255),
 
   INDEX rspex_contact_id (contact_id),
   INDEX rspex_email (email),
   INDEX rspex_city (city),
   INDEX rspex_country (country),
   INDEX rspex_postal (postal_code),
-  INDEX rspex_opted_out (opted_out),
-  INDEX rspex_is_2006_donor (is_2006_donor),
-  INDEX rspex_is_2007_donor (is_2007_donor),
-  INDEX rspex_is_2008_donor (is_2008_donor),
-  INDEX rspex_is_2009_donor (is_2009_donor),
-  INDEX rspex_is_2010_donor (is_2010_donor),
-  INDEX rspex_is_2011_donor (is_2011_donor),
-  INDEX rspex_is_2012_donor (is_2012_donor),
-  INDEX rspex_is_2013_donor (is_2013_donor),
-  INDEX rspex_is_2014_donor (is_2014_donor)
+  INDEX rspex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the temp table into the persistent one
 INSERT INTO silverpop_export (
   id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
-  is_2006_donor,is_2007_donor,is_2008_donor,is_2009_donor,is_2010_donor,
-  is_2011_donor,is_2012_donor,is_2013_donor,is_2014_donor,last_ctid,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code,unsub_hash )
+  city,country,state,postal_code )
 SELECT id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
-  is_2006_donor,is_2007_donor,is_2008_donor,is_2009_donor,is_2010_donor,
-  is_2011_donor,is_2012_donor,is_2013_donor,is_2014_donor,last_ctid,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code,unsub_hash
+  city,country,state,postal_code
 FROM temp_silverpop_export;
-
--- Set timezone offsets on the persistent table.  No joining to CiviCRM
--- source tables, so no worry about locking them.
--- Lookup timezone by country and post code -- for countries that span
--- multiple timezones.
-UPDATE silverpop_export ex
-  JOIN geonames.altnames a ON a.altname = ex.postal_code
-  JOIN geonames.geonames g ON ex.country = g.country_code
-                          AND g.geonameid = a.geonameid
-  JOIN geonames.timezones tz ON tz.tzid=g.tzid
-
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    ex.country IN ('FR', 'US', 'RU', 'AU', 'GB', 'CA', 'NZ', 'BR', 'ID', 'MX', 'PT', 'ES') AND
-    a.format='post';
-
--- Lookup timezones by country (mostly for those that do not have
--- multiple timezones.)
-UPDATE
-  silverpop_export ex,
-  (SELECT g.country_code country_code, tz.offset offset
-    FROM geonames.geonames g, geonames.timezones tz
-    WHERE g.tzid=tz.tzid
-    GROUP BY g.country_code
-  ) tz
-  SET ex.tzoffset = tz.offset
-  WHERE
-    ex.opted_out = 0 AND
-    ex.tzoffset is NULL AND
-    tz.country_code=ex.country;
-
--- If we have no TZ information; set it to UTC
-UPDATE silverpop_export ex
-  SET ex.tzoffset = 0
-  WHERE ex.tzoffset is NULL AND ex.opted_out = 0;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
@@ -414,7 +302,6 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     email,
     IFNULL(first_name, '') firstname,
     IFNULL(last_name, '') lastname,
-    last_ctid ContributionID,
     country,
     state,
     postal_code,
@@ -426,18 +313,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_usd_amount,
     latest_currency,
     latest_native_amount,
-    tzoffset timezone,
-    donation_count,
-    IF(is_2006_donor, 'YES', 'NO') is_2006_donor,
-    IF(is_2007_donor, 'YES', 'NO') is_2007_donor,
-    IF(is_2008_donor, 'YES', 'NO') is_2008_donor,
-    IF(is_2009_donor, 'YES', 'NO') is_2009_donor,
-    IF(is_2010_donor, 'YES', 'NO') is_2010_donor,
-    IF(is_2011_donor, 'YES', 'NO') is_2011_donor,
-    IF(is_2012_donor, 'YES', 'NO') is_2012_donor,
-    IF(is_2013_donor, 'YES', 'NO') is_2013_donor,
-    IF(is_2014_donor, 'YES', 'NO') is_2014_donor,
-    unsub_hash
+    donation_count
   FROM silverpop_export
   WHERE opted_out=0;
 
