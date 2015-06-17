@@ -124,5 +124,7 @@ def make_key(keystr=None):
         return paramiko.DSSKey.from_private_key(fileish)
     elif 'ssh-dss' in keystr:
         return paramiko.DSSKey(data=base64.decodestring(keystr.split(' ')[1]))
+    elif 'ecdsa-' in keystr:
+        return paramiko.ECDSAKey(data=base64.decodestring(keystr.split(' ')[1]))
 
     raise Exception('Unknown key provided')
