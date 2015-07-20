@@ -1,0 +1,26 @@
+# Deploy as /etc/fundraising/astropay-audit.yaml or $HOME/.fundraising/astropay-audit.yaml
+
+# Local path where unprocessed files land
+#
+incoming_path: /var/spool/audit/astropay/incoming
+
+# After processing (or being skipped), audit files are stored here
+archive_path: /archive/audit/astropay/archive
+
+# Connection parameters
+sftp:
+    # [sic]
+    host: 127.0.0.1
+    username: foo
+
+    # Keep synchronized with all files under this root directory
+    remote_root: /reports
+
+    # User's private key (TODO: file vs inline)
+    private_key: |-
+        -----BEGIN RSA PRIVATE KEY-----
+        SHMonsense===
+        -----END RSA PRIVATE KEY-----
+
+    host_key: |-
+        ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNvKp4Jeninl0wM8YVSCXQ46c8o8OMdQnYlTN2N7bL/rNY/2/zQRPJtkMUmNKcrIu7ZQdGkeZ3WKTGD1dqzR3hA=

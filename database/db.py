@@ -4,6 +4,7 @@ Mysql wrapper which allows query composition
 import MySQLdb as Dbi
 import atexit
 import os
+import threading
 
 from signal import signal, SIGTERM, SIG_DFL
 from process.logging import Logger as log
@@ -11,32 +12,50 @@ from process.globals import config
 
 class Connection(object):
     def __init__(self, debug=False, **kw):
+        self.connectionArgs = kw
         self.db_conn = Dbi.connect(**kw)
         self.debug = debug
+        self.connection_id = self.execute('SELECT CONNECTION_ID() AS cid', None, 0)[0]['cid']
 
     def close(self):
         self.db_conn.commit()
 
-    def execute(self, sql, params=None):
+    def execute(self, sql, params=None, timeout = 0):
         cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
-	
+        deathClock = None
+
         if self.debug:
             if params:
                 log.debug(str(sql) + " % " + repr(params))
             else:
                 log.debug(str(sql))
 
-        if params:
-            cursor.execute(sql, params)
-        elif hasattr(sql, 'uninterpolated_sql') and sql.params:
-            cursor.execute(sql.uninterpolated_sql(), sql.params)
-        else:
-            cursor.execute(str(sql))
-        #for row in cursor.fetchall():
-        #	yield row
-        out = cursor.fetchall()
-        cursor.close()
-        return out
+        if timeout > 0:
+            deathClock = threading.Timer(timeout, self.kill_connection)
+            deathClock.start()
+
+        try:
+            if params:
+                cursor.execute(sql, params)
+            elif hasattr(sql, 'uninterpolated_sql') and sql.params:
+                cursor.execute(sql.uninterpolated_sql(), sql.params)
+            else:
+                cursor.execute(str(sql))
+            #for row in cursor.fetchall():
+            #	yield row
+            out = cursor.fetchall()
+            cursor.close()
+            return out
+        finally:
+            if deathClock is not None:
+                deathClock.cancel()
+
+    def kill_connection(self):
+        log.warn('Query taking too long - killing connection {}'.format(self.connection_id))
+        killerConnection = Dbi.connect(**self.connectionArgs)
+        cursor = killerConnection.cursor()
+        cursor.execute('KILL CONNECTION {}'.format(self.connection_id))
+        killerConnection.close()
 
     def execute_paged(self, query, pageIndex, pageSize = 1000, dir = 'ASC'):
         """ Execute a paged query. This will yield a dictionary of the results
