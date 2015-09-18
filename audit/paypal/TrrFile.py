@@ -3,6 +3,8 @@
 See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_TransactionDetailReport.pdf
 '''
 
+import re
+
 from process.logging import Logger as log
 from process.globals import config
 from queue.stomp_wrap import Stomp
@@ -131,6 +133,9 @@ class TrrFile(object):
 
         if row['PayPal Reference ID Type'] == 'SUB':
             out['subscr_id'] = row['PayPal Reference ID']
+
+        if re.search('^[0-9]+$', row['Transaction Subject']):
+            out['contribution_tracking_id'] = row['Transaction Subject']
 
         event_type = row['Transaction Event Code'][0:3]
 
