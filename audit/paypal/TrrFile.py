@@ -188,10 +188,10 @@ class TrrFile(object):
         self.send(queue, out)
 
     def send(self, queue, msg):
-        if not self.stomp:
-            self.stomp = Stomp()
+        if queue == 'donations':
 
-        self.stomp.send(queue, msg)
+            if msg['contribution_tracking_id'] and msg['gateway_txn_id']:
+                print "update drupal.contribution_tracking t set contribution_id = (select id from civicrm_contribution where trxn_id = 'PAYPAL " + msg['gateway_txn_id'] + "') where t.id = " + msg['contribution_tracking_id'] + ";"
 
     def normalize_recurring(self, msg):
         'Synthesize a raw PayPal message'
