@@ -280,7 +280,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX rspex_city (city),
   INDEX rspex_country (country),
   INDEX rspex_postal (postal_code),
-  INDEX rspex_opted_out (opted_out)
+  INDEX rspex_opted_out (opted_out),
+  CONSTRAINT sp_email UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the temp table into the persistent one
