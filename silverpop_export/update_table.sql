@@ -83,7 +83,9 @@ INSERT IGNORE INTO temp_silverpop_export_latest
     civicrm.wmf_contribution_extra ex
   WHERE
     e.contact_id = ct.contact_id AND
-    ex.entity_id = ct.id
+    ex.entity_id = ct.id AND
+    ct.total_amount > 0 AND -- Refunds don't count
+    ct.contribution_status_id = 1 -- 'Completed'
   GROUP BY
     e.email
   HAVING
