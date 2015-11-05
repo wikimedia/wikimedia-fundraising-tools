@@ -3,6 +3,7 @@
 SET autocommit = 1;
 
 DROP TABLE IF EXISTS temp_silverpop_export;
+DROP TABLE IF EXISTS temp_silverpop_export_latest;
 DROP TABLE IF EXISTS temp_silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS temp_silverpop_export_stat;
 
@@ -24,7 +25,6 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   donation_count int,
 
   -- Latest contribution statistics
-  last_ctid int unsigned,
   latest_currency varchar(3),
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
@@ -43,6 +43,14 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   INDEX spex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
 
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export_latest(
+  email varchar(255) PRIMARY KEY,
+  latest_currency varchar(3),
+  latest_native_amount decimal(20,2),
+  latest_usd_amount decimal(20,2),
+  latest_donation datetime
+) COLLATE 'utf8_unicode_ci';
+
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
 INSERT INTO temp_silverpop_export
@@ -57,6 +65,29 @@ INSERT INTO temp_silverpop_export
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0;
+
+-- Find the latest donation for each email address.
+-- If there are multiple donations with the latest receive date,
+-- just pick one of them. The others will be ignored because
+-- email must be unique in this table.
+INSERT IGNORE INTO temp_silverpop_export_latest
+  SELECT
+    e.email,
+    ex.original_currency,
+    ex.original_amount,
+    ct.total_amount,
+    ct.receive_date
+  FROM
+    temp_silverpop_export e,
+    civicrm.civicrm_contribution ct,
+    civicrm.wmf_contribution_extra ex
+  WHERE
+    e.contact_id = ct.contact_id AND
+    ex.entity_id = ct.id
+  GROUP BY
+    e.email
+  HAVING
+    ct.receive_date = MAX(ct.receive_date);
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
@@ -139,10 +170,7 @@ CREATE TEMPORARY TABLE temp_silverpop_export_stat (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
   exid INT,                         -- STEP 5
-  max_ctid INT,                     -- STEP 5
-  max_amount_ctid INT,              -- STEP 5
   max_amount_usd decimal(20,2),     -- STEP 5
-  max_amount_currency varchar(3),   -- STEP 5
   has_recurred_donation tinyint(1),
   total_usd decimal(20,2),          -- STEP 5
   cnt_total int unsigned,
@@ -151,19 +179,19 @@ CREATE TEMPORARY TABLE temp_silverpop_export_stat (
 ) COLLATE 'utf8_unicode_ci';
 
 INSERT INTO temp_silverpop_export_stat
-  (email, exid, max_ctid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
+  (email, exid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
   SELECT
-    e.email, ex.id, MAX(ct.id), MAX(ct.total_amount), SUM(ct.total_amount),
+    e.email, ex.id, MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN temp_silverpop_export ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
+  WHERE ct.total_amount IS NOT NULL
   GROUP BY e.email;
 
 UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
   SET
-    ex.last_ctid = exs.max_ctid,
     ex.highest_usd_amount = exs.max_amount_usd,
     ex.lifetime_usd_total = exs.total_usd,
     ex.donation_count = exs.cnt_total,
@@ -172,14 +200,14 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
     ex.id = exs.exid;
 
 -- Populate information about the most recent contribution
-UPDATE temp_silverpop_export ex, civicrm.civicrm_contribution ct
-SET
-  latest_currency = SUBSTRING(ct.source, 1, 3),
-  latest_native_amount = CONVERT(SUBSTRING(ct.source, 5), decimal(20,2)),
-  latest_usd_amount = ct.total_amount,
-  latest_donation = ct.receive_date
-WHERE
-  ex.last_ctid = ct.id;
+UPDATE temp_silverpop_export ex, temp_silverpop_export_latest ct
+  SET
+    ex.latest_currency = ct.latest_currency,
+    ex.latest_native_amount = ct.latest_native_amount,
+    ex.latest_usd_amount = ct.latest_usd_amount,
+    ex.latest_donation = ct.latest_donation
+  WHERE
+    ex.email = ct.email;
 
 -- Remove contacts who apparently have no contributions
 -- Leave opted out non-contributors so we don't spam anyone
@@ -232,7 +260,6 @@ UPDATE temp_silverpop_export ex, silverpop_countrylangs cl
 -- Normalize the data prior to final export
 UPDATE temp_silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
 UPDATE temp_silverpop_export SET
-    last_ctid = 0,
     highest_usd_amount = 0,
     lifetime_usd_total = 0,
     donation_count = 0,
@@ -280,7 +307,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX rspex_city (city),
   INDEX rspex_country (country),
   INDEX rspex_postal (postal_code),
-  INDEX rspex_opted_out (opted_out)
+  INDEX rspex_opted_out (opted_out),
+  CONSTRAINT sp_email UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the temp table into the persistent one
