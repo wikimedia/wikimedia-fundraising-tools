@@ -1,6 +1,4 @@
 -- Updates the silverpop_export table
---
--- TODO: Slay half this script once our db is deduped in realtime.
 
 SET autocommit = 1;
 
@@ -46,7 +44,10 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
 ) COLLATE 'utf8_unicode_ci';
 
 CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export_latest(
-  email varchar(255) primary key,
+  email varchar(255) PRIMARY KEY,
+  latest_currency varchar(3),
+  latest_native_amount decimal(20,2),
+  latest_usd_amount decimal(20,2),
   latest_donation datetime
 ) COLLATE 'utf8_unicode_ci';
 
@@ -64,6 +65,31 @@ INSERT INTO temp_silverpop_export
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0;
+
+-- Find the latest donation for each email address.
+-- If there are multiple donations with the latest receive date,
+-- just pick one of them. The others will be ignored because
+-- email must be unique in this table.
+INSERT IGNORE INTO temp_silverpop_export_latest
+  SELECT
+    e.email,
+    ex.original_currency,
+    ex.original_amount,
+    ct.total_amount,
+    ct.receive_date
+  FROM
+    temp_silverpop_export e,
+    civicrm.civicrm_contribution ct,
+    civicrm.wmf_contribution_extra ex
+  WHERE
+    e.contact_id = ct.contact_id AND
+    ex.entity_id = ct.id AND
+    ct.total_amount > 0 AND -- Refunds don't count
+    ct.contribution_status_id = 1 -- 'Completed'
+  GROUP BY
+    e.email
+  HAVING
+    ct.receive_date = MAX(ct.receive_date);
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
@@ -94,7 +120,6 @@ UPDATE
 -- have to merge in more data later, but this is ~1.5M rows we're
 -- getting rid of here which is more better than taking them all the way
 -- through.
--- Use this table to store some things we aggregate from dupe contacts.
 CREATE TEMPORARY TABLE temp_silverpop_export_dedupe_email (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
@@ -102,13 +127,12 @@ CREATE TEMPORARY TABLE temp_silverpop_export_dedupe_email (
   preferred_language varchar(5),
   country varchar(2),
   opted_out tinyint(1),
-  num_contacts int,
 
   INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
-INSERT INTO temp_silverpop_export_dedupe_email (email, maxid, opted_out, num_contacts)
-   SELECT email, max(id) maxid, max(opted_out) opted_out, count(*) num_contacts
+INSERT INTO temp_silverpop_export_dedupe_email (email, maxid, opted_out)
+   SELECT email, max(id) maxid, max(opted_out) opted_out
      FROM temp_silverpop_export
        FORCE INDEX (spex_email)
        GROUP BY email
@@ -130,46 +154,11 @@ UPDATE temp_silverpop_export_dedupe_email exde, temp_silverpop_export ex
     ex.email = exde.email AND
     ex.country IS NOT NULL;
 
--- Store the latest donation date for each email.
-INSERT IGNORE INTO temp_silverpop_export_latest (email, latest_donation)
-  SELECT
-    exde.email,
-    MAX(ct.receive_date) latest_donation
-  FROM
-    temp_silverpop_export_dedupe_email exde,
-    temp_silverpop_export ex,
-    civicrm.civicrm_contribution ct
-  WHERE
-    ex.email = exde.email AND
-    ct.contact_id = ex.contact_id AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
-  GROUP BY
-    exde.email;
-
--- Remove all dupes by email.  Keep the contact record with the highest ID.
 DELETE temp_silverpop_export FROM temp_silverpop_export, temp_silverpop_export_dedupe_email
   WHERE
     temp_silverpop_export.email = temp_silverpop_export_dedupe_email.email AND
     temp_silverpop_export.id != temp_silverpop_export_dedupe_email.maxid;
 
--- Pick latest donations and copy the details into the "latest" table.
-UPDATE
-  temp_silverpop_export e,
-  temp_silverpop_export_latest l,
-  civicrm.civicrm_contribution ct,
-  civicrm.wmf_contribution_extra ex
-  SET
-    e.latest_currency = ex.original_currency,
-    e.latest_native_amount = ex.original_amount,
-    e.latest_usd_amount = ct.total_amount,
-    e.latest_donation = ct.receive_date
-  WHERE
-    e.email = l.email AND
-    ex.entity_id = ct.id AND
-    l.latest_donation = ct.receive_date;
-
--- Copy the aggregate info back to the surviving contact.
 UPDATE temp_silverpop_export ex, temp_silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
@@ -211,6 +200,16 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
     ex.has_recurred_donation = IF(exs.has_recurred_donation > 0, 1, 0)
   WHERE
     ex.id = exs.exid;
+
+-- Populate information about the most recent contribution
+UPDATE temp_silverpop_export ex, temp_silverpop_export_latest ct
+  SET
+    ex.latest_currency = ct.latest_currency,
+    ex.latest_native_amount = ct.latest_native_amount,
+    ex.latest_usd_amount = ct.latest_usd_amount,
+    ex.latest_donation = ct.latest_donation
+  WHERE
+    ex.email = ct.email;
 
 -- Remove contacts who apparently have no contributions
 -- Leave opted out non-contributors so we don't spam anyone
