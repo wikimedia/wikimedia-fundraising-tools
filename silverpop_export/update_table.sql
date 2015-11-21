@@ -66,10 +66,11 @@ INSERT INTO temp_silverpop_export
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0;
 
--- Find the latest donation for each email address.
--- If there are multiple donations with the latest receive date,
--- just pick one of them. The others will be ignored because
--- email must be unique in this table.
+-- Find the latest donation for each email address. Ordering by
+-- recieve_date and total_amount descending should always insert 
+-- the latest donation first, with the larger prevailing for an
+-- email with multiple simultaneous donations. All the rest for
+-- that email will be ignored due to the unique constraint.
 INSERT IGNORE INTO temp_silverpop_export_latest
   SELECT
     e.email,
@@ -84,12 +85,12 @@ INSERT IGNORE INTO temp_silverpop_export_latest
   WHERE
     e.contact_id = ct.contact_id AND
     ex.entity_id = ct.id AND
+    ct.receive_date IS NOT NULL AND
     ct.total_amount > 0 AND -- Refunds don't count
     ct.contribution_status_id = 1 -- 'Completed'
-  GROUP BY
-    e.email
-  HAVING
-    ct.receive_date = MAX(ct.receive_date);
+  ORDER BY
+    ct.receive_date DESC,
+    ct.total_amount DESC;
 
 -- Populate data from contribution tracking; because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
