@@ -104,6 +104,7 @@ def upload(files=None):
     log.info("Uploading to silverpop")
     sftpc = SftpClient()
     for path in files:
+        log.info("Putting file %s" % path)
         sftpc.put(path, os.path.basename(path))
 
 
