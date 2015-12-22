@@ -2,12 +2,12 @@
 
 SET autocommit = 1;
 
-DROP TABLE IF EXISTS temp_silverpop_export;
-DROP TABLE IF EXISTS temp_silverpop_export_latest;
-DROP TABLE IF EXISTS temp_silverpop_export_dedupe_email;
-DROP TABLE IF EXISTS temp_silverpop_export_stat;
+DROP TABLE IF EXISTS silverpop_export_staging;
+DROP TABLE IF EXISTS silverpop_export_latest;
+DROP TABLE IF EXISTS silverpop_export_dedupe_email;
+DROP TABLE IF EXISTS silverpop_export_stat;
 
-CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
+CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
 
   -- General information about the contact
@@ -43,7 +43,7 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export(
   INDEX spex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
 
-CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export_latest(
+CREATE TABLE IF NOT EXISTS silverpop_export_latest(
   email varchar(255) PRIMARY KEY,
   latest_currency varchar(3),
   latest_native_amount decimal(20,2),
@@ -53,7 +53,7 @@ CREATE TEMPORARY TABLE IF NOT EXISTS temp_silverpop_export_latest(
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
-INSERT INTO temp_silverpop_export
+INSERT INTO silverpop_export_staging
   (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
     e.id, e.contact_id, e.email, c.first_name, c.last_name,
@@ -71,7 +71,7 @@ INSERT INTO temp_silverpop_export
 -- the latest donation first, with the larger prevailing for an
 -- email with multiple simultaneous donations. All the rest for
 -- that email will be ignored due to the unique constraint.
-INSERT IGNORE INTO temp_silverpop_export_latest
+INSERT IGNORE INTO silverpop_export_latest
   SELECT
     e.email,
     ex.original_currency,
@@ -79,7 +79,7 @@ INSERT IGNORE INTO temp_silverpop_export_latest
     ct.total_amount,
     ct.receive_date
   FROM
-    temp_silverpop_export e,
+    silverpop_export_staging e,
     civicrm.civicrm_contribution ct,
     civicrm.wmf_contribution_extra ex
   WHERE
@@ -96,7 +96,7 @@ INSERT IGNORE INTO temp_silverpop_export_latest
 -- reliable. Do this before deduplication so we can attempt to make
 -- intelligent fallbacks in case of null data
 UPDATE
-    temp_silverpop_export ex,
+    silverpop_export_staging ex,
     civicrm.civicrm_contribution ct,
     drupal.contribution_tracking dct
   SET
@@ -107,7 +107,7 @@ UPDATE
     dct.language IS NOT NULL;
 
 UPDATE
-    temp_silverpop_export ex,
+    silverpop_export_staging ex,
     civicrm.civicrm_contribution ct,
     drupal.contribution_tracking dct
   SET
@@ -121,7 +121,7 @@ UPDATE
 -- have to merge in more data later, but this is ~1.5M rows we're
 -- getting rid of here which is more better than taking them all the way
 -- through.
-CREATE TEMPORARY TABLE temp_silverpop_export_dedupe_email (
+CREATE TABLE silverpop_export_dedupe_email (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
   maxid int,
@@ -132,35 +132,35 @@ CREATE TEMPORARY TABLE temp_silverpop_export_dedupe_email (
   INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
-INSERT INTO temp_silverpop_export_dedupe_email (email, maxid, opted_out)
+INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
    SELECT email, max(id) maxid, max(opted_out) opted_out
-     FROM temp_silverpop_export
+     FROM silverpop_export_staging
        FORCE INDEX (spex_email)
        GROUP BY email
        HAVING count(*) > 1;
 
 -- We pull in language/country from the parent table so that we
 -- can preserve them and not propogate nulls
-UPDATE temp_silverpop_export_dedupe_email exde, temp_silverpop_export ex
+UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
   SET
     exde.preferred_language = ex.preferred_language
   WHERE
     ex.email = exde.email AND
     ex.preferred_language IS NOT NULL;
 
-UPDATE temp_silverpop_export_dedupe_email exde, temp_silverpop_export ex
+UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
   SET
     exde.country = ex.country
   WHERE
     ex.email = exde.email AND
     ex.country IS NOT NULL;
 
-DELETE temp_silverpop_export FROM temp_silverpop_export, temp_silverpop_export_dedupe_email
+DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
   WHERE
-    temp_silverpop_export.email = temp_silverpop_export_dedupe_email.email AND
-    temp_silverpop_export.id != temp_silverpop_export_dedupe_email.maxid;
+    silverpop_export_staging.email = silverpop_export_dedupe_email.email AND
+    silverpop_export_staging.id != silverpop_export_dedupe_email.maxid;
 
-UPDATE temp_silverpop_export ex, temp_silverpop_export_dedupe_email exde
+UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
     ex.preferred_language = exde.preferred_language,
@@ -169,7 +169,7 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_dedupe_email exde
     exde.maxid = ex.id;
 
 -- Create an aggregate table from a full contribution table scan
-CREATE TEMPORARY TABLE temp_silverpop_export_stat (
+CREATE TABLE silverpop_export_stat (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
   exid INT,                         -- STEP 5
@@ -181,19 +181,19 @@ CREATE TEMPORARY TABLE temp_silverpop_export_stat (
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
-INSERT INTO temp_silverpop_export_stat
+INSERT INTO silverpop_export_stat
   (email, exid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
   SELECT
     e.email, ex.id, MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
-  JOIN temp_silverpop_export ex ON e.email=ex.email
+  JOIN silverpop_export_staging ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
   WHERE ct.total_amount IS NOT NULL
   GROUP BY e.email;
 
-UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
+UPDATE silverpop_export_staging ex, silverpop_export_stat exs
   SET
     ex.highest_usd_amount = exs.max_amount_usd,
     ex.lifetime_usd_total = exs.total_usd,
@@ -203,7 +203,7 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_stat exs
     ex.id = exs.exid;
 
 -- Populate information about the most recent contribution
-UPDATE temp_silverpop_export ex, temp_silverpop_export_latest ct
+UPDATE silverpop_export_staging ex, silverpop_export_latest ct
   SET
     ex.latest_currency = ct.latest_currency,
     ex.latest_native_amount = ct.latest_native_amount,
@@ -214,14 +214,14 @@ UPDATE temp_silverpop_export ex, temp_silverpop_export_latest ct
 
 -- Remove contacts who apparently have no contributions
 -- Leave opted out non-contributors so we don't spam anyone
-DELETE FROM temp_silverpop_export
+DELETE FROM silverpop_export_staging
   WHERE
-    temp_silverpop_export.latest_donation IS NULL AND
-    temp_silverpop_export.opted_out = 0;
+    silverpop_export_staging.latest_donation IS NULL AND
+    silverpop_export_staging.opted_out = 0;
 
 -- Join on civicrm address where we do not already have a geolocated
 -- address from contribution tracking
-UPDATE temp_silverpop_export ex
+UPDATE silverpop_export_staging ex
   JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
   JOIN civicrm.civicrm_country ctry ON addr.country_id = ctry.id
   LEFT JOIN civicrm.civicrm_state_province st ON addr.state_province_id = st.id
@@ -236,7 +236,7 @@ UPDATE temp_silverpop_export ex
 
 -- And now updated by civicrm address where we have a country but no
 -- city from contribution tracking; the countries must match
-UPDATE temp_silverpop_export ex
+UPDATE silverpop_export_staging ex
   JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
   JOIN civicrm.civicrm_country ctry
        ON addr.country_id = ctry.id
@@ -252,7 +252,7 @@ UPDATE temp_silverpop_export ex
 
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
-UPDATE temp_silverpop_export ex, silverpop_countrylangs cl
+UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
   SET ex.preferred_language = cl.lang
   WHERE
     ex.country IS NOT NULL AND
@@ -261,8 +261,8 @@ UPDATE temp_silverpop_export ex, silverpop_countrylangs cl
     ex.opted_out = 0;
 
 -- Normalize the data prior to final export
-UPDATE temp_silverpop_export SET preferred_language='en' WHERE preferred_language IS NULL;
-UPDATE temp_silverpop_export SET
+UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
+UPDATE silverpop_export_staging SET
     highest_usd_amount = 0,
     lifetime_usd_total = 0,
     donation_count = 0,
@@ -272,7 +272,7 @@ UPDATE temp_silverpop_export SET
     latest_donation = NOW(),
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
-UPDATE temp_silverpop_export SET country='US' where country IS NULL AND opted_out = 0;
+UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
 DROP TABLE IF EXISTS silverpop_export;
 
@@ -314,7 +314,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   CONSTRAINT sp_email UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci';
 
--- Move the data from the temp table into the persistent one
+-- Move the data from the staging table into the persistent one
 INSERT INTO silverpop_export (
   id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
@@ -324,7 +324,7 @@ SELECT id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
   city,country,state,postal_code
-FROM temp_silverpop_export;
+FROM silverpop_export_staging;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
