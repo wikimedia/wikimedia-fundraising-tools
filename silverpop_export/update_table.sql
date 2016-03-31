@@ -274,6 +274,33 @@ UPDATE silverpop_export_staging SET
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
+-- Unsubscribe anyone we lost during a merge
+DROP TABLE IF EXISTS silverpop_deleted;
+
+CREATE TABLE IF NOT EXISTS silverpop_deleted(
+  email_id int unsigned,
+  contact_id int unsigned,
+  email varchar(255)
+);
+
+INSERT INTO silverpop_deleted
+  (email_id, contact_id, email)
+  SELECT e.id, c.id, e.email
+    FROM civicrm.civicrm_contact c
+    JOIN civicrm.civicrm_email e
+      ON c.id = e.contact_id
+    GROUP BY
+      e.email
+    HAVING
+      MIN(c.is_deleted) = 1;
+
+-- Copy remaining is_deleted emails to the export as opted out.
+INSERT INTO silverpop_export_staging
+  (id, contact_id, email, opted_out)
+  SELECT email_id, contact_id, email, 1
+    FROM silverpop_deleted;
+
+-- Prepare the persistent export table.
 DROP TABLE IF EXISTS silverpop_export;
 
 CREATE TABLE IF NOT EXISTS silverpop_export(
