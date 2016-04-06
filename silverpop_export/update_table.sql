@@ -1,4 +1,7 @@
 -- Updates the silverpop_export table
+--
+-- TODO: Most of the complexity will go away once our contacts' exact email
+-- matches have been deduped.
 
 SET autocommit = 1;
 
@@ -64,7 +67,8 @@ INSERT INTO silverpop_export_staging
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
-    AND c.is_deleted = 0;
+    AND c.is_deleted = 0
+    AND e.is_primary = 1;
 
 -- Find the latest donation for each email address. Ordering by
 -- recieve_date and total_amount descending should always insert 
@@ -274,16 +278,17 @@ UPDATE silverpop_export_staging SET
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
--- Unsubscribe anyone we lost during a merge
-DROP TABLE IF EXISTS silverpop_deleted;
+-- Exclude non-primary addresses, or anyone whose old email address was deleted
+-- during a merge.
+DROP TABLE IF EXISTS silverpop_excluded;
 
-CREATE TABLE IF NOT EXISTS silverpop_deleted(
+CREATE TABLE IF NOT EXISTS silverpop_excluded(
   email_id int unsigned,
   contact_id int unsigned,
   email varchar(255)
 );
 
-INSERT INTO silverpop_deleted
+INSERT INTO silverpop_excluded
   (email_id, contact_id, email)
   SELECT e.id, c.id, e.email
     FROM civicrm.civicrm_contact c
@@ -292,13 +297,14 @@ INSERT INTO silverpop_deleted
     GROUP BY
       e.email
     HAVING
-      MIN(c.is_deleted) = 1;
+      MIN(c.is_deleted) = 1
+      OR MAX(e.is_primary) = 0;
 
--- Copy remaining is_deleted emails to the export as opted out.
+-- Copy remaining excluded email addresses to the export as opted out.
 INSERT INTO silverpop_export_staging
   (id, contact_id, email, opted_out)
   SELECT email_id, contact_id, email, 1
-    FROM silverpop_deleted;
+    FROM silverpop_excluded;
 
 -- Prepare the persistent export table.
 DROP TABLE IF EXISTS silverpop_export;
