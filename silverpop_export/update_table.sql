@@ -2,6 +2,8 @@
 --
 -- TODO: Most of the complexity will go away once our contacts' exact email
 -- matches have been deduped.
+--
+-- Timing is from a 2016-04-07 production job.
 
 SET autocommit = 1;
 
@@ -56,6 +58,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
+-- (15 minutes)
 INSERT INTO silverpop_export_staging
   (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
@@ -75,6 +78,7 @@ INSERT INTO silverpop_export_staging
 -- the latest donation first, with the larger prevailing for an
 -- email with multiple simultaneous donations. All the rest for
 -- that email will be ignored due to the unique constraint.
+-- (12 minutes)
 INSERT IGNORE INTO silverpop_export_latest
   SELECT
     e.email,
@@ -96,9 +100,10 @@ INSERT IGNORE INTO silverpop_export_latest
     ct.receive_date DESC,
     ct.total_amount DESC;
 
--- Populate data from contribution tracking; because that's fairly
+-- Populate data from contribution tracking, because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
 -- intelligent fallbacks in case of null data
+-- (11 minutes)
 UPDATE
     silverpop_export_staging ex,
     civicrm.civicrm_contribution ct,
@@ -110,6 +115,7 @@ UPDATE
     dct.contribution_id = ct.id AND
     dct.language IS NOT NULL;
 
+-- (15 minutes)
 UPDATE
     silverpop_export_staging ex,
     civicrm.civicrm_contribution ct,
@@ -185,6 +191,7 @@ CREATE TABLE silverpop_export_stat (
   INDEX spexs_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
+-- (30 minutes)
 INSERT INTO silverpop_export_stat
   (email, exid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
   SELECT
@@ -197,6 +204,7 @@ INSERT INTO silverpop_export_stat
   WHERE ct.total_amount IS NOT NULL
   GROUP BY e.email;
 
+-- (10 minutes)
 UPDATE silverpop_export_staging ex, silverpop_export_stat exs
   SET
     ex.highest_usd_amount = exs.max_amount_usd,
@@ -239,7 +247,8 @@ UPDATE silverpop_export_staging ex
     ex.opted_out = 0;
 
 -- And now updated by civicrm address where we have a country but no
--- city from contribution tracking; the countries must match
+-- city from contribution tracking.  The countries must match.
+-- (11 minutes)
 UPDATE silverpop_export_staging ex
   JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
   JOIN civicrm.civicrm_country ctry
@@ -288,6 +297,7 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded(
   email varchar(255)
 );
 
+-- (20 minutes)
 INSERT INTO silverpop_excluded
   (email_id, contact_id, email)
   SELECT e.id, c.id, e.email
@@ -348,6 +358,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the staging table into the persistent one
+-- (12 minutes)
 INSERT INTO silverpop_export (
   id,contact_id,first_name,last_name,preferred_language,email,opted_out,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
