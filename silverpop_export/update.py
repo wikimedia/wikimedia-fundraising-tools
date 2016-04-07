@@ -28,6 +28,7 @@ def load_queries(file):
                 # Do some database renaming
                 query = re.sub(r"\scivicrm\.", " %s." % config.civicrm_db.db, query)
                 query = re.sub(r"\sdrupal\.", " %s." % config.drupal_db.db, query)
+                query = re.sub(r"\slog_civicrm\.", " %s." % config.log_civicrm_db.db, query)
                 queries.append(query)
 
                 qbuf = [prefix]

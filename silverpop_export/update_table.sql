@@ -287,34 +287,30 @@ UPDATE silverpop_export_staging SET
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
--- Exclude non-primary addresses, or anyone whose old email address was deleted
--- during a merge.
+--
+-- Collect email addresses which should be excluded for various reasons, such as:
+-- * Exclude non-primary addresses
+-- * Exclude any "former residence" email addresses.
+-- * Exclude addresses dropped during contact merge.
+--
 DROP TABLE IF EXISTS silverpop_excluded;
 
 CREATE TABLE IF NOT EXISTS silverpop_excluded(
-  email_id int unsigned,
-  contact_id int unsigned,
-  email varchar(255)
+  email varchar(255),
+
+  INDEX sx_email (email),
+  CONSTRAINT sx_email_u UNIQUE (email)
 );
 
--- (20 minutes)
-INSERT INTO silverpop_excluded
-  (email_id, contact_id, email)
-  SELECT e.id, c.id, e.email
-    FROM civicrm.civicrm_contact c
-    JOIN civicrm.civicrm_email e
-      ON c.id = e.contact_id
-    GROUP BY
-      e.email
-    HAVING
-      MIN(c.is_deleted) = 1
-      OR MAX(e.is_primary) = 0;
+INSERT IGNORE INTO silverpop_excluded
+  SELECT email
+    FROM log_civicrm.log_civicrm_email e;
 
--- Copy remaining excluded email addresses to the export as opted out.
-INSERT INTO silverpop_export_staging
-  (id, contact_id, email, opted_out)
-  SELECT email_id, contact_id, email, 1
-    FROM silverpop_excluded;
+DELETE silverpop_excluded
+  FROM silverpop_excluded
+  JOIN silverpop_export_staging s
+    ON s.email = silverpop_excluded.email
+    WHERE s.opted_out = 0;
 
 -- Prepare the persistent export table.
 DROP TABLE IF EXISTS silverpop_export;
@@ -328,7 +324,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   last_name varchar(128),
   preferred_language varchar(5),
   email varchar(255),
-  opted_out tinyint(1),
 
   -- Lifetime contribution statistics
   has_recurred_donation tinyint(1),
@@ -353,22 +348,22 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   INDEX rspex_city (city),
   INDEX rspex_country (country),
   INDEX rspex_postal (postal_code),
-  INDEX rspex_opted_out (opted_out),
   CONSTRAINT sp_email UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
 INSERT INTO silverpop_export (
-  id,contact_id,first_name,last_name,preferred_language,email,opted_out,
+  id,contact_id,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
   city,country,state,postal_code )
-SELECT id,contact_id,first_name,last_name,preferred_language,email,opted_out,
+SELECT id,contact_id,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
   city,country,state,postal_code
-FROM silverpop_export_staging;
+FROM silverpop_export_staging
+WHERE opted_out=0;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
@@ -389,6 +384,4 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_currency,
     latest_native_amount,
     donation_count
-  FROM silverpop_export
-  WHERE opted_out=0;
-
+  FROM silverpop_export;
