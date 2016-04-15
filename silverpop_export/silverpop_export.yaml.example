@@ -22,9 +22,6 @@ civicrm_db:
 drupal_db:
     db: dev_drupal
 
-geonames_db:
-    db: dev_geonames
-
 silverpop_db:
     host: localhost
     user: civi

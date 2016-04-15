@@ -28,7 +28,6 @@ def load_queries(file):
                 # Do some database renaming
                 query = re.sub(r"\scivicrm\.", " %s." % config.civicrm_db.db, query)
                 query = re.sub(r"\sdrupal\.", " %s." % config.drupal_db.db, query)
-                query = re.sub(r"\sgeonames\.", " %s." % config.geonames_db.db, query)
                 queries.append(query)
 
                 qbuf = [prefix]
