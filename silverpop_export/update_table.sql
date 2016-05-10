@@ -198,7 +198,7 @@ CREATE TABLE silverpop_export_stat (
 INSERT INTO silverpop_export_stat
   (email, exid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
   SELECT
-    e.email, ex.id, MAX(ct.total_amount), SUM(ct.total_amount),
+    e.email, MAX(ex.id), MAX(ct.total_amount), SUM(ct.total_amount),
     count(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
