@@ -1,5 +1,5 @@
 '''
-Mysql wrapper which allows query composition
+Mysql wrapper providing query composition
 '''
 import MySQLdb as Dbi
 import atexit
@@ -95,10 +95,11 @@ class Connection(object):
             if lastId is not None:
                 del query.where[-1]
             lastId = result[pageIndex]
+            query.params['lastId'] = lastId
             if dir == 'ASC':
-                query.where.append("%s > %s" % (pageIndex, lastId))
+                query.where.append("%s > %%(lastId)s" % (pageIndex))
             else:
-                query.where.append("%s < %s" % (pageIndex, lastId))
+                query.where.append("%s < %%(lastId)s" % (pageIndex))
 
 
     def last_insert_id(self):
