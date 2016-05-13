@@ -12,6 +12,9 @@ DROP TABLE IF EXISTS silverpop_export_latest;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS silverpop_export_stat;
 
+-- Clean up from previous schema.
+DROP TABLE IF EXISTS silverpop_deleted;
+
 CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
 
