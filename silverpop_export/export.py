@@ -88,13 +88,15 @@ def export_unsubscribes(output_path=None):
 
     log.info("Starting unsubscribe data export")
     exportq = DbQuery()
-    exportq.tables.append('silverpop_excluded')
+    exportq.tables.append('silverpop_export')
+    exportq.columns.append('contact_id')
     exportq.columns.append('email')
+    exportq.where.append('opted_out=1')
     run_export_query(
         db=db,
         query=exportq,
         output=output_path,
-        sort_by_index="email"
+        sort_by_index="contact_id"
     )
 
 

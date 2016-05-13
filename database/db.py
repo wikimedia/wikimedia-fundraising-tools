@@ -1,5 +1,5 @@
 '''
-Mysql wrapper providing query composition
+Mysql wrapper which allows query composition
 '''
 import MySQLdb as Dbi
 import atexit

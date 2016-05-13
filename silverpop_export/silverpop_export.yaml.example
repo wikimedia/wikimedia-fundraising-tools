@@ -19,9 +19,6 @@ sftp:
 civicrm_db:
     db: dev_civicrm
 
-log_civicrm_db:
-    db: dev_log_civicrm
-
 drupal_db:
     db: dev_drupal
 
