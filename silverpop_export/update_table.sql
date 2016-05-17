@@ -299,13 +299,14 @@ UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted
 DROP TABLE IF EXISTS silverpop_excluded;
 
 CREATE TABLE IF NOT EXISTS silverpop_excluded(
+  id int AUTO_INCREMENT PRIMARY KEY,
   email varchar(255),
 
   INDEX sx_email (email),
   CONSTRAINT sx_email_u UNIQUE (email)
-);
+) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
 
-INSERT IGNORE INTO silverpop_excluded
+INSERT IGNORE INTO silverpop_excluded (email)
   SELECT email
     FROM log_civicrm.log_civicrm_email e;
 
