@@ -12,9 +12,6 @@ DROP TABLE IF EXISTS silverpop_export_latest;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS silverpop_export_stat;
 
--- Clean up from previous schema.
-DROP TABLE IF EXISTS silverpop_deleted;
-
 CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
 
@@ -80,9 +77,11 @@ INSERT INTO silverpop_export_staging
 -- recieve_date and total_amount descending should always insert 
 -- the latest donation first, with the larger prevailing for an
 -- email with multiple simultaneous donations. All the rest for
--- that email will be ignored due to the unique constraint.
+-- that email will be ignored due to the unique constraint. We
+-- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
+-- the latter throws warnings.
 -- (12 minutes)
-INSERT IGNORE INTO silverpop_export_latest
+INSERT INTO silverpop_export_latest
   SELECT
     e.email,
     ex.original_currency,
@@ -101,7 +100,8 @@ INSERT IGNORE INTO silverpop_export_latest
     ct.contribution_status_id = 1 -- 'Completed'
   ORDER BY
     ct.receive_date DESC,
-    ct.total_amount DESC;
+    ct.total_amount DESC
+ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
 -- Populate data from contribution tracking, because that's fairly
 -- reliable. Do this before deduplication so we can attempt to make
@@ -306,9 +306,11 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded(
   CONSTRAINT sx_email_u UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
 
-INSERT IGNORE INTO silverpop_excluded (email)
+-- Same no-op update trick as with silverpop_export_latest
+INSERT INTO silverpop_excluded (email)
   SELECT email
-    FROM log_civicrm.log_civicrm_email e;
+    FROM log_civicrm.log_civicrm_email e
+ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 
 DELETE silverpop_excluded
   FROM silverpop_excluded
