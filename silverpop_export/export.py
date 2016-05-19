@@ -52,6 +52,7 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
     # Make sure we've got the table headers
     try:
         first = gen.next()
+        num_rows = 1
 
         # Get the order of keys and sort them alphabetically so it doesn't come
         # out as complete soup
@@ -61,12 +62,14 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
 
         for row in gen:
             w.writerow(order_keyed_row(keys, row))
+            num_rows += 1
+
     except StopIteration:
         pass
 
     output.flush()
     output.close()
-
+    log.info("Wrote %d rows" % num_rows)
 
 def export_data(output_path=None):
     db = DbConnection(**config.silverpop_db)
