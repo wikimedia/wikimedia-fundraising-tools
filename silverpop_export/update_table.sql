@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   -- Address information
   city varchar(128),
   country varchar(2),
-  state varchar(24),
+  state varchar(64),
   postal_code varchar(128),
 
   INDEX rspex_contact_id (contact_id),
