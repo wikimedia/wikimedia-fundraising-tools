@@ -227,13 +227,6 @@ UPDATE silverpop_export_staging ex, silverpop_export_latest ct
   WHERE
     ex.email = ct.email;
 
--- Remove contacts who apparently have no contributions
--- Leave opted out non-contributors so we don't spam anyone
-DELETE FROM silverpop_export_staging
-  WHERE
-    silverpop_export_staging.latest_donation IS NULL AND
-    silverpop_export_staging.opted_out = 0;
-
 -- Join on civicrm address where we do not already have a geolocated
 -- address from contribution tracking
 UPDATE silverpop_export_staging ex
