@@ -6,6 +6,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Subs
 from process.logging import Logger as log
 from process.globals import config
 from queue.stomp_wrap import Stomp
+from queue.redis_wrap import Redis
 import ppreport
 from civicrm.civicrm import Civicrm
 
@@ -116,3 +117,8 @@ class SarFile(object):
             self.stomp = Stomp()
 
         self.stomp.send('recurring', msg)
+
+        if not self.redis:
+            self.redis = Redis()
+
+        self.redis.send('recurring', msg)

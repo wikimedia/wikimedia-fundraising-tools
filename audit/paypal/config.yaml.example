@@ -28,6 +28,15 @@ stomp:
         donations: /queue/donations
         recurring: /queue/recurring
 
+redis:
+    server: localhost
+    port: 6379
+    password: pass
+    queues:
+        refund: refund
+        donations: donations
+        recurring: recurring
+
 api:
     # url: "https://api-3t.paypal.com/nvp"
     url: "https://api-3t.sandbox.paypal.com/nvp"
