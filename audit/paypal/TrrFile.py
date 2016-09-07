@@ -8,6 +8,7 @@ import re
 from process.logging import Logger as log
 from process.globals import config
 from queue.stomp_wrap import Stomp
+from queue.redis_wrap import Redis
 import ppreport
 
 from civicrm.civicrm import Civicrm
@@ -16,6 +17,7 @@ from paypal_api import PaypalApiClassic
 class TrrFile(object):
     VERSION = [4, 8]
     stomp = None
+    redis = None
     # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
     column_headers = [
         "Column Type",
@@ -192,6 +194,11 @@ class TrrFile(object):
             self.stomp = Stomp()
 
         self.stomp.send(queue, msg)
+
+        if not self.redis:
+            self.redis = Redis()
+
+        self.redis.send(queue, msg)
 
     def normalize_recurring(self, msg):
         'Synthesize a raw PayPal message'
