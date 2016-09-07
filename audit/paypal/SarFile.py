@@ -12,6 +12,7 @@ from civicrm.civicrm import Civicrm
 
 class SarFile(object):
     VERSION=2
+    redis = None
     stomp = None
     column_headers = [
         "Column Type",
