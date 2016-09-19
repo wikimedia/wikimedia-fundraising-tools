@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   contact_id int unsigned,
   first_name varchar(128),
   last_name varchar(128),
-  preferred_language varchar(5),
+  preferred_language varchar(12),
   email varchar(255),
   opted_out tinyint(1),
 
@@ -63,7 +63,7 @@ INSERT INTO silverpop_export_staging
   (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
   SELECT
     e.id, e.contact_id, e.email, c.first_name, c.last_name,
-    IF(SUBSTRING(c.preferred_language, 1, 1) = '_', 'en', SUBSTRING(c.preferred_language, 1, 2)),
+    REPLACE(c.preferred_language, '_', '-'),
     (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(d.do_not_solicit, 0))
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
@@ -74,7 +74,7 @@ INSERT INTO silverpop_export_staging
     AND e.is_primary = 1;
 
 -- Find the latest donation for each email address. Ordering by
--- recieve_date and total_amount descending should always insert 
+-- receive_date and total_amount descending should always insert
 -- the latest donation first, with the larger prevailing for an
 -- email with multiple simultaneous donations. All the rest for
 -- that email will be ignored due to the unique constraint. We
@@ -103,21 +103,6 @@ INSERT INTO silverpop_export_latest
     ct.total_amount DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
--- Populate data from contribution tracking, because that's fairly
--- reliable. Do this before deduplication so we can attempt to make
--- intelligent fallbacks in case of null data
--- (11 minutes)
-UPDATE
-    silverpop_export_staging ex,
-    civicrm.civicrm_contribution ct,
-    drupal.contribution_tracking dct
-  SET
-    ex.preferred_language = dct.language
-  WHERE
-    ex.contact_id = ct.contact_id AND
-    dct.contribution_id = ct.id AND
-    dct.language IS NOT NULL;
-
 -- (15 minutes)
 UPDATE
     silverpop_export_staging ex,
@@ -138,7 +123,7 @@ CREATE TABLE silverpop_export_dedupe_email (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
   maxid int,
-  preferred_language varchar(5),
+  preferred_language varchar(12),
   country varchar(2),
   opted_out tinyint(1),
 
@@ -329,7 +314,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   contact_id int unsigned,
   first_name varchar(128),
   last_name varchar(128),
-  preferred_language varchar(5),
+  preferred_language varchar(12),
   email varchar(255),
 
   -- Lifetime contribution statistics
