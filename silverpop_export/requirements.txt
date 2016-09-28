@@ -1,3 +1,0 @@
-MySQL-python>=1.2.5
-PyYAML>=3.11
-paramiko>=1.16.0
