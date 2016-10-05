@@ -7,7 +7,6 @@ import re
 
 from process.logging import Logger as log
 from process.globals import config
-from queue.stomp_wrap import Stomp
 from queue.redis_wrap import Redis
 import ppreport
 
@@ -16,7 +15,6 @@ from paypal_api import PaypalApiClassic
 
 class TrrFile(object):
     VERSION = [4, 8]
-    stomp = None
     redis = None
     # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
     column_headers = [
@@ -190,11 +188,6 @@ class TrrFile(object):
         self.send(queue, out)
 
     def send(self, queue, msg):
-        if not self.stomp:
-            self.stomp = Stomp()
-
-        self.stomp.send(queue, msg)
-
         if not self.redis:
             self.redis = Redis()
 
