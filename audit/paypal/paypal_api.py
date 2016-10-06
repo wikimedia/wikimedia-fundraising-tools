@@ -30,11 +30,11 @@ class PaypalApiClassic(object):
         handlers = []
 
         # just for debugging DEBUGGING...
-        #httplib.HTTPConnection.debuglevel = 3
-        #httplib.HTTPSConnection.debuglevel = 3
+        # httplib.HTTPConnection.debuglevel = 3
+        # httplib.HTTPSConnection.debuglevel = 3
 
         if 'certificate_path' in config.api:
-            #handlers.append(HTTPSClientAuthHandler(config.api.certificate_path, config.api.certificate_path, debuglevel=2))
+            # handlers.append(HTTPSClientAuthHandler(config.api.certificate_path, config.api.certificate_path, debuglevel=2))
             handlers.append(HTTPSClientAuthHandler(config.api.certificate_path, config.api.certificate_path))
 
         opener = urllib2.build_opener(*handlers)
@@ -44,8 +44,8 @@ class PaypalApiClassic(object):
 
         return result
 
-# from http://stackoverflow.com/questions/1875052/using-paired-certificates-with-urllib2
 
+# from http://stackoverflow.com/questions/1875052/using-paired-certificates-with-urllib2
 class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
     def __init__(self, key, cert, **kw):
         urllib2.HTTPSHandler.__init__(self, **kw)

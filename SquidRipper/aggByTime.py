@@ -5,6 +5,7 @@ import sys
 from dateutil.parser import parse as dateParse
 from datetime import datetime
 
+
 def main():
     # === Extract options ===
     parser = OptionParser(usage="usage: %prog [options] <timeColumn> <timeInterval> <groupByColumn> ...")
@@ -52,9 +53,9 @@ def main():
             colVals.append(parts[i])
         colVals = tuple(colVals)
 
-        if not ctime in data:
+        if ctime not in data:
             data[ctime] = {}
-        if not colVals in data[ctime]:
+        if colVals not in data[ctime]:
             data[ctime][colVals] = 1
         else:
             data[ctime][colVals] += 1

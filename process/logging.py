@@ -2,8 +2,8 @@ import sys
 import syslog
 import os.path
 
+
 class Logger(object):
-    
     @staticmethod
     def debug(message):
         Logger.log(message, syslog.LOG_DEBUG)

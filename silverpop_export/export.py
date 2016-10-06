@@ -71,6 +71,7 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
     output.close()
     log.info("Wrote %d rows" % num_rows)
 
+
 def export_data(output_path=None):
     db = DbConnection(**config.silverpop_db)
 

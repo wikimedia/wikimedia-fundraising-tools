@@ -1,6 +1,7 @@
 from process.globals import config
 from database import db
 
+
 class Tag(object):
     cache = {}
 

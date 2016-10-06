@@ -1,5 +1,6 @@
 import csv
 
+
 # from http://docs.python.org/2/library/csv.html
 def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
     # csv.py doesn't do Unicode; encode temporarily as UTF-8:
@@ -8,6 +9,7 @@ def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
     for row in csv_reader:
         # decode UTF-8 back to Unicode, cell by cell:
         yield [unicode(cell, 'utf-8') for cell in row]
+
 
 def utf_8_encoder(unicode_csv_data):
     for line in unicode_csv_data:

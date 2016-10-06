@@ -2,6 +2,7 @@ from mock import patch
 
 test_queue = "test_queue"
 
+
 @patch("redis.Redis")
 def test_send(MockPyRedis):
     data = dict(a=1)

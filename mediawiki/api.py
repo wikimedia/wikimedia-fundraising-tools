@@ -13,10 +13,10 @@ def mw_call(args, api=config.centralnotice_mw_api):
         api,
         user_agent='bot: fr-anal'
     )
-    result = wiki.call( args )
+    result = wiki.call(args)
     if 'error' in result:
         raise RuntimeError(json.dumps(result, indent=4).replace('\\n', '\n'))
-    val = result[ args['action'] ]
+    val = result[args['action']]
     if 'list' in args:
-        val = val[ args['list'] ]
+        val = val[args['list']]
     return val

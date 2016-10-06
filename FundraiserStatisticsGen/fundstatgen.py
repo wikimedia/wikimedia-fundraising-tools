@@ -16,6 +16,7 @@ from logging.handlers import SysLogHandler
 
 CONFIG_DEFAULT_PATH = "/etc/fundraising/fundstatgen.cfg"
 
+
 def main():
     # Extract any command line options
     parser = OptionParser(usage="usage: %prog [options] <working directory>")
@@ -215,7 +216,7 @@ def pivotDataByYear(stats):
     return years, pivot
 
 
-def createOutputFiles(stats, firstcol, basename, colnames = None):
+def createOutputFiles(stats, firstcol, basename, colnames=None):
     """
     Creates a CSV file for each report in stats
     """
@@ -224,7 +225,7 @@ def createOutputFiles(stats, firstcol, basename, colnames = None):
         createSingleOutFile(stats[report], firstcol, basename + report, colnames)
 
 
-def createSingleOutFile(stats, firstcols, basefilename, colnames = None):
+def createSingleOutFile(stats, firstcols, basefilename, colnames=None):
     """
     Creates a single report file from a keyed dict
 
@@ -264,7 +265,7 @@ def createSingleOutFile(stats, firstcols, basefilename, colnames = None):
 
     jsonfilename = basefilename + ".json"
     f = file(jsonfilename, 'w')
-    mapstats = [ dict(zip(firstcols + colnames, line)) for line in alldata ]
+    mapstats = [dict(zip(firstcols + colnames, line)) for line in alldata]
     json.dump(mapstats, f)
     f.close()
 

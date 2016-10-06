@@ -5,6 +5,7 @@ import csv
 from optparse import OptionParser
 from ConfigParser import SafeConfigParser
 
+
 def main():
     # Extract any command line options
     parser = OptionParser(usage="usage: %prog [options] <working directory>")
@@ -77,7 +78,7 @@ def getData(host, port, username, password, database):
     return data
 
 
-def createSingleOutFile(stats, firstcols, filename, colnames = None):
+def createSingleOutFile(stats, firstcols, filename, colnames=None):
     """
     Creates a single report file from a keyed dict
 

@@ -26,13 +26,14 @@ def get_change(wheres):
 
     change = None
     if ref_totals['total']:
-        change = round( 100 * cur_totals['total'] / ref_totals['total'] - 100, 1 )
+        change = round(100 * cur_totals['total'] / ref_totals['total'] - 100, 1)
     cur_totals['frac_change'] = change
 
     return cur_totals
 
-#FIXME: instead of ignoring args, intersect the criteria during update
-def get_totals(wheres = None, query=None, banner=None, campaign=None, country=None, start=None, end=None, **ignore):
+
+# FIXME: instead of ignoring args, intersect the criteria during update
+def get_totals(wheres=None, query=None, banner=None, campaign=None, country=None, start=None, end=None, **ignore):
     '''
     Note that the column names must match a heading in the results spreadsheet.
     '''
@@ -55,7 +56,7 @@ def get_totals(wheres = None, query=None, banner=None, campaign=None, country=No
         query.where.append("utm_campaign = %(campaign)s")
         query.params['campaign'] = campaign
     if banner:
-        query.columns.append( ct_banner_clause + " AS banner" )
+        query.columns.append(ct_banner_clause + " AS banner")
         query.where.append(ct_banner_clause + " = %(banner)s")
         query.params['banner'] = banner
     if country:

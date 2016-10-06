@@ -9,8 +9,9 @@ from queue.redis_wrap import Redis
 import ppreport
 from civicrm.civicrm import Civicrm
 
+
 class SarFile(object):
-    VERSION=2
+    VERSION = 2
     redis = None
     column_headers = [
         "Column Type",
@@ -63,7 +64,7 @@ class SarFile(object):
 
         missing_fields = []
         for field in required_fields:
-            if not field in row or row[field] == '':
+            if field not in row or row[field] == '':
                 missing_fields.append(field)
         if missing_fields:
             raise RuntimeError("Message is missing some important fields: [{fields}]".format(fields=", ".join(missing_fields)))

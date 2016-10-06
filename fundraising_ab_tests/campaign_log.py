@@ -1,6 +1,7 @@
 from fundraising_ab_tests.fundraising_experiment import FrTest
 from process.globals import config
 
+
 def tests_from_entry(entry):
     '''
     Returns a tuple, (test ended, test begun)
@@ -37,6 +38,7 @@ def tests_from_entry(entry):
 
     return (test_from_entry('begin'), test_from_entry('end'), )
 
+
 def get_relevant_events():
     from mediawiki.centralnotice.api import get_campaign_logs
     from mediawiki.centralnotice import time_util
@@ -49,4 +51,4 @@ def get_relevant_events():
             return True
 
     logs = get_campaign_logs(since=time_util.str_time_offset(days=-config.centralnotice_history_days))
-    return [ tests_from_entry(e) for e in reversed(logs) if is_relevant(e) ]
+    return [tests_from_entry(e) for e in reversed(logs) if is_relevant(e)]

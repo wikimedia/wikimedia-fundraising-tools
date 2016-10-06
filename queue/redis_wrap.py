@@ -4,6 +4,7 @@ from process.logging import Logger as log
 import json
 import redis
 
+
 class Redis(object):
 
     conn = None

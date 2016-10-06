@@ -23,13 +23,14 @@ def is_relevant(entry):
     if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
         return True
 
+
 def fetch():
     out = csv.DictWriter(sys.stdout, [
         'campaign',
         'banner',
         'start',
         'end',
-        #FIXME: 'lps',
+        # FIXME: 'lps',
     ], delimiter="\t")
 
     out.writeheader()
@@ -43,12 +44,12 @@ def fetch():
         for test in logs:
             if is_relevant(test):
                 for banner in test['end']['banners'].keys():
-                    out.writerow( {
+                    out.writerow({
                         'campaign': test['campaign'].encode('utf-8'),
                         'banner': banner.encode('utf-8'),
                         'start': test['end']['start'],
                         'end': test['end']['end'],
-                    } )
+                    })
 
         if not logs:
             break

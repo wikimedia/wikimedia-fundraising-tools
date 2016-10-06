@@ -1,5 +1,6 @@
 from database.db import Connection
 
+
 class Civicrm(object):
     def __init__(self, config):
         self.db = Connection(**dict(config))
