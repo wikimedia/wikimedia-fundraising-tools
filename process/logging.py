@@ -33,12 +33,12 @@ class Logger(object):
         syslog.syslog(severity, message)
         syslog.closelog()
 
-        # Echo to stdout?
-        config = get_config()
+        # TODO: Echo to stdout here since we can't log yet?
+        config = process.globals.get_config()
         if sys.stdout.isatty() or (not hasattr(config, 'quiet') or not config.quiet):
             print(message)
             sys.stdout.flush()
 
 
-# Late import to deal with circular dependency
-from process.globals import get_config
+# FIXME: This late import is to cheat a circular dependency.
+import process.globals
