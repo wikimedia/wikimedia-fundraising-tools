@@ -1,4 +1,4 @@
-from fundraising_ab_tests.fundraising_test import FrTest
+from fundraising_ab_tests.fundraising_experiment import FrTest
 from process.globals import config
 
 def tests_from_entry(entry):
