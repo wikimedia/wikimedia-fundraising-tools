@@ -1,9 +1,9 @@
-from process.globals import config
-
 import httplib
 import urllib
 import urllib2
 import urlparse
+
+import process.globals
 
 
 class PaypalApiClassic(object):
@@ -11,6 +11,7 @@ class PaypalApiClassic(object):
     VERSION = '124.0'
 
     def call(self, cmd, **kw):
+        config = process.globals.get_config()
         params = {
             'PWD': config.api.password,
             'USER': config.api.username,
@@ -43,6 +44,12 @@ class PaypalApiClassic(object):
         result = urlparse.parse_qs(out.read())
 
         return result
+
+    def fetch_donor_name(self, txn_id):
+        response = self.call('GetTransactionDetails', TRANSACTIONID=txn_id)
+        if 'FIRSTNAME' not in response:
+            raise RuntimeError("Failed to get transaction details for {id}, repsonse: {response}".format(id=txn_id, response=response))
+        return (response['FIRSTNAME'][0], response['LASTNAME'][0])
 
 
 # from http://stackoverflow.com/questions/1875052/using-paired-certificates-with-urllib2

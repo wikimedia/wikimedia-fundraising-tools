@@ -3,7 +3,8 @@ from yaml import safe_load as load_yaml
 
 from process.logging import Logger as log
 
-# n.b. Careful not to import `config` by value
+# n.b. Careful not to import `config` by value.  TODO: rename to _config to
+# break external usages.
 config = dict()
 
 
