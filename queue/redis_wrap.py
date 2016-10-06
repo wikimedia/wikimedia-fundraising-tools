@@ -14,11 +14,13 @@ class Redis(object):
 
     def send(self, queue, msg):
 
+        encoded = json.dumps(msg)
+
         if config.no_effect:
-            log.info("not queueing message. " + json.dumps(msg))
+            log.info("not queueing message. " + encoded)
             return
 
         if config.redis.queues[queue]:
-            self.conn.rpush(config.redis.queues[queue], msg)
+            self.conn.rpush(config.redis.queues[queue], encoded)
         else:
-            self.conn.rpush(queue, msg)
+            self.conn.rpush(queue, encoded)
