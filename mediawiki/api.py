@@ -2,12 +2,17 @@
 Dumb interface to the MediaWiki api.
 '''
 
-from process.globals import config
+import process.globals
 
 import json
 
-def mw_call(args, api=config.centralnotice_mw_api):
+
+def mw_call(args, api=None):
     import simplemediawiki
+
+    if not api:
+        config = process.globals.get_config()
+        api = config.centralnotice_mw_api
 
     wiki = simplemediawiki.MediaWiki(
         api,

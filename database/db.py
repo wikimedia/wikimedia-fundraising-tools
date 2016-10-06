@@ -8,7 +8,8 @@ import threading
 
 from signal import signal, SIGTERM, SIG_DFL
 from process.logging import Logger as log
-from process.globals import config
+import process.globals
+
 
 class Connection(object):
     def __init__(self, debug=False, **kw):
@@ -144,6 +145,8 @@ db_conn = dict()
 def get_db(schema=None):
     '''Convenience'''
     global db_conn
+
+    config = process.globals.get_config()
 
     if not schema:
         schema = config.db_params.db

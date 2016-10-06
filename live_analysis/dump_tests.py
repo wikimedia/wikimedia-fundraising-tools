@@ -6,12 +6,12 @@
 import csv
 import sys
 
-from process.logging import Logger as log
+import mediawiki.centralnotice.api
+
 from process.globals import load_config
+
 load_config("analysis")
 
-import mediawiki.centralnotice.api
-from process.globals import config
 
 def is_relevant(entry):
     '''
