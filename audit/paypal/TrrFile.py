@@ -137,6 +137,7 @@ class TrrFile(object):
 
         if re.search('^[0-9]+$', row['Transaction Subject']):
             out['contribution_tracking_id'] = row['Transaction Subject']
+            out['order_id'] = row['Transaction Subject']
 
         event_type = row['Transaction Event Code'][0:3]
 
