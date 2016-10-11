@@ -21,13 +21,13 @@ class Redis(object):
 
     def send(self, queue, msg):
 
+        msg.update(Redis.source_meta())
+
         encoded = json.dumps(msg)
 
         if self.config.no_effect:
             log.info("not queueing message. " + encoded)
             return
-
-        msg.update(Redis.source_meta())
 
         if queue in self.config.redis.queues:
             # Map queue name if desired.
