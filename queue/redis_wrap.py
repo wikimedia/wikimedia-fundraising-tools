@@ -2,6 +2,7 @@ import os
 import process.globals
 import process.version_stamp
 import socket
+import sys
 import time
 from process.logging import Logger as log
 
