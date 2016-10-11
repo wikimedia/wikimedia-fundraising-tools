@@ -1,6 +1,7 @@
 from google.gdocs import Spreadsheet
 from process.logging import Logger as log
 
+
 def write_gdoc_results(doc=None, results=[]):
     log.info("Writing test results to {url}".format(url=doc))
     doc = Spreadsheet(doc=doc)
@@ -9,6 +10,7 @@ def write_gdoc_results(doc=None, results=[]):
         props.update(result['criteria'])
         props.update(result['results'])
         doc.append_row(props)
+
 
 def update_gdoc_results(doc=None, results=[]):
     log.info("Updating results in {url}".format(url=doc))

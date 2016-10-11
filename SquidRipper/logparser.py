@@ -119,13 +119,12 @@ def getHttpParams(httpParts):
     elementDict = {}
     for element in elements:
         try:
-            (k,v) = element.split('=')
+            (k, v) = element.split('=')
         except ValueError:
             k = element
             v = None
         elementDict[k] = v
     return elementDict
-
 
 
 if __name__ == "__main__":

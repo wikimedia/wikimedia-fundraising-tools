@@ -8,20 +8,23 @@ TODO:
 
 import re
 
-from fundraising_ab_tests.fundraising_test import FrTest
+from fundraising_ab_tests.fundraising_experiment import FrTest
 import campaign_log
 from process.globals import config
 from process.logging import Logger as log
+
 
 def parse_spec(spec):
     """Turn each row of a specification source into test objects"""
     for row in spec:
         yield FrTest(**row)
 
+
 def compare_test_fuzzy(a, b):
     """Check whether the tests match closely enough to be considered identical."""
     if a.campaign['name'] == b.campaign['name'] and a.banners == b.banners:
         return True
+
 
 def is_fr_test(test):
     if test.label and test.banners and test.campaign:

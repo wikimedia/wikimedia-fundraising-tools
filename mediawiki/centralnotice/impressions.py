@@ -1,6 +1,7 @@
 from database import db
 from process.globals import config
 
+
 def get_impressions(campaign=None, banner=None, **ignore):
     query = db.Query()
     query.columns.append("SUM(count) AS count")

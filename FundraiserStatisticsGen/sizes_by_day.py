@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 
-# FIXME: dayoffiscalyear
+# FIXME: dayoffiscalyear, parameterize all this
 start_time = "20120701"
 end_time = "20130701"
-#start_time = "20060101"
-#end_time = "20140101"
+# start_time = "20060101"
+# end_time = "20140101"
 ranges = [
     [0, 10],
-    [10,30],
-    [30,50],
-    [50,100],
-    [100,200],
-    [200,1000],
-    [1000,2500],
-    [2500,10000],
-    [10000,1000000000]
+    [10, 30],
+    [30, 50],
+    [50, 100],
+    [100, 200],
+    [200, 1000],
+    [1000, 2500],
+    [2500, 10000],
+    [10000, 1000000000]
 ]
 
 amount_slices_cols = ", ".join([

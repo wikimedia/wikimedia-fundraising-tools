@@ -18,10 +18,11 @@ options = None
 civi = None
 log_file = None
 
+
 def main():
     global config, messaging, options, civi
     parser = OptionParser(usage="usage: %prog [options]")
-    parser.add_option("-c", "--config", dest='configFile', default=[ "paypal-audit.cfg" ], action='append', help='Path to configuration file')
+    parser.add_option("-c", "--config", dest='configFile', default=["paypal-audit.cfg"], action='append', help='Path to configuration file')
     parser.add_option("-f", "--auditFile", dest='auditFile', default=None, help='CSV of transaction history')
     parser.add_option('-l', "--logFile", dest='logFile', default="audit.log", help='Destination logfile. New messages will be appended.')
     parser.add_option("-n", "--no-effect", dest='noEffect', default=False, action="store_true", help="Dummy no-effect mode")
@@ -46,7 +47,7 @@ def main():
     locale.setlocale(locale.LC_NUMERIC, "")
 
     # fix spurious whitespace around column header names
-    infile.fieldnames = [ name.strip() for name in infile.fieldnames ]
+    infile.fieldnames = [name.strip() for name in infile.fieldnames]
 
     ignore_types = [
         "Authorization",
@@ -82,8 +83,10 @@ def main():
         else:
             handle_unknown(line)
 
+
 def handle_unknown(line):
     log("Unhandled transaction, type \"%s\": %s" % (line['Type'], json.dumps(line)))
+
 
 def handle_refund(line):
     global config, messaging, civi
@@ -104,6 +107,7 @@ def handle_refund(line):
     else:
         log("Refund already exists: %s" % (txn_id, ))
 
+
 def handle_payment(line):
     global config, messaging, civi
 
@@ -120,6 +124,7 @@ def handle_payment(line):
         messaging.send("payment", msg)
     else:
         log("Payment already exists: %s" % (txn_id, ))
+
 
 def normalize_msg(line):
     timestamp = dateutil.parser.parse(
@@ -152,6 +157,7 @@ def normalize_msg(line):
         'gateway': "paypal",
         'gateway_txn_id': line['Transaction ID'],
     }
+
 
 def normalize_refund_msg(line):
     msg = normalize_msg(line)

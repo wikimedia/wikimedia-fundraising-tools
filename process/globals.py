@@ -6,6 +6,7 @@ from process.logging import Logger as log
 # n.b. Careful not to import `config` by value
 config = dict()
 
+
 def load_config(app_name):
     global config
 
@@ -30,14 +31,16 @@ def load_config(app_name):
 
         config.app_name = app_name
 
-        return
+        return config
 
     raise Exception("No config found, searched " + ", ".join(search_filenames))
+
 
 def get_config():
     """Procedural way to get the config, to workaround early bootstrapping fluctuations"""
     global config
     return config
+
 
 class DictAsAttrDict(dict):
     def __getattr__(self, name):

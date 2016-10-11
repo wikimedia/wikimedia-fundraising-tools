@@ -13,6 +13,7 @@ import ppreport
 from civicrm.civicrm import Civicrm
 from paypal_api import PaypalApiClassic
 
+
 class TrrFile(object):
     VERSION = [4, 8]
     redis = None

@@ -3,12 +3,14 @@ Lockfile using a temporary file and the process id.
 
 Self-corrects stale locks unless "failopen" is True.
 '''
-import os, os.path
+import os
+import os.path
 import sys
 
 from logging import Logger as log
 
 lockfile = None
+
 
 def begin(filename=None, failopen=False):
     if not filename:
@@ -46,6 +48,7 @@ def begin(filename=None, failopen=False):
 
     global lockfile
     lockfile = filename
+
 
 def end():
     global lockfile

@@ -18,7 +18,7 @@ def load_queries(file):
     script_path = os.path.dirname(__file__)
     qbuf = [prefix]
     queries = []
-    f = open( os.path.join( script_path, file ), 'r' )
+    f = open(os.path.join(script_path, file), 'r')
     for line in f:
         line = line.rstrip()
         if line:

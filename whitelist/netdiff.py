@@ -19,4 +19,3 @@ with open(argv[2], 'r') as exfile:
 
 for cidr in net.iter_cidrs():
     print(cidr)
-

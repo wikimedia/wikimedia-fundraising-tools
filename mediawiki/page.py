@@ -1,5 +1,6 @@
 from mediawiki.api import mw_call
 
+
 def get_content(title, **kw):
     result = mw_call({
         'action': 'query',

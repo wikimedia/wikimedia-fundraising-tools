@@ -10,6 +10,7 @@ import json
 # NOTE: This script requires a set of WMF PyBal configuration files. These may be obtained
 # from fenari:/h/w/conf/pybal.conf. For more details talk to paravoid.
 
+
 def main():
     # === Extract options ===
     parser = OptionParser(usage="usage: %prog [options]")

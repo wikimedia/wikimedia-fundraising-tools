@@ -20,7 +20,7 @@ class Connection(object):
     def close(self):
         self.db_conn.commit()
 
-    def execute(self, sql, params=None, timeout = 0):
+    def execute(self, sql, params=None, timeout=0):
         cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
         deathClock = None
 
@@ -41,8 +41,8 @@ class Connection(object):
                 cursor.execute(sql.uninterpolated_sql(), sql.params)
             else:
                 cursor.execute(str(sql))
-            #for row in cursor.fetchall():
-            #	yield row
+            # for row in cursor.fetchall():
+            #     yield row
             out = cursor.fetchall()
             cursor.close()
             return out
@@ -57,7 +57,7 @@ class Connection(object):
         cursor.execute('KILL CONNECTION {}'.format(self.connection_id))
         killerConnection.close()
 
-    def execute_paged(self, query, pageIndex, pageSize = 1000, dir = 'ASC'):
+    def execute_paged(self, query, pageIndex, pageSize=1000, dir='ASC'):
         """ Execute a paged query. This will yield a dictionary of the results
         until there are no more results to yield. The pageIndex will be added
         to the order by automatically. If the Query already has a limit, it will
@@ -101,7 +101,6 @@ class Connection(object):
             else:
                 query.where.append("%s < %%(lastId)s" % (pageIndex))
 
-
     def last_insert_id(self):
         return self.db_conn.insert_id()
 
@@ -141,6 +140,7 @@ class Query(object):
 
 db_conn = dict()
 
+
 def get_db(schema=None):
     '''Convenience'''
     global db_conn
@@ -155,9 +155,11 @@ def get_db(schema=None):
 
     return db_conn[schema]
 
+
 def close_all():
     for conn in db_conn.values():
         conn.close()
+
 
 def handle_sigterm(signum, stack_frame):
     close_all()
@@ -166,4 +168,3 @@ def handle_sigterm(signum, stack_frame):
 
 atexit.register(close_all)
 signal(SIGTERM, handle_sigterm)
-

@@ -11,14 +11,15 @@ from process.globals import config
 # TODO: ExecuteBatch; 2-leg oauth
 # TODO: cache rows locally, operate and then flush
 
+
 def authenticate(client):
-    #client.SetOAuthInputParameters(
-    #    gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
-    #    consumer_key=config.gdocs['consumer_key'],
-    #    consumer_secret=config.gdocs['consumer_secret'],
-    #    two_legged_oauth=True,
-    #    requestor_id=config.gdocs['email']
-    #)
+    # client.SetOAuthInputParameters(
+    #     gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
+    #     consumer_key=config.gdocs['consumer_key'],
+    #     consumer_secret=config.gdocs['consumer_secret'],
+    #     two_legged_oauth=True,
+    #     requestor_id=config.gdocs['email']
+    # )
     client.ClientLogin(
         config.gdocs['email'],
         config.gdocs['passwd'],
@@ -26,14 +27,15 @@ def authenticate(client):
     )
     client.ssl = True
 
-def new_doc( title ):
+
+def new_doc(title):
     '''
     return doc_key
     '''
-    client = gdata.docs.service.DocsService( email=config.gdocs['email'], source=config.app_name )
-    authenticate( client )
+    client = gdata.docs.service.DocsService(email=config.gdocs['email'], source=config.app_name)
+    authenticate(client)
 
-    #entry = gdata.docs.data.Resource( type='spreadsheet', title=title, collection='bot: FR' )
+    # entry = gdata.docs.data.Resource(type='spreadsheet', title=title, collection='bot: FR')
     entry = client.Upload(
         gdata.MediaSource(
             file_name=title,
@@ -45,9 +47,10 @@ def new_doc( title ):
 
     return entry.id.text.rsplit('%3A')[-1]
 
+
 class Spreadsheet(object):
     def __init__(self, doc=None):
-        self.client = gdata.spreadsheet.service.SpreadsheetsService( source=config.app_name )
+        self.client = gdata.spreadsheet.service.SpreadsheetsService(source=config.app_name)
         authenticate(self.client)
 
         if doc:
@@ -56,7 +59,7 @@ class Spreadsheet(object):
             self.doc_key = doc.doc_key
             self.worksheet_id = doc.worksheet_id
         else:
-            self.doc_key = new_doc( 'test1' )
+            self.doc_key = new_doc('test1')
 
         if self.worksheet_id is None:
             self.worksheet_id = self.default_worksheet()
@@ -65,23 +68,23 @@ class Spreadsheet(object):
         '''
         return worksheet id
         '''
-        wk_feed = self.client.GetWorksheetsFeed( self.doc_key )
+        wk_feed = self.client.GetWorksheetsFeed(self.doc_key)
         return wk_feed.entry[0].id.text.rsplit('/')[-1]
 
     def render_headers(self, columns):
         # TODO: set extension cell type and format
         for i, name in enumerate(columns, 1):
-            cur = self.get_cell( (1, i) )
+            cur = self.get_cell((1, i))
             if cur and cur != name:
                 raise Exception("Unexpected header in location (%d, %d): %s" % (1, i, cur,))
-            self.client.UpdateCell( 1, i, name, self.doc_key, self.worksheet_id )
+            self.client.UpdateCell(1, i, name, self.doc_key, self.worksheet_id)
 
     def num_rows(self):
-        feed = self.client.GetListFeed( self.doc_key, wksht_id=self.worksheet_id )
-        #FIXME: race condition
-        return len( feed.entry ) + 1
+        feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
+        # FIXME: race condition
+        return len(feed.entry) + 1
 
-    def append_row( self, row ):
+    def append_row(self, row):
         rendered = {}
         for key, e in row.items():
             if e is None:
@@ -89,7 +92,7 @@ class Spreadsheet(object):
             if not hasattr(e, 'decode'):
                 e = str(e)
             rendered[key] = e
-        self.client.InsertRow( rendered, self.doc_key, self.worksheet_id )
+        self.client.InsertRow(rendered, self.doc_key, self.worksheet_id)
 
     def update_row(self, props, index=None, matching=None):
         if matching:
@@ -97,7 +100,7 @@ class Spreadsheet(object):
             # if len(matches) > 1:
             #   raise Exception
             pass
-        feed = self.client.GetListFeed( self.doc_key, wksht_id=self.worksheet_id )
+        feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
         entry = feed.entry[index - 1]
         for k, v in props.items():
             if k in entry.custom:
@@ -106,10 +109,10 @@ class Spreadsheet(object):
             if a_link.rel == 'edit':
                 self.client.Put(entry, a_link.href)
 
-    def set_cell( self, addr, data ):
-        self.client.UpdateCell( addr[0], addr[1], data, self.doc_key, self.worksheet_id )
+    def set_cell(self, addr, data):
+        self.client.UpdateCell(addr[0], addr[1], data, self.doc_key, self.worksheet_id)
 
-    def get_cell( self, addr ):
+    def get_cell(self, addr):
         feed = self.client.GetCellsFeed(
             self.doc_key,
             wksht_id=self.worksheet_id,
@@ -117,8 +120,8 @@ class Spreadsheet(object):
         )
         return feed.text
 
-    def get_row( self, row ):
-        feed = self.client.GetListFeed( self.doc_key, wksht_id=self.worksheet_id )
+    def get_row(self, row):
+        feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
         if row > len(feed.entry):
             return None
         ret = {}
@@ -126,14 +129,14 @@ class Spreadsheet(object):
             ret[key] = value.text
         return ret
 
-    def rc_addr( self, addr ):
-        return "R%dC%d" % ( addr[0], addr[1], )
+    def rc_addr(self, addr):
+        return "R%dC%d" % (addr[0], addr[1],)
 
     def get_all_rows(self):
         '''
         Dump entire spreadsheet and return as a list of dicts
         '''
-        feed = self.client.GetListFeed( self.doc_key, wksht_id=self.worksheet_id )
+        feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
         for line in feed.entry:
             row = {}
             for key, value in line.custom.items():
@@ -155,5 +158,5 @@ class GDocId(object):
             self.worksheet_id = worksheet_id
 
     def __repr__(self):
-        #FIXME doc types
+        # FIXME doc types
         return "https://docs.google.com/spreadsheet/ccc?key=%s#gid=%d" % (self.doc_key, self.worksheet_id - 1)

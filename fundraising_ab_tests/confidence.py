@@ -1,6 +1,7 @@
 from process.globals import config
 from stats.stats_abba import Experiment
 
+
 def add_confidence(results, name_column, successes_column):
     confidence = get_confidence(results, name_column, successes_column)
     if confidence:
@@ -12,6 +13,7 @@ def add_confidence(results, name_column, successes_column):
     results[0].results.update({
         'confidencelink': get_confidence_link(results, name_column, successes_column)
     })
+
 
 def get_confidence(results, name_column=None, successes_column=None, trials=None):
     num_test_cases = len(results)
@@ -35,11 +37,11 @@ def get_confidence(results, name_column=None, successes_column=None, trials=None
         baseline_num_trials=config.fudge_trials,
         confidence_level=config.confidence_level
     )
-    #useMultipleTestCorrection=true
+    # useMultipleTestCorrection=true
 
     cases = []
     for result in results:
-        #name = result.results[name_column]
+        # name = result.results[name_column]
         successes = result.results[successes_column]
         if hasattr(trials, 'encode'):
             trials = result.results[trials]
@@ -50,6 +52,7 @@ def get_confidence(results, name_column=None, successes_column=None, trials=None
 
     return cases
 
+
 def get_confidence_link(results, name_column, successes_column):
     cases = []
     for result in results:
@@ -58,10 +61,9 @@ def get_confidence_link(results, name_column, successes_column):
             continue
         name = result.results[name_column]
         successes = result.results[successes_column]
-        cases.append( "%s=%s,%s" % (name, successes, config.fudge_trials) )
+        cases.append("%s=%s,%s" % (name, successes, config.fudge_trials))
 
     return "http://www.thumbtack.com/labs/abba/#%(cases)s&abba:intervalConfidenceLevel=%(confidence)s&abba:useMultipleTestCorrection=true" % {
         'cases': "&".join(cases),
         'confidence': config.confidence_level,
     }
-

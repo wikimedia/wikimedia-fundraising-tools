@@ -2,6 +2,7 @@ import os.path
 
 cached_revision = None
 
+
 def source_revision():
     global cached_revision
 

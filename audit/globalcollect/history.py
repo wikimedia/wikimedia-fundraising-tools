@@ -16,10 +16,11 @@ config = None
 options = None
 args = None
 
+
 def main():
     global config, options, db
     parser = OptionParser(usage="usage: %prog [options]")
-    parser.add_option("-c", "--config", dest='configFile', default=[ "globalcollect-audit.cfg" ], action='append', help='Path to configuration file')
+    parser.add_option("-c", "--config", dest='configFile', default=["globalcollect-audit.cfg"], action='append', help='Path to configuration file')
     parser.add_option("-f", "--auditFile", dest='auditFile', default=None, help='CSV of transaction history')
     parser.add_option('-l', "--logFile", dest='logFile', default="audit.log", help='Destination logfile. New messages will be appended.')
     (options, args) = parser.parse_args()
@@ -34,7 +35,7 @@ def main():
 
     for line in infile:
         # TODO parse and filter on status ids
-        #if line["Status Description"] is not "COLLECTED":
+        # if line["Status Description"] is not "COLLECTED":
 
         normalized = {
             'transaction_id': line["Order ID"],
@@ -43,7 +44,7 @@ def main():
             'received': line["Received Date"],
             # GC has multiple time formats...
             'time_format': "%Y-%m-%d %H:%i",
-            #'time_format': "%c/%e/%y %k:%i",
+            # 'time_format': "%c/%e/%y %k:%i",
         }
 
         sql = """
@@ -60,6 +61,7 @@ INSERT IGNORE INTO test.scratch_transactions SET
 
 
 log_file = None
+
 
 def log(msg):
     global options, log_file

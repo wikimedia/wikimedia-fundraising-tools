@@ -2,9 +2,11 @@ from spec import FrTestSpec, parse_spec
 from google.gdocs import Spreadsheet
 from process.logging import Logger as log
 
+
 def read_gdoc_spec(doc=None):
     rows = list(Spreadsheet(doc=doc).get_all_rows())
     return FrTestSpec(spec=list(parse_spec(rows)))
+
 
 def update_gdoc_spec(doc=None, spec=None):
     log.info("Updating test specs with latest CentralNotice changes... {url}".format(url=doc))

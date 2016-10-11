@@ -3,9 +3,10 @@ from process.logging import Logger as log
 from process.globals import config
 from results import get_banner_results
 
+
 class FrTest(object):
     """Single N-way test
-    
+
     Currently, only banner tests are supported."""
 
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
@@ -26,13 +27,13 @@ class FrTest(object):
             self.is_banner_test = True
             if banners:
                 if hasattr(banners, 'strip'):
-                    banners = [ s.strip() for s in banners.split(",") ]
+                    banners = [s.strip() for s in banners.split(",")]
                 self.banners = banners
             else:
                 if self.campaign['banners']:
                     self.banners = self.campaign['banners'].keys()
 
-            #self.variations = [ FrTestVariation(banner=name) for name in self.banners ]
+            # self.variations = [ FrTestVariation(banner=name) for name in self.banners ]
 
         self.is_country_test = (self.type.count('country') > 0)
         self.is_lp_test = (self.type.count('lp') > 0)
@@ -64,8 +65,8 @@ class FrTest(object):
             self.results.extend(get_banner_results(cases))
 
         if self.is_country_test:
-            #results = [ calculate_result(country=code) for code in campaign['countries'] ]
-            #self.results.extend(results)
+            # results = [ calculate_result(country=code) for code in campaign['countries'] ]
+            # self.results.extend(results)
             log.warn("country test type not implemented")
 
         if self.is_lp_test:
@@ -99,4 +100,4 @@ Test: %(label)s (%(campaigns)s) %(start)s - %(end)s
             description += " lps: " + str(self.lps)
         return description
 
-#class FrTestVariation(object):
+# class FrTestVariation(object):

@@ -1,10 +1,12 @@
-import os, os.path
+import os
+import os.path
 import base64
 import paramiko
 import StringIO
 
 from process.logging import Logger as log
 from process.globals import config
+
 
 class Client(object):
     def __init__(self):
@@ -85,13 +87,14 @@ class Crawler(object):
             if hasattr(config, 'panic_on_empty') and config.panic_on_empty:
                 raise RuntimeError("Stupid files did not download correctly.")
 
+
 def walk_files(paths):
     '''List all files under these path(s)
 
     Parameters
     ==========
     * paths - single or list of paths
-    
+
     Return value
     ============
     A list of all files found under the root directory(ies)
@@ -107,6 +110,7 @@ def walk_files(paths):
             result += filenames
 
     return result
+
 
 def make_key(keystr=None):
     '''Cheesily detect a key string's type and create a Key object from it

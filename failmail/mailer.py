@@ -7,6 +7,7 @@ import yaml
 from process.globals import config
 from process.logging import Logger as log
 
+
 class FailMailer(object):
     @staticmethod
     def mail(errorcode, data=None, print_exception=False):
