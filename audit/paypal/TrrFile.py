@@ -97,8 +97,8 @@ class TrrFile(object):
 
         out = {
             'gateway_txn_id': row['Transaction ID'],
-            'date': row['Transaction Initiation Date'],
-            'settled_date': row['Transaction Completion Date'],
+            'date': ppreport.parse_date(row['Transaction Initiation Date']),
+            'settled_date': ppreport.parse_date(row['Transaction Completion Date']),
             'gross': float(row['Gross Transaction Amount']) / 100.0,
             'currency': row['Gross Transaction Currency'],
             'gateway_status': row['Transactional Status'],

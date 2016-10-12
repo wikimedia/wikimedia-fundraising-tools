@@ -43,6 +43,6 @@ class Redis(object):
             'source_type': 'audit',
             'source_run_id': os.getpid(),
             'source_version': process.version_stamp.source_revision(),
-            'source_enqueued_time': time.time(),
+            'source_enqueued_time': int(time.time()),
             'source_host': socket.gethostname(),
         }
