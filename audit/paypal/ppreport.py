@@ -1,3 +1,4 @@
+import dateutil.parser
 import io
 
 from failmail.mailer import FailMailer
@@ -47,3 +48,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
                 pass
             else:
                 raise RuntimeError("Unknown column type: {type}".format(type=column_type))
+
+def parse_date(date_string):
+    date_object = dateutil.parser.parse(date_string)
+    return date_object.strftime('%s')
