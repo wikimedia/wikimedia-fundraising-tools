@@ -96,6 +96,7 @@ class TrrFile(object):
         else:
             addr_prefix = 'Shipping Address '
 
+        # FIXME: Accept an empty or malformed date, or keep the exception?
         out = {
             'gateway_txn_id': row['Transaction ID'],
             'date': ppreport.parse_date(row['Transaction Initiation Date']),

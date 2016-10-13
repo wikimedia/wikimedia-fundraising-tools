@@ -19,8 +19,10 @@ def test_recurring_charge_without_subscription(MockPaypalApi, MockGlobals, MockC
         "PayPal Reference ID": "",
         "PayPal Reference ID Type": "SUB",
         "Transaction Event Code": "T0002",
-        "Transaction Initiation Date": "",
-        "Transaction Completion Date": "",
+        # FIXME: Use and test real date format.
+        "Transaction Initiation Date": "Thu Oct 13 19:53:57 UTC 2016",
+        "Transaction Completion Date": "Thu Oct 13 19:53:58 UTC 2016",
+        # sic.
         "Transaction  Debit or Credit": "",
         "Gross Transaction Amount": "10.00",
         "Gross Transaction Currency": "",
@@ -77,6 +79,7 @@ def test_recurring_charge_without_subscription(MockPaypalApi, MockGlobals, MockC
         parser.parse_line(row)
 
     # Should have failed with a specific missing field error.
+    # FIXME: Annoyingly, this masks any other, unexpected exception.
     assert cm.exception.message == "Missing field subscr_id"
 
     # Make sure we didn't try to send anything to the queue.
