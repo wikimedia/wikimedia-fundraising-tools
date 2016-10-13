@@ -214,6 +214,7 @@ UPDATE silverpop_export_staging ex, silverpop_export_latest ct
 
 -- Join on civicrm address where we do not already have a geolocated
 -- address from contribution tracking
+-- FIXME: needs addr.is_primary = 1
 UPDATE silverpop_export_staging ex
   JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
   JOIN civicrm.civicrm_country ctry ON addr.country_id = ctry.id
@@ -230,6 +231,7 @@ UPDATE silverpop_export_staging ex
 -- And now updated by civicrm address where we have a country but no
 -- city from contribution tracking.  The countries must match.
 -- (11 minutes)
+-- FIXME: We need addr.is_primary = 1
 UPDATE silverpop_export_staging ex
   JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
   JOIN civicrm.civicrm_country ctry

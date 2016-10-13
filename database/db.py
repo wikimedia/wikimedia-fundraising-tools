@@ -159,6 +159,38 @@ def get_db(schema=None):
     return db_conn[schema]
 
 
+def load_queries(script_path):
+    '''
+    Helper to parse queries out of a SQL file.  Requires that each statement
+    ends in /.*;\s*$/
+    '''
+    qbuf = []
+    queries = []
+    f = open(script_path, 'r')
+    for line in f:
+        line = line.rstrip()
+        if line:
+            qbuf.append(line)
+            if line.endswith(';'):
+                query = "\n".join(qbuf)
+                queries.append(query)
+
+                qbuf = []
+
+    f.close()
+    return queries
+
+
+def run_script(script_path):
+    '''
+    Load and run a SQL file using the current database connection.
+    '''
+
+    queries = load_queries(script_path)
+    for statement in queries:
+        get_db().execute(statement)
+
+
 def close_all():
     for conn in db_conn.values():
         conn.close()

@@ -12,6 +12,10 @@ import process.lock as lock
 
 
 def load_queries(file):
+    # TODO: Reuse database.db.load_queries
+
+    config = process.globals.get_config()
+
     prefix = "SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;-- Silverpop Export Script, %s" % file
     script_path = os.path.dirname(__file__)
     qbuf = [prefix]
