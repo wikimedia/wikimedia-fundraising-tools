@@ -189,7 +189,9 @@ INSERT INTO silverpop_export_stat
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
-  WHERE ct.total_amount IS NOT NULL
+  WHERE ct.receive_date IS NOT NULL AND
+    ct.total_amount > 0 AND -- Refunds don't count
+    ct.contribution_status_id = 1 -- Only completed status
   GROUP BY e.email;
 
 -- (10 minutes)

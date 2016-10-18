@@ -1,3 +1,5 @@
+import datetime
+from decimal import Decimal
 import mock
 import MySQLdb
 import os
@@ -61,6 +63,31 @@ def test_duplicate():
     cursor.execute("select count(*) from silverpop_export")
     assert cursor.fetchone() == (1,)
 
+def test_refund_history():
+    '''
+    Test that we don't include refunded donations in a donor's history
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 1),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 9);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 20.15, 'CAD'),
+        (2, 35.15, 'CAD');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, latest_usd_amount, latest_donation  from silverpop_export")
+    expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), Decimal('15.25'), datetime.datetime(2015, 1, 3))
+    assert cursor.fetchone() == expected
 
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
