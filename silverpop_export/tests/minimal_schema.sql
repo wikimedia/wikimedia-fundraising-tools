@@ -75,7 +75,8 @@ create table civicrm_address (
     city varchar(64) COLLATE utf8_unicode_ci,
     postal_code varchar(64) COLLATE utf8_unicode_ci,
     country_id int(10) unsigned,
-    state_province_id int(10) unsigned
+    state_province_id int(10) unsigned,
+    timezone varchar(8) COLLATE utf8_unicode_ci
 );
 
 drop table if exists civicrm_country;

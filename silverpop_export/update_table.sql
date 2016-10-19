@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
+  timezone varchar(5),
 
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
@@ -225,7 +226,8 @@ UPDATE silverpop_export_staging ex
     ex.city = addr.city,
     ex.country = ctry.iso_code,
     ex.postal_code = addr.postal_code,
-    ex.state = st.name
+    ex.state = st.name,
+    ex.timezone = addr.timezone
   WHERE
     ex.country IS NULL AND
     ex.opted_out = 0;
@@ -338,6 +340,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
+  timezone varchar(5),
 
   INDEX rspex_contact_id (contact_id),
   INDEX rspex_email (email),
@@ -353,11 +356,11 @@ INSERT INTO silverpop_export (
   id,contact_id,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code )
+  city,country,state,postal_code,timezone )
 SELECT id,contact_id,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code
+  city,country,state,postal_code,timezone
 FROM silverpop_export_staging
 WHERE opted_out=0;
 
@@ -371,6 +374,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     country,
     state,
     postal_code,
+    timezone,
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     highest_usd_amount,
