@@ -13,9 +13,10 @@ import redis
 class Redis(object):
 
     conn = None
-    config = process.globals.get_config()
 
     def __init__(self):
+        self.config = process.globals.get_config()
+
         if not self.config.no_effect:
             self.conn = redis.Redis(host=self.config.redis.server, port=self.config.redis.port, password=self.config.redis.password)
 

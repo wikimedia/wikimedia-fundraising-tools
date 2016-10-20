@@ -5,30 +5,31 @@ import paramiko
 import StringIO
 
 from process.logging import Logger as log
-from process.globals import config
+import process.globals
 
 
 class Client(object):
     def __init__(self):
         self.client = None
         self.connect()
+        self.config = process.globals.get_config()
 
     def __del__(self):
         if self.client:
             self.client.close()
 
     def connect(self):
-        log.info("Connecting to {host}".format(host=config.sftp.host))
-        transport = paramiko.Transport((config.sftp.host, 22))
+        log.info("Connecting to {host}".format(host=self.config.sftp.host))
+        transport = paramiko.Transport((self.config.sftp.host, 22))
         params = {
-            'username': config.sftp.username,
+            'username': self.config.sftp.username,
         }
-        if hasattr(config.sftp, 'host_key'):
-            params['hostkey'] = make_key(config.sftp.host_key)
-        if hasattr(config.sftp, 'password'):
-            params['password'] = config.sftp.password
-        if hasattr(config.sftp, 'private_key'):
-            params['pkey'] = make_key(config.sftp.private_key)
+        if hasattr(self.config.sftp, 'host_key'):
+            params['hostkey'] = make_key(self.config.sftp.host_key)
+        if hasattr(self.config.sftp, 'password'):
+            params['password'] = self.config.sftp.password
+        if hasattr(self.config.sftp, 'private_key'):
+            params['pkey'] = make_key(self.config.sftp.private_key)
         transport.connect(**params)
         self.client = paramiko.SFTPClient.from_transport(transport)
 
@@ -45,13 +46,15 @@ class Client(object):
             raise
 
     def put(self, localpath, remotepath):
-        self.client.put(localpath, os.path.join(config.sftp.remote_root, remotepath))
+        self.client.put(localpath, os.path.join(self.config.sftp.remote_root, remotepath))
 
 
 class Crawler(object):
     @staticmethod
     def pull():
         '''Pull down new remote files'''
+
+        config = process.globals.get_config()
 
         # Check against both unprocessed and processed files to find new remote files
         local_paths = [

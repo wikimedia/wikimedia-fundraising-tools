@@ -8,7 +8,8 @@ import threading
 
 from signal import signal, SIGTERM, SIG_DFL
 from process.logging import Logger as log
-from process.globals import config
+import process.globals
+
 
 class Connection(object):
     def __init__(self, debug=False, **kw):
@@ -145,6 +146,8 @@ def get_db(schema=None):
     '''Convenience'''
     global db_conn
 
+    config = process.globals.get_config()
+
     if not schema:
         schema = config.db_params.db
 
@@ -154,6 +157,38 @@ def get_db(schema=None):
         db_conn[schema] = Connection(**params)
 
     return db_conn[schema]
+
+
+def load_queries(script_path):
+    '''
+    Helper to parse queries out of a SQL file.  Requires that each statement
+    ends in /.*;\s*$/
+    '''
+    qbuf = []
+    queries = []
+    f = open(script_path, 'r')
+    for line in f:
+        line = line.rstrip()
+        if line:
+            qbuf.append(line)
+            if line.endswith(';'):
+                query = "\n".join(qbuf)
+                queries.append(query)
+
+                qbuf = []
+
+    f.close()
+    return queries
+
+
+def run_script(script_path):
+    '''
+    Load and run a SQL file using the current database connection.
+    '''
+
+    queries = load_queries(script_path)
+    for statement in queries:
+        get_db().execute(statement)
 
 
 def close_all():

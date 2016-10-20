@@ -6,12 +6,12 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_
 import re
 
 from process.logging import Logger as log
-from process.globals import config
-from queue.redis_wrap import Redis
+import process.globals
+import queue.redis_wrap
 import ppreport
 
-from civicrm.civicrm import Civicrm
-from paypal_api import PaypalApiClassic
+import civicrm.civicrm
+import paypal_api
 
 
 class TrrFile(object):
@@ -83,7 +83,8 @@ class TrrFile(object):
 
     def __init__(self, path):
         self.path = path
-        self.crm = Civicrm(config.civicrm_db)
+        self.config = process.globals.get_config()
+        self.crm = civicrm.civicrm.Civicrm(self.config.civicrm_db)
 
     def parse(self):
         # FIXME: encapsulation issues
@@ -95,6 +96,7 @@ class TrrFile(object):
         else:
             addr_prefix = 'Shipping Address '
 
+        # FIXME: Accept an empty or malformed date, or keep the exception?
         out = {
             'gateway_txn_id': row['Transaction ID'],
             'date': ppreport.parse_date(row['Transaction Initiation Date']),
@@ -181,19 +183,19 @@ class TrrFile(object):
             return
 
         if 'last_name' not in out and queue != 'refund':
-            out['first_name'], out['last_name'] = self.fetch_donor_name(out['gateway_txn_id'])
+            out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
 
-        if config.no_thankyou:
+        if self.config.no_thankyou:
             out['thankyou_date'] = 0
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
         self.send(queue, out)
 
-    def send(self, queue, msg):
+    def send(self, queue_name, msg):
         if not self.redis:
-            self.redis = Redis()
+            self.redis = queue.redis_wrap.Redis()
 
-        self.redis.send(queue, msg)
+        self.redis.send(queue_name, msg)
 
     def normalize_recurring(self, msg):
         'Synthesize a raw PayPal message'
@@ -201,6 +203,14 @@ class TrrFile(object):
         if 'fee' not in msg:
             msg['fee'] = 0
 
+        # TODO: Move validation elsewhere.
+        required_fields = ['subscr_id']
+        for field in required_fields:
+            if field not in msg or not msg[field]:
+                raise Exception("Missing field " + field)
+
+        # FIXME: Are the names available in these records?  That would save us
+        # an API to fetch_donor_name.
         out = {
             'gateway': 'paypal',
             'txn_type': 'subscr_payment',
@@ -220,10 +230,3 @@ class TrrFile(object):
         }
 
         return out
-
-    def fetch_donor_name(self, txn_id):
-        api = PaypalApiClassic()
-        response = api.call('GetTransactionDetails', TRANSACTIONID=txn_id)
-        if 'FIRSTNAME' not in response:
-            raise RuntimeError("Failed to get transaction details for {id}, repsonse: {response}".format(id=txn_id, response=response))
-        return (response['FIRSTNAME'][0], response['LASTNAME'][0])

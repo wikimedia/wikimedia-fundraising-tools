@@ -4,9 +4,7 @@ import re
 import os
 
 from process.logging import Logger as log
-from process.globals import load_config
-load_config('silverpop_export')
-from process.globals import config
+import process.globals
 
 from database.db import Connection as DbConnection
 import export
@@ -14,6 +12,10 @@ import process.lock as lock
 
 
 def load_queries(file):
+    # TODO: Reuse database.db.load_queries
+
+    config = process.globals.get_config()
+
     prefix = "SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;-- Silverpop Export Script, %s" % file
     script_path = os.path.dirname(__file__)
     qbuf = [prefix]
@@ -46,7 +48,8 @@ def run_queries(db, queries):
 
 
 if __name__ == '__main__':
-    global config
+    config = process.globals.load_config('silverpop_export')
+
     log.info("Begin Silverpop Update")
     lock.begin()
 

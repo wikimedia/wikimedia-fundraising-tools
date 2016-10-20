@@ -6,9 +6,7 @@ import os.path
 import time
 
 from process.logging import Logger as log
-from process.globals import load_config
-load_config('silverpop_export')
-from process.globals import config
+import process.globals
 
 from database.db import Connection as DbConnection, Query as DbQuery
 import process.lock as lock
@@ -18,6 +16,7 @@ import unicode_csv_writer
 
 def export_and_upload():
     log.info("Begin Silverpop Export")
+    config = process.globals.get_config()
 
     make_sure_path_exists(config.working_path)
 
@@ -73,6 +72,8 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
 
 
 def export_data(output_path=None):
+    config = process.globals.get_config()
+
     db = DbConnection(**config.silverpop_db)
 
     log.info("Starting full data export")
@@ -88,6 +89,8 @@ def export_data(output_path=None):
 
 
 def export_unsubscribes(output_path=None):
+    config = process.globals.get_config()
+
     db = DbConnection(**config.silverpop_db)
 
     log.info("Starting unsubscribe data export")
@@ -111,6 +114,8 @@ def upload(files=None):
 
 
 def rotate_files():
+    config = process.globals.get_config()
+
     # Clean up after ourselves
     if config.days_to_keep_files:
         now = time.time()
@@ -138,6 +143,8 @@ def make_sure_path_exists(path):
 
 
 if __name__ == '__main__':
+    process.globals.load_config('silverpop_export')
+
     lock.begin()
 
     export_and_upload()
