@@ -11,8 +11,8 @@ import process.globals
 class Client(object):
     def __init__(self):
         self.client = None
-        self.connect()
         self.config = process.globals.get_config()
+        self.connect()
 
     def __del__(self):
         if self.client:
