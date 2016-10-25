@@ -63,6 +63,7 @@ def test_duplicate():
     cursor.execute("select count(*) from silverpop_export")
     assert cursor.fetchone() == (1,)
 
+
 def test_refund_history():
     '''
     Test that we don't include refunded donations in a donor's history
@@ -88,6 +89,7 @@ def test_refund_history():
     cursor.execute("select highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, latest_usd_amount, latest_donation  from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), Decimal('15.25'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
+
 
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
