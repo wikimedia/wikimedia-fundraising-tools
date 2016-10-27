@@ -9,6 +9,7 @@ SET autocommit = 1;
 
 DROP TABLE IF EXISTS silverpop_export_staging;
 DROP TABLE IF EXISTS silverpop_export_latest;
+DROP TABLE IF EXISTS silverpop_export_highest;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS silverpop_export_stat;
 DROP TABLE IF EXISTS silverpop_export_address;
@@ -27,6 +28,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   -- Lifetime contribution statistics
   has_recurred_donation tinyint(1),
   highest_usd_amount decimal(20,2),
+  highest_native_amount decimal(20,2),
+  highest_native_currency varchar(3),
   lifetime_usd_total decimal(20,2),
   donation_count int,
 
@@ -35,6 +38,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
   latest_donation datetime,
+  highest_donation_date datetime,
 
   -- Address information
   city varchar(128),
@@ -116,6 +120,36 @@ UPDATE
     dct.contribution_id = ct.id AND
     dct.country IS NOT NULL;
 
+CREATE TABLE silverpop_export_highest(
+  email varchar(255) PRIMARY KEY,
+  highest_native_currency varchar(3),
+  highest_native_amount decimal(20,2),
+  highest_usd_amount decimal(20,2),
+  highest_donation_date datetime
+) COLLATE 'utf8_unicode_ci';
+
+INSERT INTO silverpop_export_highest
+  SELECT
+    e.email,
+    ex.original_currency,
+    ex.original_amount,
+    ct.total_amount,
+    ct.receive_date
+  FROM
+    silverpop_export_staging e,
+    civicrm.civicrm_contribution ct,
+    civicrm.wmf_contribution_extra ex
+  WHERE
+    e.contact_id = ct.contact_id AND
+    ex.entity_id = ct.id AND
+    ct.receive_date IS NOT NULL AND
+    ct.total_amount > 0 AND -- Refunds don't count
+    ct.contribution_status_id = 1 -- 'Completed'
+  ORDER BY
+    ct.total_amount DESC,
+    ct.receive_date DESC
+ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
+
 -- Deduplicate rows that have the same email address, we will
 -- have to merge in more data later, but this is ~1.5M rows we're
 -- getting rid of here which is more better than taking them all the way
@@ -169,23 +203,19 @@ UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
 
 -- Create an aggregate table from a full contribution table scan
 CREATE TABLE silverpop_export_stat (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  email varchar(255),
-  exid INT,                         -- STEP 5
-  max_amount_usd decimal(20,2),     -- STEP 5
+  email varchar(255) PRIMARY KEY,
+  exid INT,
   has_recurred_donation tinyint(1),
-  total_usd decimal(20,2),          -- STEP 5
+  total_usd decimal(20,2),
   cnt_total int unsigned,
-
-  INDEX spexs_email (email)
+  INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
--- (30 minutes)
+
 INSERT INTO silverpop_export_stat
-  (email, exid, max_amount_usd, total_usd, cnt_total, has_recurred_donation)
+  (email, exid, total_usd, cnt_total, has_recurred_donation)
   SELECT
-    e.email, MAX(ex.id), MAX(ct.total_amount), SUM(ct.total_amount),
-    count(*),
+    e.email, MAX(ex.id), SUM(ct.total_amount), COUNT(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
@@ -196,24 +226,26 @@ INSERT INTO silverpop_export_stat
   GROUP BY e.email;
 
 -- (10 minutes)
-UPDATE silverpop_export_staging ex, silverpop_export_stat exs
+UPDATE silverpop_export_staging ex
+  INNER JOIN silverpop_export_stat exs on ex.id = exs.exid
   SET
-    ex.highest_usd_amount = exs.max_amount_usd,
     ex.lifetime_usd_total = exs.total_usd,
     ex.donation_count = exs.cnt_total,
-    ex.has_recurred_donation = IF(exs.has_recurred_donation > 0, 1, 0)
-  WHERE
-    ex.id = exs.exid;
+    ex.has_recurred_donation = exs.has_recurred_donation;
 
--- Populate information about the most recent contribution
-UPDATE silverpop_export_staging ex, silverpop_export_latest ct
+-- Populate information about the latest and greatest contributions
+UPDATE silverpop_export_staging ex, silverpop_export_latest lt, silverpop_export_highest hg
   SET
-    ex.latest_currency = ct.latest_currency,
-    ex.latest_native_amount = ct.latest_native_amount,
-    ex.latest_usd_amount = ct.latest_usd_amount,
-    ex.latest_donation = ct.latest_donation
+    ex.latest_currency = lt.latest_currency,
+    ex.latest_native_amount = lt.latest_native_amount,
+    ex.latest_usd_amount = lt.latest_usd_amount,
+    ex.latest_donation = lt.latest_donation,
+    ex.highest_native_currency = hg.highest_native_currency,
+    ex.highest_native_amount = hg.highest_native_amount,
+    ex.highest_usd_amount = hg.highest_usd_amount,
+    ex.highest_donation_date = hg.highest_donation_date
   WHERE
-    ex.email = ct.email;
+    ex.email = lt.email AND ex.email=hg.email;
 
 -- Postal addresses by email
 CREATE TABLE silverpop_export_address (
@@ -275,6 +307,9 @@ UPDATE silverpop_export_staging SET
     latest_native_amount = 0,
     latest_usd_amount = 0,
     latest_donation = NOW(),
+    highest_native_currency = 'USD',
+    highest_native_amount = 0,
+    highest_donation_date = NOW(),
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
@@ -331,6 +366,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   -- Lifetime contribution statistics
   has_recurred_donation tinyint(1),
   highest_usd_amount decimal(20,2),
+  highest_native_amount decimal(20,2),
+  highest_native_currency varchar(3),
+  highest_donation_date datetime,
   lifetime_usd_total decimal(20,2),
   donation_count int,
 
@@ -359,11 +397,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 -- (12 minutes)
 INSERT INTO silverpop_export (
   id,contact_id,first_name,last_name,preferred_language,email,
-  has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
+  has_recurred_donation,highest_usd_amount,highest_native_amount,
+  highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
   city,country,state,postal_code,timezone )
 SELECT id,contact_id,first_name,last_name,preferred_language,email,
-  has_recurred_donation,highest_usd_amount,lifetime_usd_total,donation_count,
+  has_recurred_donation,highest_usd_amount,highest_native_amount,
+  highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
   city,country,state,postal_code,timezone
 FROM silverpop_export_staging
@@ -383,6 +423,9 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     highest_usd_amount,
+    highest_native_amount,
+    highest_native_currency,
+    DATE_FORMAT(highest_donation_date, '%m/%d/%Y') highest_donation_date,
     lifetime_usd_total,
     DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
     latest_usd_amount,
