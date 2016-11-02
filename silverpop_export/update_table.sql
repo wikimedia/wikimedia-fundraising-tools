@@ -363,12 +363,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   postal_code varchar(128),
   timezone varchar(8),
 
-  INDEX rspex_contact_id (contact_id),
-  INDEX rspex_email (email),
-  INDEX rspex_city (city),
-  INDEX rspex_country (country),
-  INDEX rspex_postal (postal_code),
-  CONSTRAINT sp_email UNIQUE (email)
+  CONSTRAINT sp_email UNIQUE (email),
+  CONSTRAINT sp_contact_id UNIQUE (contact_id)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the staging table into the persistent one
