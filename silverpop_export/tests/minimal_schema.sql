@@ -70,6 +70,7 @@ create table civicrm_contribution (
 
 drop table if exists civicrm_address;
 create table civicrm_address (
+    id int(10) unsigned auto_increment primary key,
     contact_id int(10) unsigned,
     is_primary tinyint(4),
     city varchar(64) COLLATE utf8_unicode_ci,

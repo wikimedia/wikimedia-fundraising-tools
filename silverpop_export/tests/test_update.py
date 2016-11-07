@@ -91,6 +91,45 @@ def test_refund_history():
     assert cursor.fetchone() == expected
 
 
+def test_timezone():
+    '''
+    Test that we export timezone records where they exist
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1),
+        (2);
+    """, """
+    insert into civicrm_country (id, iso_code) values
+        (1, 'US');
+    """, """
+    insert into civicrm_address (contact_id, is_primary, country_id, postal_code, timezone) values
+        (1, 1, 1, '10027', 'UTC-5');
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 1),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 20.15, 'USD'),
+        (2, 35.15, 'USD');
+    """, """
+    insert into contribution_tracking (contribution_id, country) values
+        (1, 'US'),
+        (2, 'US');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email, country, postal_code, timezone from silverpop_export")
+    expected = ('person1@localhost', 'US', '10027', 'UTC-5')
+    assert cursor.fetchone() == expected
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 
