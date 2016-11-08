@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS silverpop_export_staging;
 DROP TABLE IF EXISTS silverpop_export_latest;
 DROP TABLE IF EXISTS silverpop_export_dedupe_email;
 DROP TABLE IF EXISTS silverpop_export_stat;
+DROP TABLE IF EXISTS silverpop_export_address;
 
 CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
@@ -44,7 +45,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
 
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
-  INDEX spex_city (city),
   INDEX spex_country (country),
   INDEX spex_opted_out (opted_out)
 ) COLLATE 'utf8_unicode_ci';
@@ -215,40 +215,45 @@ UPDATE silverpop_export_staging ex, silverpop_export_latest ct
   WHERE
     ex.email = ct.email;
 
--- Join on civicrm address where we do not already have a geolocated
--- address from contribution tracking
--- FIXME: needs addr.is_primary = 1
-UPDATE silverpop_export_staging ex
-  JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
-  JOIN civicrm.civicrm_country ctry ON addr.country_id = ctry.id
-  LEFT JOIN civicrm.civicrm_state_province st ON addr.state_province_id = st.id
-  SET
-    ex.city = addr.city,
-    ex.country = ctry.iso_code,
-    ex.postal_code = addr.postal_code,
-    ex.state = st.name,
-    ex.timezone = addr.timezone
-  WHERE
-    ex.country IS NULL AND
-    ex.opted_out = 0;
+-- Postal addresses by email
+CREATE TABLE silverpop_export_address (
+  email varchar(255) PRIMARY KEY,
+  city varchar(128),
+  country varchar(2),
+  state varchar(64),
+  postal_code varchar(128),
+  timezone varchar(5)
+) COLLATE 'utf8_unicode_ci';
 
--- And now updated by civicrm address where we have a country but no
--- city from contribution tracking.  The countries must match.
--- (11 minutes)
--- FIXME: We need addr.is_primary = 1
+-- (16 minutes)
+-- Get address for each email matching latest contribution_tracking country.
+-- Prefer more complete information.
+INSERT INTO silverpop_export_address
+SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
+  FROM      civicrm.civicrm_email e
+  JOIN      silverpop_export_staging ex
+    ON      e.email = ex.email
+  JOIN      civicrm.civicrm_address a
+    ON      e.contact_id = a.contact_id AND a.is_primary = 1
+  JOIN      civicrm.civicrm_country ctry
+    ON      a.country_id = ctry.id
+  LEFT JOIN civicrm.civicrm_state_province st
+    ON      a.state_province_id = st.id
+  WHERE     ex.opted_out = 0
+    AND     (ex.country IS NULL OR ex.country = ctry.iso_code)
+  ORDER BY  isnull(a.postal_code) ASC, a.id DESC
+ON DUPLICATE KEY UPDATE email = e.email;
+
+-- (3 minutes)
 UPDATE silverpop_export_staging ex
-  JOIN civicrm.civicrm_address addr ON ex.contact_id = addr.contact_id
-  JOIN civicrm.civicrm_country ctry
-       ON addr.country_id = ctry.id
-       AND ex.country = ctry.iso_code
-  LEFT JOIN civicrm.civicrm_state_province st ON addr.state_province_id = st.id
+  JOIN silverpop_export_address addr
+       ON ex.email = addr.email
   SET
     ex.city = addr.city,
+    ex.country = addr.country,
     ex.postal_code = addr.postal_code,
-    ex.state = st.name
-  WHERE
-    ex.city IS NULL AND
-    ex.opted_out = 0;
+    ex.state = addr.state,
+    ex.timezone = addr.timezone;
 
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
