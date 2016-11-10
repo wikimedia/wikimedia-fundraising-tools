@@ -42,7 +42,8 @@ def load_queries(file):
 def run_queries(db, queries):
     i = 1
     for query in queries:
-        log.info("Running query #%s" % i)
+        info = (i, query[:80])
+        log.info("Running query #%s: %s" % info)
         db.execute(query)
         i += 1
 
