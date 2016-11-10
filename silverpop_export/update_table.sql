@@ -225,28 +225,6 @@ INSERT INTO silverpop_export_stat
     ct.contribution_status_id = 1 -- Only completed status
   GROUP BY e.email;
 
--- (10 minutes)
-UPDATE silverpop_export_staging ex
-  INNER JOIN silverpop_export_stat exs on ex.id = exs.exid
-  SET
-    ex.lifetime_usd_total = exs.total_usd,
-    ex.donation_count = exs.cnt_total,
-    ex.has_recurred_donation = exs.has_recurred_donation;
-
--- Populate information about the latest and greatest contributions
-UPDATE silverpop_export_staging ex, silverpop_export_latest lt, silverpop_export_highest hg
-  SET
-    ex.latest_currency = lt.latest_currency,
-    ex.latest_native_amount = lt.latest_native_amount,
-    ex.latest_usd_amount = lt.latest_usd_amount,
-    ex.latest_donation = lt.latest_donation,
-    ex.highest_native_currency = hg.highest_native_currency,
-    ex.highest_native_amount = hg.highest_native_amount,
-    ex.highest_usd_amount = hg.highest_usd_amount,
-    ex.highest_donation_date = hg.highest_donation_date
-  WHERE
-    ex.email = lt.email AND ex.email=hg.email;
-
 -- Postal addresses by email
 CREATE TABLE silverpop_export_address (
   email varchar(255) PRIMARY KEY,
@@ -276,11 +254,24 @@ SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   ORDER BY  isnull(a.postal_code) ASC, a.id DESC
 ON DUPLICATE KEY UPDATE email = e.email;
 
--- (3 minutes)
+-- Pull in address and latest/greatest/cumulative stats from intermediate tables
 UPDATE silverpop_export_staging ex
-  JOIN silverpop_export_address addr
-       ON ex.email = addr.email
+  LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
+  LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
+  LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
+  LEFT JOIN silverpop_export_address addr ON ex.email = addr.email
   SET
+    ex.lifetime_usd_total = exs.total_usd,
+    ex.donation_count = exs.cnt_total,
+    ex.has_recurred_donation = exs.has_recurred_donation,
+    ex.latest_currency = lt.latest_currency,
+    ex.latest_native_amount = lt.latest_native_amount,
+    ex.latest_usd_amount = lt.latest_usd_amount,
+    ex.latest_donation = lt.latest_donation,
+    ex.highest_native_currency = hg.highest_native_currency,
+    ex.highest_native_amount = hg.highest_native_amount,
+    ex.highest_usd_amount = hg.highest_usd_amount,
+    ex.highest_donation_date = hg.highest_donation_date,
     ex.city = addr.city,
     ex.country = addr.country,
     ex.postal_code = addr.postal_code,
