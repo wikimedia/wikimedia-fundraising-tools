@@ -178,7 +178,11 @@ class TrrFile(object):
             log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return
 
-        if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
+        if queue == 'donations' and self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
+            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
+            return
+
+        if queue == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway='paypal'):
             log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
             return
 
