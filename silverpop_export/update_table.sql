@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  timezone varchar(5),
+  timezone varchar(8),
 
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
@@ -232,7 +232,7 @@ CREATE TABLE silverpop_export_address (
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  timezone varchar(5)
+  timezone varchar(8)
 ) COLLATE 'utf8_unicode_ci';
 
 -- (16 minutes)
@@ -374,7 +374,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  timezone varchar(5),
+  timezone varchar(8),
 
   INDEX rspex_contact_id (contact_id),
   INDEX rspex_email (email),
