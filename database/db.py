@@ -201,5 +201,6 @@ def handle_sigterm(signum, stack_frame):
     signal(SIGTERM, SIG_DFL)
     os.kill(os.getpid(), signum)
 
+
 atexit.register(close_all)
 signal(SIGTERM, handle_sigterm)
