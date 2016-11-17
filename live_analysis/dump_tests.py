@@ -56,5 +56,6 @@ def fetch():
 
         cur = cur + pagesize
 
+
 if __name__ == "__main__":
     fetch()

@@ -15,6 +15,18 @@ SELECT COUNT(*) AS count FROM wmf_contribution_extra
         count = list(self.db.execute(sql, (gateway, gateway_txn_id)))
         return count[0]['count'] > 0
 
+    def transaction_refunded(self, gateway_txn_id, gateway="paypal"):
+        sql = """
+SELECT contribution_status_id AS status
+    FROM wmf_contribution_extra x
+    INNER JOIN civicrm_contribution c on x.entity_id = c.id
+    WHERE gateway = %s AND gateway_txn_id = %s
+    LIMIT 1
+        """
+
+        status = list(self.db.execute(sql, (gateway, gateway_txn_id)))
+        return len(status) == 1 and status[0]['status'] == 9
+
     def subscription_exists(self, subscr_id):
         # FIXME: trxn_id style is inconsistent between gateways.  This will only work for paypal.
         sql = """

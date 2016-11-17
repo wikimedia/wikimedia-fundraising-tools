@@ -269,6 +269,7 @@ def createSingleOutFile(stats, firstcols, basefilename, colnames=None):
     json.dump(mapstats, f)
     f.close()
 
+
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
