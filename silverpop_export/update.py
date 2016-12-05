@@ -40,6 +40,9 @@ def load_queries(file):
 
 
 def run_queries(db, queries):
+    """
+    Build silverpop_export database from CiviCRM.
+    """
     i = 1
     for query in queries:
         no_prefix = query[query.index("\n") + 1:]
@@ -63,7 +66,7 @@ if __name__ == '__main__':
     log.info("Starting update query run")
     run_queries(db, update_queries)
 
-    export.export_and_upload()
+    export.export_all()
 
     lock.end()
     log.info("End Silverpop Export")
