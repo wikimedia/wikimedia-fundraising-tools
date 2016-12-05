@@ -10,11 +10,13 @@ import process.globals
 
 from database.db import Connection as DbConnection, Query as DbQuery
 import process.lock as lock
-from sftp.client import Client as SftpClient
 import unicode_csv_writer
 
 
-def export_and_upload():
+def export_all():
+    """
+    Dump database contents to CSVs.
+    """
     log.info("Begin Silverpop Export")
     config = process.globals.get_config()
 
@@ -31,7 +33,6 @@ def export_and_upload():
 
     export_data(output_path=updatefile)
     export_unsubscribes(output_path=unsubfile)
-    upload([updatefile, unsubfile])
     rotate_files()
 
     log.info("End Silverpop Export")
@@ -105,14 +106,6 @@ def export_unsubscribes(output_path=None):
     )
 
 
-def upload(files=None):
-    log.info("Uploading to silverpop")
-    sftpc = SftpClient()
-    for path in files:
-        log.info("Putting file %s" % path)
-        sftpc.put(path, os.path.basename(path))
-
-
 def rotate_files():
     config = process.globals.get_config()
 
@@ -147,6 +140,6 @@ if __name__ == '__main__':
 
     lock.begin()
 
-    export_and_upload()
+    export_all()
 
     lock.end()
