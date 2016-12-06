@@ -2,6 +2,7 @@
 
 import glob
 import os
+import sys
 
 import process
 from process.logging import Logger as log
@@ -36,6 +37,14 @@ if __name__ == '__main__':
 
     lock.begin()
 
-    upload_most_recent()
+    for i in range(3):
+        try:
+            upload_most_recent()
+            break
+        except:
+            log.error("Ran into trouble: " + str(sys.exc_info()))
+
+            if i == 2:
+                raise
 
     lock.end()
