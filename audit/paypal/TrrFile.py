@@ -104,7 +104,6 @@ class TrrFile(object):
             'gross': float(row['Gross Transaction Amount']) / 100.0,
             'currency': row['Gross Transaction Currency'],
             'gateway_status': row['Transactional Status'],
-            'gateway': 'paypal',
             'note': row['Transaction Note'],
             'email': row['Payer\'s Account ID'],
 
@@ -115,6 +114,13 @@ class TrrFile(object):
             'postal_code': row[addr_prefix + 'Zip'],
             'country': row[addr_prefix + 'Country'],
         }
+
+        # FIXME: This is weasly, see that we're also sending the raw payment
+        # source value as payment_method.
+        if row['Payment Source'] == 'Express Checkout':
+            out['gateway'] = 'paypal_ec'
+        else:
+            out['gateway'] = 'paypal'
 
         if row['Fee Amount']:
             out['fee'] = float(row['Fee Amount']) / 100.0
@@ -178,11 +184,11 @@ class TrrFile(object):
             log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return
 
-        if queue == 'donations' and self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
+        if queue == 'donations' and self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway=out['gateway']):
             log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
             return
 
-        if queue == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway='paypal'):
+        if queue == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
             log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
             return
 
