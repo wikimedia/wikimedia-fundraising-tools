@@ -153,7 +153,9 @@ class TrrFile(object):
         if event_type in ('T00', 'T03', 'T05', 'T07', 'T22'):
             if row['Transaction Event Code'] == 'T0002':
                 queue = 'recurring'
-                out = self.normalize_recurring(out)
+                out['txn_type'] = 'subscr_payment'
+                if 'subscr_id' not in out or not out['subscr_id']:
+                    raise Exception('Missing field subscr_id')
             elif row['Transaction  Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
                 log.info("-Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date']))
@@ -206,37 +208,3 @@ class TrrFile(object):
             self.redis = queue.redis_wrap.Redis()
 
         self.redis.send(queue_name, msg)
-
-    def normalize_recurring(self, msg):
-        'Synthesize a raw PayPal message'
-
-        if 'fee' not in msg:
-            msg['fee'] = 0
-
-        # TODO: Move validation elsewhere.
-        required_fields = ['subscr_id']
-        for field in required_fields:
-            if field not in msg or not msg[field]:
-                raise Exception("Missing field " + field)
-
-        # FIXME: Are the names available in these records?  That would save us
-        # an API to fetch_donor_name.
-        out = {
-            'gateway': 'paypal',
-            'txn_type': 'subscr_payment',
-            'gateway_txn_id': msg['gateway_txn_id'],
-            'txn_id': msg['gateway_txn_id'],
-            'subscr_id': msg['subscr_id'],
-            'payment_date': msg['date'],
-            'payer_email': msg['email'],
-            'mc_currency': msg['currency'],
-            'mc_gross': msg['gross'],
-            'mc_fee': msg['fee'],
-            'address_street': "\n".join([msg['street_address'], msg['supplemental_address_1']]),
-            'address_city': msg['city'],
-            'address_zip': msg['postal_code'],
-            'address_state': msg['state_province'],
-            'address_country_code': msg['country'],
-        }
-
-        return out
