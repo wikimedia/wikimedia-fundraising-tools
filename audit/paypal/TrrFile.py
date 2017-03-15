@@ -143,9 +143,17 @@ class TrrFile(object):
         if row['PayPal Reference ID Type'] == 'SUB':
             out['subscr_id'] = row['PayPal Reference ID']
 
+        # Look in all the places we might have stuck a ct_id
         if re.search('^[0-9]+$', row['Transaction Subject']):
             out['contribution_tracking_id'] = row['Transaction Subject']
-            out['order_id'] = row['Transaction Subject']
+        elif row['Custom Field']:
+            out['contribution_tracking_id'] = row['Custom Field']
+        elif row['Invoice ID']:
+            # Here it can be the ct_id.attempt format
+            out['contribution_tracking_id'] = row['Invoice ID'].split('.')[0]
+
+        if out['contribution_tracking_id']:
+            out['order_id'] = out['contribution_tracking_id']
 
         event_type = row['Transaction Event Code'][0:3]
 
