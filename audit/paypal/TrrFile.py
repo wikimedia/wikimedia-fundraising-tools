@@ -115,13 +115,6 @@ class TrrFile(object):
             'country': row[addr_prefix + 'Country'],
         }
 
-        # FIXME: This is weasly, see that we're also sending the raw payment
-        # source value as payment_method.
-        if row['Payment Source'] == 'Express Checkout':
-            out['gateway'] = 'paypal_ec'
-        else:
-            out['gateway'] = 'paypal'
-
         if row['Fee Amount']:
             out['fee'] = float(row['Fee Amount']) / 100.0
 
@@ -190,6 +183,8 @@ class TrrFile(object):
 
             queue = 'refund'
 
+        out['gateway'] = self.determine_gateway(row, queue)
+
         if not queue:
             log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return
@@ -210,6 +205,19 @@ class TrrFile(object):
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
         self.send(queue, out)
+
+    def determine_gateway(self, row, queue):
+        # FIXME: This is weasly, see that we're also sending the raw payment
+        # source value as payment_method.
+        if row['Payment Source'] == 'Express Checkout':
+            return 'paypal_ec'
+
+        # FIXME: tenuous logic here
+        # For refunds, only paypal_ec sets the invoice ID
+        if queue == 'refund' and row['Invoice ID']:
+            return 'paypal_ec'
+
+        return 'paypal'
 
     def send(self, queue_name, msg):
         if not self.redis:

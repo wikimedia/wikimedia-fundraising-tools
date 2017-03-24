@@ -33,7 +33,7 @@ def get_base_row():
         "Payer's Account ID": "prankster@anonymous.net",
         "Payer Address Status": "N",
         "Item Name": "Generous benificence",
-        "Item ID": "GIMME",
+        "Item ID": "DONATE",
         "Option 1 Name": "",
         "Option 1 Value": "",
         "Option 2 Name": "",
@@ -78,8 +78,41 @@ def get_refund_row():
         "Transaction  Debit or Credit": "DR",
         "Fee Debit or Credit": "CR",
         "Fee Amount": "55",
-        "Transaction Note": "r",
-        "Payer's Account ID": "prankster@anonymous.net"
+        "Transaction Note": "refund",
+    })
+    return row
+
+
+def get_ec_refund_row():
+
+    row = get_base_row()
+    row.update({
+        "Invoice ID": "4123422",
+        "PayPal Reference ID": "3GJH3GJ3334214812",
+        "PayPal Reference ID Type": "TXN",
+        "Transaction Event Code": "T1107",
+        "Transaction  Debit or Credit": "DR",
+        "Fee Debit or Credit": "CR",
+        "Transaction Note": "refund",
+        "Custom Field": "4123422",
+        "Item ID": "",
+    })
+    return row
+
+
+def get_ec_recurring_refund_row():
+
+    row = get_base_row()
+    row.update({
+        "Invoice ID": "4123422",
+        "PayPal Reference ID": "3GJH3GJ3334214812",
+        "PayPal Reference ID Type": "TXN",
+        "Transaction Event Code": "T1107",
+        "Transaction  Debit or Credit": "DR",
+        "Fee Debit or Credit": "CR",
+        "Transaction Note": "refund",
+        "Custom Field": "",
+        "Item ID": "",
     })
     return row
 
@@ -138,7 +171,53 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     assert args[0][0] == 'refund'
-    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'r', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
+
+
+@patch("queue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
+def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that express checkout refunds are marked as such
+    '''
+    row = get_ec_refund_row()
+
+    MockCivicrm().transaction_refunded.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '4123422', 'order_id': '4123422'}
+    assert args[0][0] == 'refund'
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
+
+
+@patch("queue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
+def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that express checkout recurring refunds are marked as ec too
+    '''
+    row = get_ec_recurring_refund_row()
+
+    MockCivicrm().transaction_refunded.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '4123422', 'order_id': '4123422'}
+    assert args[0][0] == 'refund'
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
 
