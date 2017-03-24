@@ -3,6 +3,9 @@ import nose.tools
 
 import audit.paypal.TrrFile
 
+# weird thing we have to do to get better assert_equals feedback
+nose.tools.assert_equals.im_class.maxDiff = None
+
 
 def get_base_row():
 
@@ -135,9 +138,9 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     assert args[0][0] == 'refund'
-    expected = sorted({'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': '1474736101', 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'r', 'supplemental_address_1': '', 'settled_date': '1474736101', 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'})
-    actual = sorted(args[0][1])
-    assert actual == expected
+    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'r', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
 
 
 @patch("queue.redis_wrap.Redis")
@@ -175,6 +178,6 @@ def test_recurring(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     assert args[0][0] == 'recurring'
-    expected = sorted({'last_name': 'Man', 'txn_type': 'subscr_payment', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': '1474736101', 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': '1474736101', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'})
-    actual = sorted(args[0][1])
-    assert actual == expected
+    expected = {'last_name': 'Man', 'txn_type': 'subscr_payment', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1474743301, 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
