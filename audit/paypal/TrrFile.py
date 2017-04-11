@@ -115,13 +115,6 @@ class TrrFile(object):
             'country': row[addr_prefix + 'Country'],
         }
 
-        # FIXME: This is weasly, see that we're also sending the raw payment
-        # source value as payment_method.
-        if row['Payment Source'] == 'Express Checkout':
-            out['gateway'] = 'paypal_ec'
-        else:
-            out['gateway'] = 'paypal'
-
         if row['Fee Amount']:
             out['fee'] = float(row['Fee Amount']) / 100.0
 
@@ -143,9 +136,17 @@ class TrrFile(object):
         if row['PayPal Reference ID Type'] == 'SUB':
             out['subscr_id'] = row['PayPal Reference ID']
 
+        # Look in all the places we might have stuck a ct_id
         if re.search('^[0-9]+$', row['Transaction Subject']):
             out['contribution_tracking_id'] = row['Transaction Subject']
-            out['order_id'] = row['Transaction Subject']
+        elif row['Custom Field']:
+            out['contribution_tracking_id'] = row['Custom Field']
+        elif row['Invoice ID']:
+            # Here it can be the ct_id.attempt format
+            out['contribution_tracking_id'] = row['Invoice ID'].split('.')[0]
+
+        if out['contribution_tracking_id']:
+            out['order_id'] = out['contribution_tracking_id']
 
         event_type = row['Transaction Event Code'][0:3]
 
@@ -153,7 +154,9 @@ class TrrFile(object):
         if event_type in ('T00', 'T03', 'T05', 'T07', 'T22'):
             if row['Transaction Event Code'] == 'T0002':
                 queue = 'recurring'
-                out = self.normalize_recurring(out)
+                out['txn_type'] = 'subscr_payment'
+                if 'subscr_id' not in out or not out['subscr_id']:
+                    raise Exception('Missing field subscr_id')
             elif row['Transaction  Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
                 log.info("-Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date']))
@@ -180,6 +183,8 @@ class TrrFile(object):
 
             queue = 'refund'
 
+        out['gateway'] = self.determine_gateway(row, queue)
+
         if not queue:
             log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return
@@ -201,42 +206,21 @@ class TrrFile(object):
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
         self.send(queue, out)
 
+    def determine_gateway(self, row, queue):
+        # FIXME: This is weasly, see that we're also sending the raw payment
+        # source value as payment_method.
+        if row['Payment Source'] == 'Express Checkout':
+            return 'paypal_ec'
+
+        # FIXME: tenuous logic here
+        # For refunds, only paypal_ec sets the invoice ID
+        if queue == 'refund' and row['Invoice ID']:
+            return 'paypal_ec'
+
+        return 'paypal'
+
     def send(self, queue_name, msg):
         if not self.redis:
             self.redis = queue.redis_wrap.Redis()
 
         self.redis.send(queue_name, msg)
-
-    def normalize_recurring(self, msg):
-        'Synthesize a raw PayPal message'
-
-        if 'fee' not in msg:
-            msg['fee'] = 0
-
-        # TODO: Move validation elsewhere.
-        required_fields = ['subscr_id']
-        for field in required_fields:
-            if field not in msg or not msg[field]:
-                raise Exception("Missing field " + field)
-
-        # FIXME: Are the names available in these records?  That would save us
-        # an API to fetch_donor_name.
-        out = {
-            'gateway': 'paypal',
-            'txn_type': 'subscr_payment',
-            'gateway_txn_id': msg['gateway_txn_id'],
-            'txn_id': msg['gateway_txn_id'],
-            'subscr_id': msg['subscr_id'],
-            'payment_date': msg['date'],
-            'payer_email': msg['email'],
-            'mc_currency': msg['currency'],
-            'mc_gross': msg['gross'],
-            'mc_fee': msg['fee'],
-            'address_street': "\n".join([msg['street_address'], msg['supplemental_address_1']]),
-            'address_city': msg['city'],
-            'address_zip': msg['postal_code'],
-            'address_state': msg['state_province'],
-            'address_country_code': msg['country'],
-        }
-
-        return out

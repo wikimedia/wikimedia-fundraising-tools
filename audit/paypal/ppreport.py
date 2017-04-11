@@ -1,4 +1,6 @@
+import datetime
 import dateutil.parser
+import dateutil.tz
 import io
 
 from failmail.mailer import FailMailer
@@ -52,4 +54,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
 
 def parse_date(date_string):
     date_object = dateutil.parser.parse(date_string)
-    return date_object.strftime('%s')
+    utc = dateutil.tz.gettz('UTC')
+    date_utc = date_object.astimezone(utc)
+    epoch = datetime.datetime(1970, 1, 1, tzinfo=utc)
+    return int((date_utc - epoch).total_seconds())
