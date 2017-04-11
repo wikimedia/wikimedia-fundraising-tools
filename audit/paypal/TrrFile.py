@@ -145,7 +145,7 @@ class TrrFile(object):
             # Here it can be the ct_id.attempt format
             out['contribution_tracking_id'] = row['Invoice ID'].split('.')[0]
 
-        if out['contribution_tracking_id']:
+        if 'contribution_tracking_id' in out:
             out['order_id'] = out['contribution_tracking_id']
 
         event_type = row['Transaction Event Code'][0:3]
