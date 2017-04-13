@@ -20,14 +20,6 @@ sftp:
     host_key: |-
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDHDBjNezkG40FluT09yGTiNH2zzB3PnvfzX0Dj+A1UiV2buDNF0fOlGxu/vMCrnUHnuxjHlJ2ieBRwMl/0NiFd4uL/HtmsyFkT/EbUjZF9Ky2u4TVHHVRuZYnipidCtJ5RABBRwjToeg60C185CJpHGciFTwwGKDrZDZaGbMpKRZB7z0Nt3/Wuk8pO3fvbUGaIC4pAPe2ljyIPp/LuEE4QNlER8Hexs8XHKbo+a22vb0/hrcV38saLFZfm0O62sYkJ8t8bFDN1k/3c+2/0TfMZc6qbWA6sD872zcqaRHM2BtntWn9TuZP36/SclC0k3h1S0M5lQ2Mp5TAKqXtwgCnl
 
-stomp:
-    server: crm.dev
-    port: 61613
-    queues:
-        refund: /queue/refund
-        donations: /queue/donations
-        recurring: /queue/recurring
-
 redis:
     server: localhost
     port: 6379
