@@ -1,5 +1,7 @@
+import csv
 from mock import patch
 import nose.tools
+import os
 
 import audit.paypal.TrrFile
 
@@ -83,40 +85,6 @@ def get_refund_row():
     return row
 
 
-def get_ec_refund_row():
-
-    row = get_base_row()
-    row.update({
-        "Invoice ID": "4123422",
-        "PayPal Reference ID": "3GJH3GJ3334214812",
-        "PayPal Reference ID Type": "TXN",
-        "Transaction Event Code": "T1107",
-        "Transaction  Debit or Credit": "DR",
-        "Fee Debit or Credit": "CR",
-        "Transaction Note": "refund",
-        "Custom Field": "4123422",
-        "Item ID": "",
-    })
-    return row
-
-
-def get_ec_recurring_refund_row():
-
-    row = get_base_row()
-    row.update({
-        "Invoice ID": "4123422",
-        "PayPal Reference ID": "3GJH3GJ3334214812",
-        "PayPal Reference ID Type": "TXN",
-        "Transaction Event Code": "T1107",
-        "Transaction  Debit or Credit": "DR",
-        "Fee Debit or Credit": "CR",
-        "Transaction Note": "refund",
-        "Custom Field": "",
-        "Item ID": "",
-    })
-    return row
-
-
 def get_recurring_row():
     row = get_base_row()
     row.update({
@@ -126,6 +94,13 @@ def get_recurring_row():
         "Gross Transaction Amount": "10.00",
     })
     return row
+
+
+def get_csv_row(filename):
+    path = os.path.dirname(__file__) + "/data/" + filename + ".csv"
+    with open(path, 'r') as datafile:
+        r = csv.DictReader(datafile)
+        return r.next()
 
 
 @patch("queue.redis_wrap.Redis")
@@ -179,11 +154,34 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
 @patch("queue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
+def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that express checkout donations are marked as such
+    '''
+    row = get_csv_row("express_checkout_donation")
+
+    MockCivicrm().transaction_exists.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'Express Checkout', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595, 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229'}
+    nose.tools.assert_equals('donations', args[0][0])
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
+
+
+@patch("queue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
 def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
     '''
     Test that express checkout refunds are marked as such
     '''
-    row = get_ec_refund_row()
+    row = get_csv_row("express_checkout_refund")
 
     MockCivicrm().transaction_refunded.return_value = False
 
@@ -193,7 +191,7 @@ def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '4123422', 'order_id': '4123422'}
+    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'Others', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1490200499, 'gateway_refund_id': '3HD08833MR473623T', 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '3HD08833MR473623T', 'gross_currency': 'JPY', 'country': 'US', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200499, 'gateway_parent_id': '1V551844CE5526421', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
@@ -206,7 +204,7 @@ def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
     '''
     Test that express checkout recurring refunds are marked as ec too
     '''
-    row = get_ec_recurring_refund_row()
+    row = get_csv_row("express_checkout_recurring_refund")
 
     MockCivicrm().transaction_refunded.return_value = False
 
@@ -216,7 +214,7 @@ def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '4123422', 'order_id': '4123422'}
+    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': '', 'payment_method': 'Others', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1490200431, 'gateway_refund_id': '8WG23468CX793000L', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '8WG23468CX793000L', 'gross_currency': 'JPY', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200431, 'gateway_parent_id': '4JH2438EE9876546W', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
