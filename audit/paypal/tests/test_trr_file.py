@@ -177,6 +177,29 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
 @patch("queue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
+def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that express checkout recurring donations are marked as such
+    '''
+    row = get_csv_row("express_checkout_recurring_donation")
+
+    MockCivicrm().transaction_exists.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    expected = {'txn_type': 'subscr_payment', 'subscr_id': 'I-SS5RD7POSD46', 'last_name': 'Who', 'thankyou_date': 0, 'city': '', 'payment_method': 'Others', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1488634565, 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '4JH2438EE9876546W', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488634565, 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681'}
+    nose.tools.assert_equals('recurring', args[0][0])
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
+
+
+@patch("queue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
 def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
     '''
     Test that express checkout refunds are marked as such
