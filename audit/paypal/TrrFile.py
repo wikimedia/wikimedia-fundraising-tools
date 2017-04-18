@@ -133,9 +133,6 @@ class TrrFile(object):
         if 'Card Type' in row:
             out['payment_submethod'] = row['Card Type']
 
-        if row['PayPal Reference ID Type'] == 'SUB':
-            out['subscr_id'] = row['PayPal Reference ID']
-
         # Look in all the places we might have stuck a ct_id
         if re.search('^[0-9]+$', row['Transaction Subject']):
             out['contribution_tracking_id'] = row['Transaction Subject']
@@ -155,7 +152,8 @@ class TrrFile(object):
             if row['Transaction Event Code'] == 'T0002':
                 queue = 'recurring'
                 out['txn_type'] = 'subscr_payment'
-                if 'subscr_id' not in out or not out['subscr_id']:
+                out['subscr_id'] = row['PayPal Reference ID']
+                if not out['subscr_id']:
                     raise Exception('Missing field subscr_id')
             elif row['Transaction  Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
@@ -215,6 +213,11 @@ class TrrFile(object):
         # FIXME: tenuous logic here
         # For refunds, only paypal_ec sets the invoice ID
         if queue == 'refund' and row['Invoice ID']:
+            return 'paypal_ec'
+
+        # Skating further onto thin ice, we identify recurring version by
+        # the first character of the subscr_id
+        if queue == 'recurring' and row['PayPal Reference ID'][0] == 'I':
             return 'paypal_ec'
 
         return 'paypal'
