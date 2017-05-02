@@ -4,10 +4,11 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Subs
 '''
 
 from process.logging import Logger as log
-from process.globals import config
-from queue.redis_wrap import Redis
+import process.globals
+import queue.redis_wrap
 import ppreport
-from civicrm.civicrm import Civicrm
+
+import civicrm.civicrm
 
 
 class SarFile(object):
@@ -48,7 +49,9 @@ class SarFile(object):
 
     def __init__(self, path):
         self.path = path
-        self.crm = Civicrm(config.civicrm_db)
+        self.config = process.globals.get_config()
+        print(self.config)
+        self.crm = civicrm.civicrm.Civicrm(self.config.civicrm_db)
 
     def parse(self):
         ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers)
@@ -70,50 +73,60 @@ class SarFile(object):
             raise RuntimeError("Message is missing some important fields: [{fields}]".format(fields=", ".join(missing_fields)))
 
         names = row['Subscription Payer Name'].split(' ')
+        date = ppreport.parse_date(row['Subscription Creation Date'])
 
         out = {
             'subscr_id': row['Subscription ID'],
-            'mc_currency': row['Subscription Currency'],
-            'mc_amount3': float(row['Period 3 Amount']) / 100,
-            'period3': row['Subscription Period 3'],
-            'subscr_date': row['Subscription Creation Date'],
-            'payer_email': row['Subscription Payer email address'],
+            'currency': row['Subscription Currency'],
+            'gross': float(row['Period 3 Amount']) / 100,
+            'email': row['Subscription Payer email address'],
             'first_name': names[0],
             'last_name': " ".join(names[1:]),
-            'address_street': row['Shipping Address Line1'],
-            'address_city': row['Shipping Address City'],
-            'address_zip': row['Shipping Address Zip'],
-            'address_state': row['Shipping Address State'],
-            'address_country_code': row['Shipping Address Country'],
-            'gateway': 'paypal',
+            'street_address': row['Shipping Address Line1'],
+            'city': row['Shipping Address City'],
+            'postal_code': row['Shipping Address Zip'],
+            'state_province': row['Shipping Address State'],
+            'country': row['Shipping Address Country'],
+            'gateway': 'paypal',  # TODO: Express checkout
         }
 
         # FIXME what historical evil caused...
         if row['Subscription Period 3'] != "1 M":
             raise RuntimeError("Unknown subscription period {period}".format(period=row['Subscription Period 3']))
+        else:
+            out['frequency_interval'] = '1'
+            out['frequency_unit'] = 'month'
+
+        log_params = {
+            'id': out['subscr_id'],
+            'date': row['Subscription Creation Date'],
+        }
 
         if row['Subscription Action Type'] == 'S0000':
             out['txn_type'] = 'subscr_signup'
+            out['start_date'] = date
+            out['create_date'] = date
             if self.crm.subscription_exists(out['subscr_id']):
-                log.info("-Duplicate\t{id}\t{date}\tsubscr_signup".format(id=out['subscr_id'], date=out['subscr_date']))
+                log.info("-Duplicate\t{id}\t{date}\tsubscr_signup".format(**log_params))
                 return
         elif row['Subscription Action Type'] == 'S0100':
-            log.info("-Ignored\t{id}\t{date}\tsubscr_modify".format(id=out['subscr_id'], date=out['subscr_date']))
+            log.info("-Ignored\t{id}\t{date}\tsubscr_modify".format(**log_params))
             return
         elif row['Subscription Action Type'] == 'S0200':
             out['txn_type'] = 'subscr_cancel'
-            out['cancel_date'] = out['subscr_date']
+            out['cancel_date'] = date
         elif row['Subscription Action Type'] == 'S0300':
             out['txn_type'] = 'subscr_eot'
 
-        if config.no_thankyou:
+        if self.config.no_thankyou:
             out['thankyou_date'] = 0
 
-        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['subscr_id'], date=out['subscr_date'], type=out['txn_type']))
+        log_params['type'] = out['txn_type']
+        log.info("+Sending\t{id}\t{date}\t{type}".format(**log_params))
         self.send(out)
 
     def send(self, msg):
         if not self.redis:
-            self.redis = Redis()
+            self.redis = queue.redis_wrap.Redis()
 
         self.redis.send('recurring', msg)
