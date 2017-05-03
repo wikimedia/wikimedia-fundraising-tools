@@ -50,7 +50,6 @@ class SarFile(object):
     def __init__(self, path):
         self.path = path
         self.config = process.globals.get_config()
-        print(self.config)
         self.crm = civicrm.civicrm.Civicrm(self.config.civicrm_db)
 
     def parse(self):
