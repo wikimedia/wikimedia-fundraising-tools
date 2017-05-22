@@ -27,7 +27,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
 
     with io.open(path, 'r', encoding=encoding) as csvfile:
         plainreader = unicode_csv_reader(csvfile, **dialect)
-
+        rownum = 1
         for row in plainreader:
             column_type = row[0]
             if column_type == 'RH':
@@ -45,11 +45,18 @@ def read_encoded(path, version, callback, column_headers, encoding):
                 try:
                     callback(record)
                 except:
-                    FailMailer.mail('BAD_AUDIT_LINE', data=record, print_exception=True)
+                    logme = {'row': rownum}
+                    for identifier in ['Transaction ID', 'Invoice ID', 'PayPal Reference ID', 'Subscription ID']:
+                        if identifier in record:
+                            logme[identifier] = record[identifier]
+
+                    FailMailer.mail('BAD_AUDIT_LINE', data=logme, print_exception=True)
             elif column_type in ('SF', 'SC', 'RF', 'RC', 'FF'):
                 pass
             else:
                 raise RuntimeError("Unknown column type: {type}".format(type=column_type))
+
+            rownum = rownum + 1
 
 
 def parse_date(date_string):
