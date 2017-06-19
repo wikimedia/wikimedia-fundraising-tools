@@ -27,7 +27,7 @@ class TrrFile(object):
         "Transaction Event Code",
         "Transaction Initiation Date",
         "Transaction Completion Date",
-        "Transaction  Debit or Credit",
+        "Transaction Debit or Credit",
         "Gross Transaction Amount",
         "Gross Transaction Currency",
         "Fee Debit or Credit",
@@ -155,7 +155,7 @@ class TrrFile(object):
                 out['subscr_id'] = row['PayPal Reference ID']
                 if not out['subscr_id']:
                     raise Exception('Missing field subscr_id')
-            elif row['Transaction  Debit or Credit'] == 'DR':
+            elif row['Transaction Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
                 log.info("-Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date']))
                 # This payment is from us!  Do not send to the CRM.
