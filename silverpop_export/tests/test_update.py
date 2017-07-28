@@ -64,6 +64,36 @@ def test_duplicate():
     assert cursor.fetchone() == (1,)
 
 
+def test_no_donations():
+    '''
+    Test that we set the donation-related fields correctly when a contact has
+    no donations.
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select has_recurred_donation, highest_usd_amount, " +
+                   "highest_native_amount, highest_native_currency, " +
+                   "highest_donation_date, lifetime_usd_total, " +
+                   "donation_count, latest_currency, latest_native_amount, " +
+                   "latest_usd_amount, latest_donation from silverpop_export")
+    actual = cursor.fetchone()
+    print(actual)
+    expected = (0, Decimal('0.00'),
+                Decimal('0.00'), None,
+                None, Decimal('0.00'),
+                0, None, Decimal('0.00'),
+                Decimal('0.00'), None)
+    assert actual == expected
+
+
 def test_refund_history():
     '''
     Test that we don't include refunded donations in a donor's history

@@ -294,13 +294,9 @@ UPDATE silverpop_export_staging SET
     highest_usd_amount = 0,
     lifetime_usd_total = 0,
     donation_count = 0,
-    latest_currency = 'USD',
     latest_native_amount = 0,
     latest_usd_amount = 0,
-    latest_donation = NOW(),
-    highest_native_currency = 'USD',
     highest_native_amount = 0,
-    highest_donation_date = NOW(),
     has_recurred_donation = 0
   WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
