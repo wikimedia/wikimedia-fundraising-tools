@@ -26,19 +26,19 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   opted_out tinyint(1),
 
   -- Lifetime contribution statistics
-  has_recurred_donation tinyint(1),
-  highest_usd_amount decimal(20,2),
-  highest_native_amount decimal(20,2),
-  highest_native_currency varchar(3),
-  lifetime_usd_total decimal(20,2),
-  donation_count int,
+  has_recurred_donation tinyint(1) not null default 0,
+  highest_usd_amount decimal(20,2) not null default 0,
+  highest_native_amount decimal(20,2) not null default 0,
+  highest_native_currency varchar(3) not null default '',
+  lifetime_usd_total decimal(20,2) not null default 0,
+  donation_count int not null default 0,
 
   -- Latest contribution statistics
-  latest_currency varchar(3),
-  latest_native_amount decimal(20,2),
-  latest_usd_amount decimal(20,2),
-  latest_donation datetime,
-  highest_donation_date datetime,
+  latest_currency varchar(3) not null default '',
+  latest_native_amount decimal(20,2) not null default 0,
+  latest_usd_amount decimal(20,2) not null default 0,
+  latest_donation datetime null,
+  highest_donation_date datetime null,
 
   -- Address information
   city varchar(128),
@@ -290,15 +290,6 @@ UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
 
 -- Normalize the data prior to final export
 UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
-UPDATE silverpop_export_staging SET
-    highest_usd_amount = 0,
-    lifetime_usd_total = 0,
-    donation_count = 0,
-    latest_native_amount = 0,
-    latest_usd_amount = 0,
-    highest_native_amount = 0,
-    has_recurred_donation = 0
-  WHERE donation_count IS NULL AND opted_out = 0;
 UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
 --
@@ -412,9 +403,9 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     highest_usd_amount,
     highest_native_amount,
     highest_native_currency,
-    DATE_FORMAT(highest_donation_date, '%m/%d/%Y') highest_donation_date,
+    IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') highest_donation_date,
     lifetime_usd_total,
-    DATE_FORMAT(latest_donation, '%m/%d/%Y') latest_donation_date,
+    IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') latest_donation_date,
     latest_usd_amount,
     latest_currency,
     latest_native_amount,
