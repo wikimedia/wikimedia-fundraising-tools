@@ -281,3 +281,22 @@ def test_recurring(MockGlobals, MockCivicrm, MockRedis):
     expected = {'last_name': 'Man', 'txn_type': 'subscr_payment', 'thankyou_date': 0, 'city': '', 'payment_method': '', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1474743301, 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
+
+
+@patch("queue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
+def test_duplicate_recurring(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that we don't send duplicate recurring messages
+    '''
+    MockCivicrm().transaction_exists.return_value = True
+
+    row = get_recurring_row()
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    nose.tools.assert_equals(None, args)
