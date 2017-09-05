@@ -2,6 +2,7 @@ import datetime
 import dateutil.parser
 import dateutil.tz
 import io
+import os.path
 
 from failmail.mailer import FailMailer
 from process.logging import Logger as log
@@ -45,7 +46,10 @@ def read_encoded(path, version, callback, column_headers, encoding):
                 try:
                     callback(record)
                 except:
-                    logme = {'row': rownum}
+                    logme = {
+                        'file': os.path.basename(path),
+                        'row': rownum
+                    }
                     for identifier in ['Transaction ID', 'Invoice ID', 'PayPal Reference ID', 'Subscription ID']:
                         if identifier in record:
                             logme[identifier] = record[identifier]
