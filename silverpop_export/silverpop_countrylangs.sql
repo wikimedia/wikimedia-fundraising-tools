@@ -1,11 +1,11 @@
 DROP TABLE IF EXISTS silverpop_countrylangs;
-CREATE TABLE IF NOT EXISTS silverpop_countrylangs(
-  id int unsigned PRIMARY KEY AUTO_INCREMENT,
-  country varchar(2),
-  lang varchar(20),
-
-  INDEX spcl_country (country)
-);
+ CREATE TABLE `silverpop_countrylangs` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `country` varbinary(2) DEFAULT NULL,
+  `lang` varbinary(20) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `spcl_country` (`country`)
+) ENGINE=InnoDB DEFAULT CHARSET=binary;
 
 INSERT INTO silverpop_countrylangs (country, lang) VALUES
   ('AF', 'prs'),
