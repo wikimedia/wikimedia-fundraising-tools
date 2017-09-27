@@ -120,6 +120,36 @@ def test_refund_history():
     assert cursor.fetchone() == expected
 
 
+def test_first_donation():
+    """
+    Test that we correctly calculate the first donation date,
+    not counting refunded donations.
+    """
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 9),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 1),
+        (3, 1, '2017-05-05', 35.35, 'def789', 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 20.15, 'CAD'),
+        (2, 35.15, 'CAD'),
+        (3, 45.25, 'CAD');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select first_donation_date from silverpop_export")
+    expected = (datetime.datetime(2016, 5, 5),)
+    assert cursor.fetchone() == expected
+
+
 def test_timezone():
     '''
     Test that we export timezone records where they exist
