@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   latest_native_amount decimal(20,2) not null default 0,
   latest_usd_amount decimal(20,2) not null default 0,
   latest_donation datetime null,
+  first_donation_date datetime null,
   highest_donation_date datetime null,
 
   -- Address information
@@ -208,15 +209,17 @@ CREATE TABLE silverpop_export_stat (
   has_recurred_donation tinyint(1),
   total_usd decimal(20,2),
   cnt_total int unsigned,
+  first_donation_date datetime,
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
 
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, has_recurred_donation)
+  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date)
   SELECT
     e.email, MAX(ex.id), SUM(ct.total_amount), COUNT(*),
-    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0))
+    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
+    MIN(ct.receive_date)
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
@@ -264,6 +267,7 @@ UPDATE silverpop_export_staging ex
     ex.lifetime_usd_total = exs.total_usd,
     ex.donation_count = exs.cnt_total,
     ex.has_recurred_donation = exs.has_recurred_donation,
+    ex.first_donation_date = exs.first_donation_date,
     ex.latest_currency = lt.latest_currency,
     ex.latest_native_amount = lt.latest_native_amount,
     ex.latest_usd_amount = lt.latest_usd_amount,
@@ -355,6 +359,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   latest_native_amount decimal(20,2),
   latest_usd_amount decimal(20,2),
   latest_donation datetime,
+  first_donation_date datetime,
 
   -- Address information
   city varchar(128),
@@ -378,12 +383,12 @@ INSERT INTO silverpop_export (
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code,timezone )
+  first_donation_date,city,country,state,postal_code,timezone )
 SELECT id,contact_id,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_native_amount,latest_usd_amount,latest_donation,
-  city,country,state,postal_code,timezone
+  first_donation_date,city,country,state,postal_code,timezone
 FROM silverpop_export_staging
 WHERE opted_out=0;
 
@@ -409,5 +414,6 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_usd_amount,
     latest_currency,
     latest_native_amount,
-    donation_count
+    donation_count,
+    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date
   FROM silverpop_export;
