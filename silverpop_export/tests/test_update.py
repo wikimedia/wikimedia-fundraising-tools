@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 from decimal import Decimal
 import mock
@@ -26,7 +27,7 @@ def setup():
         db_name = "test"
         db_user = "test"
 
-    db_params = {"user": db_user, "host": db_host}
+    db_params = {"user": db_user, "host": db_host, "charset": "utf8"}
     if db_pass:
         db_params['passwd'] = db_pass
 
@@ -215,6 +216,36 @@ def test_native_amount():
     cursor = conn.db_conn.cursor()
     cursor.execute("select highest_usd_amount, highest_native_amount, highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
+    actual = cursor.fetchone()
+    assert actual == expected
+
+
+def test_currency_symbol():
+    '''
+    Test that we correctly pull in the currency symbol for the latest donation
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1),
+        (2, 1, '2017-07-07', 10.95, 'nnn777', 1),
+        (3, 1, '2016-05-05', 10.00, 'abc456', 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 1000, 'JPY'),
+        (2, 9.00, 'GBP'),
+        (3, 10.00, 'USD');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select latest_currency, latest_currency_symbol from silverpop_export")
+    expected = ('GBP', u'£')
     actual = cursor.fetchone()
     assert actual == expected
 

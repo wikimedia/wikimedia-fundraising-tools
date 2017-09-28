@@ -26,6 +26,20 @@ create table civicrm_contact (
     is_deleted tinyint(4) default '0'
 );
 
+drop table if exists civicrm_currency;
+create table civicrm_currency (
+    id int(10) unsigned auto_increment primary key,
+    name varchar(64) COLLATE utf8_unicode_ci,
+    symbol varchar(8) COLLATE utf8_unicode_ci,
+    key UI_name (name)
+);
+insert into civicrm_currency (name, symbol)
+values
+    ('USD', '$'),
+    ('CAD', '$'),
+    ('GBP', '£'),
+    ('DZD', NULL);
+
 drop table if exists wmf_donor;
 create table wmf_donor (
     id int(10) unsigned,
