@@ -20,6 +20,7 @@ create table civicrm_contact (
     do_not_trade tinyint(4) default '1',
     is_opt_out tinyint(4) default '0',
     preferred_language varchar(32) COLLATE utf8_unicode_ci,
+    hash varchar(32) COLLATE utf8_unicode_ci,
     first_name varchar(64) COLLATE utf8_unicode_ci,
     middle_name varchar(64) COLLATE utf8_unicode_ci,
     last_name varchar(64) COLLATE utf8_unicode_ci,

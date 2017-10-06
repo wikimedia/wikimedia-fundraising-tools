@@ -250,6 +250,24 @@ def test_currency_symbol():
     assert actual == expected
 
 
+def test_export_hash():
+    '''
+    Test that we export one record for a duplicate contact.
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, hash) values
+        (1, 'abfe829234baa87s76d');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select contact_hash from silverpop_export")
+    assert cursor.fetchone() == ('abfe829234baa87s76d',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 

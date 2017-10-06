@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
 
   -- General information about the contact
   contact_id int unsigned,
+  contact_hash varchar(32),
   first_name varchar(128),
   last_name varchar(128),
   preferred_language varchar(12),
@@ -68,9 +69,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 -- have an email address. ID is civicrm_email.id.
 -- (15 minutes)
 INSERT INTO silverpop_export_staging
-  (id, contact_id, email, first_name, last_name, preferred_language, opted_out)
+  (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out)
   SELECT
-    e.id, e.contact_id, e.email, c.first_name, c.last_name,
+    e.id, e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
     (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(d.do_not_solicit, 0))
   FROM civicrm.civicrm_email e
@@ -346,6 +347,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 
   -- General information about the contact
   contact_id int unsigned,
+  contact_hash varchar(32),
   first_name varchar(128),
   last_name varchar(128),
   preferred_language varchar(12),
@@ -386,12 +388,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
 INSERT INTO silverpop_export (
-  id,contact_id,first_name,last_name,preferred_language,email,
+  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,timezone )
-SELECT id,contact_id,first_name,last_name,preferred_language,email,
+SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
@@ -403,6 +405,7 @@ WHERE opted_out=0;
 CREATE OR REPLACE VIEW silverpop_export_view AS
   SELECT
     contact_id ContactID,
+    contact_hash,
     email,
     IFNULL(first_name, '') firstname,
     IFNULL(last_name, '') lastname,
