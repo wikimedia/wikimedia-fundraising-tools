@@ -45,7 +45,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
                 record = dict(zip(column_headers, row))
                 try:
                     callback(record)
-                except:
+                except Exception:
                     logme = {
                         'file': os.path.basename(path),
                         'row': rownum

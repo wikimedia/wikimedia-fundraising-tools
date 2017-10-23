@@ -89,7 +89,7 @@ def loadPybal(pattern):
         try:
             obj = eval(line)
             hosts.append(obj['host'])
-        except:
+        except Exception:
             pass
 
     return hosts
@@ -106,7 +106,7 @@ def getSlotContents(host, headers, urls):
             resultStr = result.read()[31:-3]
             jobj = json.loads(resultStr)
             contents.append(jobj['bannerName'])
-        except:
+        except Exception:
             contents.append(None)
     return contents
 

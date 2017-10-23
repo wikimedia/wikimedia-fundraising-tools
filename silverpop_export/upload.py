@@ -41,7 +41,7 @@ if __name__ == '__main__':
         try:
             upload_most_recent()
             break
-        except:
+        except Exception:
             log.error("Ran into trouble: " + str(sys.exc_info()))
 
             if i == 2:

@@ -39,7 +39,7 @@ class Client(object):
     def get(self, filename, dest_path):
         try:
             self.client.get(filename, dest_path)
-        except:
+        except Exception:
             if os.path.exists(dest_path):
                 log.info("Removing corrupted download: {path}".format(path=dest_path))
                 os.unlink(dest_path)
