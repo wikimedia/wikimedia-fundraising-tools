@@ -268,6 +268,39 @@ def test_export_hash():
     assert cursor.fetchone() == ('abfe829234baa87s76d',)
 
 
+def test_bad_ct_country():
+    '''
+    Test that we use the Civi address in place of XX contribution_tracking
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 1000, 'JPY');
+    """, """
+    insert into contribution_tracking (contribution_id, country) values
+        (1, 'XX');
+    """, """
+    insert into civicrm_country (id, iso_code) values
+        (1, 'PE');
+    """, """
+    insert into civicrm_address (contact_id, is_primary, country_id) values
+        (1, 1, 1);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select country from silverpop_export")
+    assert cursor.fetchone() == ('PE',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 

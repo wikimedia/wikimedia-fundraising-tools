@@ -115,18 +115,6 @@ INSERT INTO silverpop_export_latest
     ct.total_amount DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
--- (15 minutes)
-UPDATE
-    silverpop_export_staging ex,
-    civicrm.civicrm_contribution ct,
-    drupal.contribution_tracking dct
-  SET
-    ex.country = dct.country
-  WHERE
-    ex.contact_id = ct.contact_id AND
-    dct.contribution_id = ct.id AND
-    dct.country IS NOT NULL;
-
 CREATE TABLE silverpop_export_highest(
   email varchar(255) PRIMARY KEY,
   highest_native_currency varchar(3),
@@ -166,7 +154,6 @@ CREATE TABLE silverpop_export_dedupe_email (
   email varchar(255),
   maxid int,
   preferred_language varchar(12),
-  country varchar(2),
   opted_out tinyint(1),
 
   INDEX spexde_email (email)
@@ -179,21 +166,14 @@ INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
        GROUP BY email
        HAVING count(*) > 1;
 
--- We pull in language/country from the parent table so that we
--- can preserve them and not propogate nulls
+-- We pull in language from the parent table so that we
+-- can preserve it and not propagate nulls
 UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
   SET
     exde.preferred_language = ex.preferred_language
   WHERE
     ex.email = exde.email AND
     ex.preferred_language IS NOT NULL;
-
-UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
-  SET
-    exde.country = ex.country
-  WHERE
-    ex.email = exde.email AND
-    ex.country IS NOT NULL;
 
 DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
   WHERE
@@ -203,8 +183,7 @@ DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_
 UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
-    ex.preferred_language = exde.preferred_language,
-    ex.country = exde.country
+    ex.preferred_language = exde.preferred_language
   WHERE
     exde.maxid = ex.id;
 
@@ -245,8 +224,7 @@ CREATE TABLE silverpop_export_address (
 ) COLLATE 'utf8_unicode_ci';
 
 -- (16 minutes)
--- Get address for each email matching latest contribution_tracking country.
--- Prefer more complete information.
+-- Get latest address for each email.
 INSERT INTO silverpop_export_address
 SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   FROM      civicrm.civicrm_email e
@@ -259,8 +237,7 @@ SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   LEFT JOIN civicrm.civicrm_state_province st
     ON      a.state_province_id = st.id
   WHERE     ex.opted_out = 0
-    AND     (ex.country IS NULL OR ex.country = ctry.iso_code)
-  ORDER BY  isnull(a.postal_code) ASC, a.id DESC
+  ORDER BY  a.id DESC
 ON DUPLICATE KEY UPDATE email = e.email;
 
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
@@ -289,6 +266,21 @@ UPDATE silverpop_export_staging ex
     ex.state = addr.state,
     ex.timezone = addr.timezone;
 
+-- Fill in missing addresses from contribution_tracking
+-- (15 minutes)
+UPDATE
+    silverpop_export_staging ex,
+    civicrm.civicrm_contribution ct,
+    drupal.contribution_tracking dct
+  SET
+    ex.country = dct.country
+  WHERE
+    ex.country IS NULL AND
+    ex.contact_id = ct.contact_id AND
+    dct.contribution_id = ct.id AND
+    dct.country IS NOT NULL AND
+    ex.opted_out = 0;
+
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
 UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
@@ -299,9 +291,8 @@ UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
     ex.country = cl.country AND
     ex.opted_out = 0;
 
--- Normalize the data prior to final export
+-- Still no language? Default 'em to English
 UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
-UPDATE silverpop_export_staging SET country='US' where country IS NULL AND opted_out = 0;
 
 --
 -- Collect email addresses which should be excluded for various reasons, such as:
@@ -409,7 +400,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     email,
     IFNULL(first_name, '') firstname,
     IFNULL(last_name, '') lastname,
-    country,
+    IFNULL(country, 'XX') country,
     state,
     postal_code,
     timezone,
