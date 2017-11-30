@@ -113,7 +113,7 @@ class SarFile(object):
             return
         elif row['Subscription Action Type'] == 'S0200':
             if not self.crm.subscription_exists(out['subscr_id']):
-                log.info("-Duplicate\t{id}\t{date}\tsubscr_cancel".format(id=out['subscr_id'], date=out['subscr_date']))
+                log.info("-Duplicate\t{id}\t{date}\tsubscr_cancel".format(**log_params))
                 return
             out['txn_type'] = 'subscr_cancel'
             out['cancel_date'] = date
