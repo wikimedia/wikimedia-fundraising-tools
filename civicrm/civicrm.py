@@ -31,7 +31,7 @@ SELECT contribution_status_id AS status
         # FIXME: trxn_id style is inconsistent between gateways.  This will only work for paypal.
         sql = """
 SELECT COUNT(*) AS count FROM civicrm_contribution_recur
-    WHERE trxn_id = %s
+    WHERE trxn_id = %s AND end_date IS NULL
         """
 
         count = list(self.db.execute(sql, (subscr_id, )))

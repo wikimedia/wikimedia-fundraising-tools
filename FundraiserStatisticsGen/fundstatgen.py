@@ -275,7 +275,7 @@ if __name__ == "__main__":
 
     try:
         logging.captureWarnings(True)
-    except:
+    except Exception:
         # Damn; python 2.6; just ignore it
         pass
 
