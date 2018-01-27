@@ -8,7 +8,6 @@ import sys
 
 from process.logging import Logger as log
 from process.globals import load_config
-load_config("banner_screenshot")
 from process.globals import get_config
 
 from mediawiki.centralnotice.api import get_campaign_logs
@@ -103,6 +102,7 @@ JS_RENDER_SCRIPT = os.path.join(__dir__, "rasterize.js")
 
 if __name__ == "__main__":
     try:
+        load_config("banner_screenshot")
         log.info("Beginning banner scrape")
         begin()
 

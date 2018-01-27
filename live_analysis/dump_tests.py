@@ -10,8 +10,6 @@ import mediawiki.centralnotice.api
 
 from process.globals import load_config
 
-load_config("analysis")
-
 
 def is_relevant(entry):
     '''
@@ -58,4 +56,5 @@ def fetch():
 
 
 if __name__ == "__main__":
+    load_config("analysis")
     fetch()

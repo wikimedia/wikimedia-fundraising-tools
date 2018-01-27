@@ -5,7 +5,6 @@ import re
 import shutil
 from process.logging import Logger as log
 from process.globals import load_config
-load_config("paypal-audit")
 from process.globals import get_config
 import process.lock as lock
 
@@ -49,8 +48,8 @@ def archive(path):
     shutil.move(path, dest_path)
 
 if __name__ == '__main__':
+    config = load_config("paypal-audit")
     lock.begin()
-    config = get_config()
 
     for filename in os.listdir(config.incoming_path):
         path = os.path.join(config.incoming_path, filename)

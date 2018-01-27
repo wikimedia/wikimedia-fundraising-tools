@@ -3,12 +3,12 @@
 from process.logging import Logger as log
 
 from process.globals import load_config
-load_config("globalcollect-audit")
 
 import process.lock as lock
 import sftp.client
 
 if __name__ == '__main__':
+    load_config("globalcollect-audit")
     log.info("Begin GlobalCollect nightly audit download")
     lock.begin()
 
