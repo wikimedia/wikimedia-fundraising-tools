@@ -1,41 +1,52 @@
-import sys
-import syslog
-import os.path
+"""
+Helper to make logging go to syslog and optionally stdout.
+
+TODO:
+* Deprecate Logger and use the usual pattern:
+  log = logging.getLogger(__name__)
+"""
+import logging
+import logging.config
+
+import process.globals
+
+_is_setup = False
+# TODO: Modules should do this internally, so logging happens under the correct
+# package name and can be filtered.
+_log = logging.getLogger(__name__)
 
 
+# Deprecated.
 class Logger(object):
     @staticmethod
     def debug(message):
-        Logger.log(message, syslog.LOG_DEBUG)
+        _log.debug(message)
 
     @staticmethod
     def info(message):
-        Logger.log(message, syslog.LOG_INFO)
+        _log.info(message)
 
     @staticmethod
     def warn(message):
-        Logger.log(message, syslog.LOG_WARNING)
+        _log.warning(message)
 
     @staticmethod
     def error(message):
-        Logger.log(message, syslog.LOG_ERR)
-        print >>sys.stderr, message
+        _log.error(message)
 
     @staticmethod
     def fatal(message):
-        Logger.log(message, syslog.LOG_CRIT)
-        print >>sys.stderr, message
+        _log.critical(message)
 
-    @staticmethod
-    def log(message, severity):
-        app_name = os.path.basename(sys.argv[0])
-        syslog.openlog(app_name)
-        syslog.syslog(severity, message)
-        syslog.closelog()
 
-        # FIXME: This late import is to cheat a circular dependency.
-        import process.globals
-        config = process.globals.get_config()
-        if sys.stdout.isatty() or (not hasattr(config, 'quiet') or not config.quiet):
-            print(message)
-            sys.stdout.flush()
+def setup_logging():
+    global _is_setup
+
+    if _is_setup:
+        return
+
+    config = process.globals.get_config()
+
+    logging.config.dictConfig(config.logging)
+
+    _is_setup = True
