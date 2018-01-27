@@ -11,7 +11,7 @@ import re
 from fundraising_ab_tests.fundraising_experiment import FrTest
 import campaign_log
 from process.globals import get_config
-from process.logging import Logger as log
+from process.log import Logger as log
 
 
 def parse_spec(spec):

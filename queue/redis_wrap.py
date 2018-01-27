@@ -4,7 +4,7 @@ import process.version_stamp
 import socket
 import sys
 import time
-from process.logging import Logger as log
+from process.log import Logger as log
 
 import json
 import redis

@@ -1,5 +1,5 @@
 from google.gdocs import Spreadsheet
-from process.logging import Logger as log
+from process.log import Logger as log
 
 
 def write_gdoc_results(doc=None, results=[]):

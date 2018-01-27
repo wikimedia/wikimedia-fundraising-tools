@@ -1,6 +1,6 @@
 import mediawiki.centralnotice.api
-from process.logging import Logger as log
 from process.globals import get_config
+from process.log import Logger as log
 from results import get_banner_results
 
 

@@ -5,7 +5,7 @@ import os
 import os.path
 import time
 
-from process.logging import Logger as log
+from process.log import Logger as log
 import process.globals
 
 from database.db import Connection as DbConnection, Query as DbQuery

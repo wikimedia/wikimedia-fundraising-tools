@@ -5,7 +5,7 @@ import os
 import sys
 
 import process
-from process.logging import Logger as log
+from process.log import Logger as log
 from sftp.client import Client as SftpClient
 import process.lock as lock
 

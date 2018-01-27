@@ -4,7 +4,7 @@ import base64
 import paramiko
 import StringIO
 
-from process.logging import Logger as log
+from process.log import Logger as log
 import process.globals
 
 

@@ -5,7 +5,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_
 
 import re
 
-from process.logging import Logger as log
+from process.log import Logger as log
 import process.globals
 import queue.redis_wrap
 import ppreport

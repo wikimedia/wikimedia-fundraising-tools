@@ -6,7 +6,7 @@ import subprocess
 import re
 import sys
 
-from process.logging import Logger as log
+from process.log import Logger as log
 from process.globals import load_config
 from process.globals import get_config
 

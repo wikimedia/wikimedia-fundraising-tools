@@ -1,7 +1,7 @@
 import os.path
 from yaml import safe_load as load_yaml
 
-from process.logging import Logger as log
+from process.log import Logger as log
 
 _config = dict()
 

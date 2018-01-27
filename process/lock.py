@@ -7,7 +7,7 @@ import os
 import os.path
 import sys
 
-from logging import Logger as log
+from log import Logger as log
 
 lockfile = None
 

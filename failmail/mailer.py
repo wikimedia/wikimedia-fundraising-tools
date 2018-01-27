@@ -5,7 +5,7 @@ import traceback
 import yaml
 
 from process.globals import get_config
-from process.logging import Logger as log
+from process.log import Logger as log
 
 
 class FailMailer(object):
