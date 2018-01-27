@@ -3,12 +3,15 @@
 See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_SubscribeAgmntRprt.pdf
 '''
 
-from process.log import Logger as log
+import logging
+
 import process.globals
 import queue.redis_wrap
 import ppreport
 
 import civicrm.civicrm
+
+log = logging.getLogger(__name__)
 
 
 class SarFile(object):

@@ -1,7 +1,10 @@
+import logging
+
 import mediawiki.centralnotice.api
 from process.globals import get_config
-from process.log import Logger as log
 from results import get_banner_results
+
+log = logging.getLogger(__name__)
 
 
 class FrTest(object):
@@ -15,11 +18,11 @@ class FrTest(object):
             if key in ignore:
                 ignore.pop(key)
         if ignore:
-            log.warn("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
+            log.warning("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
 
         self.campaign = mediawiki.centralnotice.api.get_campaign(campaign)
         if not self.campaign:
-            log.warn("no such campaign '{campaign}'".format(campaign=campaign))
+            log.warning("no such campaign '{campaign}'".format(campaign=campaign))
 
         self.type = type.lower()
 
@@ -68,10 +71,10 @@ class FrTest(object):
         if self.is_country_test:
             # results = [ calculate_result(country=code) for code in campaign['countries'] ]
             # self.results.extend(results)
-            log.warn("country test type not implemented")
+            log.warning("country test type not implemented")
 
         if self.is_lp_test:
-            log.warn("LP test type not implemented")
+            log.warning("LP test type not implemented")
 
     def get_case(self, **kw):
         conditions = {

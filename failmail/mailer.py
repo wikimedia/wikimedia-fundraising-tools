@@ -1,11 +1,13 @@
 from email.mime.text import MIMEText
+import logging
 import smtplib
 import sys
 import traceback
 import yaml
 
 from process.globals import get_config
-from process.log import Logger as log
+
+log = logging.getLogger(__name__)
 
 
 class FailMailer(object):

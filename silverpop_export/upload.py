@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
 import glob
+import logging
 import os
 import sys
 
 import process
-from process.log import Logger as log
 from sftp.client import Client as SftpClient
 import process.lock as lock
+
+log = logging.getLogger(__name__)
 
 
 def upload_most_recent():

@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
 import errno
+import logging
 import os
 import os.path
 import time
 
-from process.log import Logger as log
 import process.globals
 
 from database.db import Connection as DbConnection, Query as DbQuery
 import process.lock as lock
 import unicode_csv_writer
+
+log = logging.getLogger(__name__)
 
 
 def export_all():

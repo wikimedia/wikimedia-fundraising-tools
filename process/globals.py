@@ -1,9 +1,11 @@
+import logging
 import os.path
 from yaml import safe_load as load_yaml
 
 import process.log
 
 _config = dict()
+log = logging.getLogger(__name__)
 
 
 def load_config(app_name):
@@ -26,7 +28,7 @@ def load_config(app_name):
             continue
 
         _config = DictAsAttrDict(load_yaml(file(filename, 'r')))
-        process.log.Logger.info("Loaded config from {path}.".format(path=filename))
+        log.info("Loaded config from {path}.".format(path=filename))
 
         _config.app_name = app_name
 

@@ -2,11 +2,13 @@ import datetime
 import dateutil.parser
 import dateutil.tz
 import io
+import logging
 import os.path
 
 from failmail.mailer import FailMailer
-from process.log import Logger as log
 from unicode_csv_reader import unicode_csv_reader
+
+log = logging.getLogger(__name__)
 
 dialect = dict(
     delimiter=',',

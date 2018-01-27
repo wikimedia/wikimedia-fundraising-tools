@@ -1,5 +1,8 @@
+import logging
+
 from google.gdocs import Spreadsheet
-from process.log import Logger as log
+
+log = logging.getLogger(__name__)
 
 
 def write_gdoc_results(doc=None, results=[]):
@@ -46,7 +49,7 @@ def update_gdoc_results(doc=None, results=[]):
             doc.append_row(props)
         else:
             if len(matching) > 1:
-                log.warn("more than one result row {match} matches criteria: {criteria}".format(match=matching, criteria=result['criteria']))
+                log.warning("more than one result row {match} matches criteria: {criteria}".format(match=matching, criteria=result['criteria']))
             index = matching[-1]
             log.debug("updating row {rownum} with {banner}".format(rownum=index, banner=result['criteria']['banner']))
             doc.update_row(props, index=index)

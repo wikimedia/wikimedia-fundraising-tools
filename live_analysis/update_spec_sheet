@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from process.log import Logger as log
 from process.globals import load_config
 
 from process.lock import begin, end

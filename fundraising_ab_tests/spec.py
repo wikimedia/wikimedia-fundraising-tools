@@ -6,12 +6,14 @@ TODO:
 * match start_time to discriminate between mutations of an otherwise identical test...
 """
 
+import logging
 import re
 
 from fundraising_ab_tests.fundraising_experiment import FrTest
 import campaign_log
 from process.globals import get_config
-from process.log import Logger as log
+
+log = logging.getLogger(__name__)
 
 
 def parse_spec(spec):
@@ -36,7 +38,7 @@ def is_fr_test(test):
             log.debug("Determined test {title} belongs to Fundraising".format(title=test.label))
         return not is_chapter
 
-    log.warn("missing data for test {title}".format(title=test.label))
+    log.warning("missing data for test {title}".format(title=test.label))
 
 
 class FrTestSpec(object):

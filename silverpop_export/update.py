@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
+import logging
 import re
 import os
 
-from process.log import Logger as log
 import process.globals
 
 from database.db import Connection as DbConnection
 import export
 import process.lock as lock
+
+log = logging.getLogger(__name__)
 
 
 def load_queries(file):
