@@ -1,6 +1,6 @@
 import mediawiki.centralnotice.api
 from process.logging import Logger as log
-from process.globals import config
+from process.globals import get_config
 from results import get_banner_results
 
 
@@ -10,6 +10,7 @@ class FrTest(object):
     Currently, only banner tests are supported."""
 
     def __init__(self, label=None, type="", campaign=None, banners=None, start=None, end=None, disabled=False, **ignore):
+        config = get_config()
         for key in config.ignored_columns:
             if key in ignore:
                 ignore.pop(key)

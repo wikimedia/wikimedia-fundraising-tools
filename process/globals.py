@@ -3,13 +3,11 @@ from yaml import safe_load as load_yaml
 
 from process.logging import Logger as log
 
-# n.b. Careful not to import `config` by value.  TODO: rename to _config to
-# break external usages.
-config = dict()
+_config = dict()
 
 
 def load_config(app_name):
-    global config
+    global _config
 
     search_filenames = [
         os.path.expanduser("~/.fundraising/%s.yaml" % app_name),
@@ -27,20 +25,19 @@ def load_config(app_name):
         if not os.path.exists(filename):
             continue
 
-        config = DictAsAttrDict(load_yaml(file(filename, 'r')))
+        _config = DictAsAttrDict(load_yaml(file(filename, 'r')))
         log.info("Loaded config from {path}.".format(path=filename))
 
-        config.app_name = app_name
+        _config.app_name = app_name
 
-        return config
+        return _config
 
     raise Exception("No config found, searched " + ", ".join(search_filenames))
 
 
 def get_config():
     """Procedural way to get the config, to workaround early bootstrapping fluctuations"""
-    global config
-    return config
+    return _config
 
 
 class DictAsAttrDict(dict):

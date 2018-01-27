@@ -7,10 +7,10 @@ load_config("analysis")
 from process.lock import begin, end
 from fundraising_ab_tests.spec_gdoc import update_gdoc_spec
 
-from process.globals import config
+from process.globals import get_config
 
 begin()
 
-update_gdoc_spec(doc=config.spec_db.spec.url)
+update_gdoc_spec(doc=get_config().spec_db.spec.url)
 
 end()

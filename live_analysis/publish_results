@@ -8,10 +8,11 @@ from process.lock import begin, end
 from fundraising_ab_tests.spec_gdoc import read_gdoc_spec
 from fundraising_ab_tests.results_gdoc import update_gdoc_results
 
-from process.globals import config
+from process.globals import get_config
 
 begin()
 
+config = get_config()
 log.info("Reading test specifications from {url}".format(url=config.spec_db.spec.url))
 tests = read_gdoc_spec(doc=config.spec_db.spec.url)
 

@@ -10,7 +10,7 @@ import re
 
 from fundraising_ab_tests.fundraising_experiment import FrTest
 import campaign_log
-from process.globals import config
+from process.globals import get_config
 from process.logging import Logger as log
 
 
@@ -27,6 +27,7 @@ def compare_test_fuzzy(a, b):
 
 
 def is_fr_test(test):
+    config = get_config()
     if test.label and test.banners and test.campaign:
         is_chapter = re.search(config.fr_chapter_test, test.banners[0])
         if is_chapter:

@@ -6,7 +6,7 @@ import shutil
 from process.logging import Logger as log
 from process.globals import load_config
 load_config("paypal-audit")
-from process.globals import config
+from process.globals import get_config
 import process.lock as lock
 
 import TrrFile, SarFile
@@ -40,6 +40,7 @@ def parse(path):
 
 def archive(path):
     filename = os.path.basename(path)
+    config = get_config()
     dest_path = os.path.join(config.archive_path, filename)
 
     log.info("Archiving {orig} to {new}".format(orig=path, new=dest_path))
@@ -49,6 +50,7 @@ def archive(path):
 
 if __name__ == '__main__':
     lock.begin()
+    config = get_config()
 
     for filename in os.listdir(config.incoming_path):
         path = os.path.join(config.incoming_path, filename)
