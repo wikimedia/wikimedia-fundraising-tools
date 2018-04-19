@@ -6,15 +6,14 @@ import re
 import sys
 
 from process.globals import load_config
-load_config("language_audit")
-
-from process.globals import config
+from process.globals import get_config
 from process.lock import begin, end
 
 from mediawiki.i18n import get_languages
 from mediawiki.page import get_content
 
 def check_pages():
+    config = get_config()
     for check_spec in config.check_page_languages:
         api_url = check_spec['api']
         languages = sorted([ l['code'] for l in get_languages(api=api_url) ])
@@ -29,6 +28,7 @@ def check_pages():
 
 if __name__ == "__main__":
     try:
+        load_config("language_audit")
         begin()
 
         check_pages()

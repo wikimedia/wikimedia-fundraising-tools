@@ -73,10 +73,11 @@ INSERT INTO silverpop_export_staging
   SELECT
     e.id, e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(d.do_not_solicit, 0))
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0))
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
+  LEFT JOIN civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0
@@ -240,6 +241,22 @@ SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   ORDER BY  a.id DESC
 ON DUPLICATE KEY UPDATE email = e.email;
 
+-- Fill in missing countries from contribution_tracking
+INSERT INTO silverpop_export_address (email, country)
+SELECT      e.email, ct.country
+  FROM      civicrm.civicrm_email e
+  JOIN      silverpop_export_staging ex
+    ON      e.email = ex.email
+  JOIN      civicrm.civicrm_contribution cc
+    ON      cc.contact_id = e.contact_id
+  JOIN      drupal.contribution_tracking ct
+    ON      ct.contribution_id = cc.id
+  JOIN      civicrm.civicrm_country ctry
+    ON      ct.country = ctry.iso_code # filter out invalid c_t countries
+  WHERE     ex.opted_out = 0
+  ORDER BY cc.id DESC
+ON DUPLICATE KEY UPDATE email = e.email;
+
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
 UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
@@ -265,21 +282,6 @@ UPDATE silverpop_export_staging ex
     ex.postal_code = addr.postal_code,
     ex.state = addr.state,
     ex.timezone = addr.timezone;
-
--- Fill in missing addresses from contribution_tracking
--- (15 minutes)
-UPDATE
-    silverpop_export_staging ex,
-    civicrm.civicrm_contribution ct,
-    drupal.contribution_tracking dct
-  SET
-    ex.country = dct.country
-  WHERE
-    ex.country IS NULL AND
-    ex.contact_id = ct.contact_id AND
-    dct.contribution_id = ct.id AND
-    dct.country IS NOT NULL AND
-    ex.opted_out = 0;
 
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
@@ -368,12 +370,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   postal_code varchar(128),
   timezone varchar(8),
 
-  INDEX rspex_contact_id (contact_id),
-  INDEX rspex_email (email),
-  INDEX rspex_city (city),
-  INDEX rspex_country (country),
-  INDEX rspex_postal (postal_code),
-  CONSTRAINT sp_email UNIQUE (email)
+  CONSTRAINT sp_email UNIQUE (email),
+  CONSTRAINT sp_contact_id UNIQUE (contact_id)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Move the data from the staging table into the persistent one

@@ -3,12 +3,14 @@ Mysql wrapper providing query composition
 '''
 import MySQLdb as Dbi
 import atexit
+import logging
 import os
 import threading
 
 from signal import signal, SIGTERM, SIG_DFL
-from process.logging import Logger as log
 import process.globals
+
+log = logging.getLogger(__name__)
 
 
 class Connection(object):
@@ -52,7 +54,7 @@ class Connection(object):
                 deathClock.cancel()
 
     def kill_connection(self):
-        log.warn('Query taking too long - killing connection {}'.format(self.connection_id))
+        log.warning('Query taking too long - killing connection {}'.format(self.connection_id))
         killerConnection = Dbi.connect(**self.connectionArgs)
         cursor = killerConnection.cursor()
         cursor.execute('KILL CONNECTION {}'.format(self.connection_id))

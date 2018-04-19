@@ -1,11 +1,13 @@
 from email.mime.text import MIMEText
+import logging
 import smtplib
 import sys
 import traceback
 import yaml
 
-from process.globals import config
-from process.logging import Logger as log
+from process.globals import get_config
+
+log = logging.getLogger(__name__)
 
 
 class FailMailer(object):
@@ -24,6 +26,7 @@ class FailMailer(object):
 
         msg = MIMEText(body)
 
+        config = get_config()
         from_address = config.failmail_sender
         to_address = config.failmail_recipients
         if hasattr(to_address, 'split'):

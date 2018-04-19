@@ -6,13 +6,14 @@ import gdata.docs.service
 import gdata.docs.data
 import gdata.spreadsheet.service
 
-from process.globals import config
+from process.globals import get_config
 
 # TODO: ExecuteBatch; 2-leg oauth
 # TODO: cache rows locally, operate and then flush
 
 
 def authenticate(client):
+    config = get_config()
     # client.SetOAuthInputParameters(
     #     gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
     #     consumer_key=config.gdocs['consumer_key'],
@@ -32,6 +33,7 @@ def new_doc(title):
     '''
     return doc_key
     '''
+    config = get_config()
     client = gdata.docs.service.DocsService(email=config.gdocs['email'], source=config.app_name)
     authenticate(client)
 
@@ -50,6 +52,7 @@ def new_doc(title):
 
 class Spreadsheet(object):
     def __init__(self, doc=None):
+        config = get_config()
         self.client = gdata.spreadsheet.service.SpreadsheetsService(source=config.app_name)
         authenticate(self.client)
 

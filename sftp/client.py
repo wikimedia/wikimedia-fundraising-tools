@@ -1,11 +1,13 @@
 import os
 import os.path
 import base64
+import logging
 import paramiko
 import StringIO
 
-from process.logging import Logger as log
 import process.globals
+
+log = logging.getLogger(__name__)
 
 
 class Client(object):
@@ -82,7 +84,7 @@ class Crawler(object):
             if os.path.getsize(dest_path) == 0:
                 os.unlink(dest_path)
                 empty_failures.append(filename)
-                log.warn("Stupid file was empty, removing locally: {path}".format(path=dest_path))
+                log.warning("Stupid file was empty, removing locally: {path}".format(path=dest_path))
 
         if empty_failures:
             log.error("The following files were empty, please contact your provider: {failures}".format(failures=", ".join(empty_failures)))

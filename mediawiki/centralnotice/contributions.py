@@ -6,7 +6,7 @@ TODO: Use anonymized tables
 
 import decimal
 
-from process.globals import config
+from process.globals import get_config
 from database import db
 
 import time_util
@@ -15,6 +15,7 @@ ct_banner_clause = "LEFT(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.'
 
 
 def get_change(wheres):
+    config = get_config()
     begin = time_util.str_time_offset(minutes=-90)
     end = time_util.str_time_offset(minutes=-30)
 
@@ -37,6 +38,7 @@ def get_totals(wheres=None, query=None, banner=None, campaign=None, country=None
     '''
     Note that the column names must match a heading in the results spreadsheet.
     '''
+    config = get_config()
     if not query:
         query = db.Query()
     query.columns.append('SUM(total_amount) AS total')

@@ -1,4 +1,4 @@
-from process.globals import config
+from process.globals import get_config
 from stats.stats_abba import Experiment
 
 
@@ -31,6 +31,7 @@ def get_confidence(results, name_column=None, successes_column=None, trials=None
     if not baseline_successes:
         return
 
+    config = get_config()
     experiment = Experiment(
         num_trials=config.fudge_trials,
         baseline_num_successes=baseline_successes,
@@ -55,6 +56,7 @@ def get_confidence(results, name_column=None, successes_column=None, trials=None
 
 def get_confidence_link(results, name_column, successes_column):
     cases = []
+    config = get_config()
     for result in results:
         # skip empty results, usually these will be "blank" banners
         if not result.results[successes_column]:

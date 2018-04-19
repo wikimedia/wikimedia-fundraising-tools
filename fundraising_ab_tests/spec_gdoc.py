@@ -1,6 +1,9 @@
+import logging
+
 from spec import FrTestSpec, parse_spec
 from google.gdocs import Spreadsheet
-from process.logging import Logger as log
+
+log = logging.getLogger(__name__)
 
 
 def read_gdoc_spec(doc=None):

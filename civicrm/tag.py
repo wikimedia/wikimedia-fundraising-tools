@@ -1,4 +1,4 @@
-from process.globals import config
+from process.globals import get_config
 from database import db
 
 
@@ -16,6 +16,7 @@ class Tag(object):
         self.name = name
 
         sql = "SELECT id FROM civicrm_tag WHERE name = %s"
+        config = get_config()
         results = list(db.get_db(config.civicrm_schema).execute(sql, (name, )))
         if not results:
             raise RuntimeError("Db schema missing tag: " + name)

@@ -3,11 +3,12 @@ Lockfile using a temporary file and the process id.
 
 Self-corrects stale locks unless "failopen" is True.
 '''
+import logging
 import os
 import os.path
 import sys
 
-from logging import Logger as log
+log = logging.getLogger(__name__)
 
 lockfile = None
 
@@ -19,7 +20,7 @@ def begin(filename=None, failopen=False):
         filename = "/tmp/%s-%s.lock" % (unique, cmd)
 
     if os.path.exists(filename):
-        log.warn("Lockfile found!")
+        log.warning("Lockfile found!")
         f = open(filename, "r")
         pid = None
         try:

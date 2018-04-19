@@ -1,5 +1,5 @@
 import json
-from process.globals import config
+from process.globals import get_config
 from mediawiki.centralnotice.contributions import get_totals
 from mediawiki.centralnotice.impressions import get_impressions
 from fundraising_ab_tests.confidence import add_confidence
@@ -54,6 +54,7 @@ def banner_results(criteria):
     else:
         country = 'US'
 
+    config = get_config()
     results.update({
         'preview': config.preview_format.format(banner=criteria['banner'], language=language, country=country),
         'screenshot': config.screenshot_format.format(banner=criteria['banner'], language=language),

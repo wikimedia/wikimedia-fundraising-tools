@@ -3,15 +3,17 @@
 See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_TransactionDetailReport.pdf
 '''
 
+import logging
 import re
 
-from process.logging import Logger as log
 import process.globals
 import queue.redis_wrap
 import ppreport
 
 import civicrm.civicrm
 import paypal_api
+
+log = logging.getLogger(__name__)
 
 
 class TrrFile(object):

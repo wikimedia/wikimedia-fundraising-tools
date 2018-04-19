@@ -1,13 +1,15 @@
+import logging
 import os
 import process.globals
 import process.version_stamp
 import socket
 import sys
 import time
-from process.logging import Logger as log
 
 import json
 import redis
+
+log = logging.getLogger(__name__)
 
 
 class Redis(object):
