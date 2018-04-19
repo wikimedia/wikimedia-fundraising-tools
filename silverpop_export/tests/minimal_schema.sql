@@ -45,7 +45,6 @@ drop table if exists wmf_donor;
 create table wmf_donor (
     id int(10) unsigned,
     entity_id int(10) unsigned,
-    do_not_solicit tinyint(4),
     is_2006_donor tinyint(4),
     is_2007_donor tinyint(4),
     is_2008_donor tinyint(4),
@@ -71,6 +70,13 @@ create table wmf_donor (
     last_donation_amount decimal(20,2),
     last_donation_usd decimal(20,2),
     lifetime_usd_total decimal(20,2)
+);
+
+drop table if exists civicrm_value_1_communication_4;
+create table civicrm_value_1_communication_4 (
+    id int(10) unsigned,
+    entity_id int(10) unsigned,
+    do_not_solicit tinyint(4)
 );
 
 drop table if exists civicrm_contribution;

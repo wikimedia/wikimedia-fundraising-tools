@@ -73,10 +73,11 @@ INSERT INTO silverpop_export_staging
   SELECT
     e.id, e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(d.do_not_solicit, 0))
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0))
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
+  LEFT JOIN civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0
