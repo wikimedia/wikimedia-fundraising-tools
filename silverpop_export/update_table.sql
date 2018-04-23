@@ -252,7 +252,7 @@ SELECT      e.email, ct.country
   JOIN      drupal.contribution_tracking ct
     ON      ct.contribution_id = cc.id
   JOIN      civicrm.civicrm_country ctry
-    ON      ct.country = ctry.iso_code # filter out invalid c_t countries
+    ON      ct.country = ctry.iso_code COLLATE utf8_general_ci # filter out invalid c_t countries
   WHERE     ex.opted_out = 0
   ORDER BY cc.id DESC
 ON DUPLICATE KEY UPDATE email = e.email;
