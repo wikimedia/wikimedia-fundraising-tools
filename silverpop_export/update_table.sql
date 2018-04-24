@@ -241,22 +241,6 @@ SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   ORDER BY  a.id DESC
 ON DUPLICATE KEY UPDATE email = e.email;
 
--- Fill in missing countries from contribution_tracking
-INSERT INTO silverpop_export_address (email, country)
-SELECT      e.email, ct.country
-  FROM      civicrm.civicrm_email e
-  JOIN      silverpop_export_staging ex
-    ON      e.email = ex.email
-  JOIN      civicrm.civicrm_contribution cc
-    ON      cc.contact_id = e.contact_id
-  JOIN      drupal.contribution_tracking ct
-    ON      ct.contribution_id = cc.id
-  JOIN      civicrm.civicrm_country ctry
-    ON      ct.country = ctry.iso_code # filter out invalid c_t countries
-  WHERE     ex.opted_out = 0
-  ORDER BY cc.id DESC
-ON DUPLICATE KEY UPDATE email = e.email;
-
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
 UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
@@ -282,6 +266,21 @@ UPDATE silverpop_export_staging ex
     ex.postal_code = addr.postal_code,
     ex.state = addr.state,
     ex.timezone = addr.timezone;
+
+-- Fill in missing addresses from contribution_tracking
+-- (15 minutes)
+UPDATE
+    silverpop_export_staging ex,
+    civicrm.civicrm_contribution ct,
+    drupal.contribution_tracking dct
+  SET
+    ex.country = dct.country
+  WHERE
+    ex.country IS NULL AND
+    ex.contact_id = ct.contact_id AND
+    dct.contribution_id = ct.id AND
+    dct.country IS NOT NULL AND
+    ex.opted_out = 0;
 
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
