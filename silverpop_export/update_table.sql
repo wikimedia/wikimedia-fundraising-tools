@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   preferred_language varchar(12),
   email varchar(255),
   opted_out tinyint(1),
+  opted_in tinyint(1),
 
   -- Lifetime contribution statistics
   has_recurred_donation tinyint(1) not null default 0,
@@ -69,11 +70,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 -- have an email address. ID is civicrm_email.id.
 -- (15 minutes)
 INSERT INTO silverpop_export_staging
-  (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out)
+  (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in)
   SELECT
     e.id, e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0))
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)),
+    v.opt_in
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
@@ -344,6 +346,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   last_name varchar(128),
   preferred_language varchar(12),
   email varchar(255),
+  opted_in tinyint(1),
 
   -- Lifetime contribution statistics
   has_recurred_donation tinyint(1),
@@ -376,12 +379,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
 INSERT INTO silverpop_export (
-  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
+  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,timezone )
-SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
+SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
@@ -403,6 +406,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     timezone,
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
+    CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS opted_in,
     highest_usd_amount,
     highest_native_amount,
     highest_native_currency,

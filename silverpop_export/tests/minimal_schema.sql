@@ -76,7 +76,8 @@ drop table if exists civicrm_value_1_communication_4;
 create table civicrm_value_1_communication_4 (
     id int(10) unsigned,
     entity_id int(10) unsigned,
-    do_not_solicit tinyint(4)
+    do_not_solicit tinyint(4),
+    opt_in tinyint(1)
 );
 
 drop table if exists civicrm_contribution;
