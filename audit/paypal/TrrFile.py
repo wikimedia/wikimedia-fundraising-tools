@@ -135,17 +135,15 @@ class TrrFile(object):
         if 'Card Type' in row:
             out['payment_submethod'] = row['Card Type']
 
-        # Look in all the places we might have stuck a ct_id
-        if re.search('^[0-9]+$', row['Transaction Subject']):
-            out['contribution_tracking_id'] = row['Transaction Subject']
-        elif row['Custom Field']:
-            out['contribution_tracking_id'] = row['Custom Field']
-        elif row['Invoice ID']:
-            # Here it can be the ct_id.attempt format
-            out['contribution_tracking_id'] = row['Invoice ID'].split('.')[0]
+        # Look in all the places we might have stuck an order id
+        for oid_field in ('Invoice ID', 'Transaction Subject', 'Custom Field'):
+            if re.search('^[0-9]+(\\.[0-9]+)?$', row[oid_field]):
+                out['order_id'] = row[oid_field]
+                break
 
-        if 'contribution_tracking_id' in out:
-            out['order_id'] = out['contribution_tracking_id']
+        if 'order_id' in out:
+            # It can be the ct_id.attempt format
+            out['contribution_tracking_id'] = out['order_id'].split('.')[0]
 
         event_type = row['Transaction Event Code'][0:3]
 
