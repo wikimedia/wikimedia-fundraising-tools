@@ -164,7 +164,7 @@ def get_db(schema=None):
 def load_queries(script_path):
     '''
     Helper to parse queries out of a SQL file.  Requires that each statement
-    ends in /.*;\s*$/
+    ends in ;
     '''
     qbuf = []
     queries = []
