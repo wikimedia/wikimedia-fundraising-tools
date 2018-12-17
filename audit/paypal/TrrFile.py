@@ -192,6 +192,13 @@ class TrrFile(object):
                 log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
                 return
 
+        if queue == 'recurring' and out['gateway'] == 'paypal_ec':
+            # Some legacy recurring payments have been re-coded with I- subscription IDs, making them look like
+            # EC donations. Check for the txn ID in legacy as well, to make sure we don't duplicate.
+            if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
+                log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
+                return
+
         if queue == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
             log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
             return
