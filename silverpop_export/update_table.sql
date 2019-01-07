@@ -378,7 +378,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
-INSERT INTO silverpop_export (
+INSERT IGNORE INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
