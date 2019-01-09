@@ -378,7 +378,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
 
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
-INSERT IGNORE INTO silverpop_export (
+INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
@@ -390,7 +390,8 @@ SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,timezone
 FROM silverpop_export_staging
-WHERE opted_out=0;
+WHERE opted_out=0
+ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
