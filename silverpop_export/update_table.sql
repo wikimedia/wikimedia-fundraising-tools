@@ -390,7 +390,8 @@ SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,timezone
 FROM silverpop_export_staging
-WHERE opted_out=0;
+WHERE opted_out=0
+ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
