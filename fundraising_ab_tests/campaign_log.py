@@ -47,7 +47,7 @@ def get_relevant_events():
         '''
         This change enabled/disabled a test; or an enabled test has been mutated.
         '''
-        if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
+        if 'enabled' in entry['added'] or entry['begin']['enabled'] == 1:
             return True
 
     config = get_config()

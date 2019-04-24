@@ -18,7 +18,7 @@ def is_relevant(entry):
     if not entry['end']['banners']:
         return False
 
-    if 'enabled' in entry['added'] or entry['begin']['enabled'] is 1:
+    if 'enabled' in entry['added'] or entry['begin']['enabled'] == 1:
         return True
 
 
