@@ -304,6 +304,30 @@ def test_bad_ct_country():
     assert cursor.fetchone() == ('PE',)
 
 
+def test_exclusion():
+    '''
+    Test that we exclude former email addresses from the log table.
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into log_civicrm_email (id, email) values
+        (1, 'formerperson1@localhost'),
+        (1, 'person1@localhost');
+    """, """
+    insert into civicrm_contact (id) values
+        (1);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email from silverpop_export")
+    assert cursor.fetchone() == ('person1@localhost',)
+    cursor.execute("select email from silverpop_excluded")
+    assert cursor.fetchone() == ('formerperson1@localhost',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 
