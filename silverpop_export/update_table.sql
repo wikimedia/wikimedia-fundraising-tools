@@ -78,7 +78,6 @@ INSERT INTO silverpop_export_staging
     v.opt_in
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
-  LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
