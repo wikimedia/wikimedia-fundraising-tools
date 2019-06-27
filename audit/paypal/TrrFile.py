@@ -147,10 +147,10 @@ class TrrFile(object):
 
         event_type = row['Transaction Event Code'][0:3]
 
-        queue = None
+        queue_name = None
         if event_type in ('T00', 'T03', 'T05', 'T07', 'T22'):
             if row['Transaction Event Code'] == 'T0002':
-                queue = 'recurring'
+                queue_name = 'recurring'
                 out['txn_type'] = 'subscr_payment'
                 out['subscr_id'] = row['PayPal Reference ID']
                 if not out['subscr_id']:
@@ -161,7 +161,7 @@ class TrrFile(object):
                 # This payment is from us!  Do not send to the CRM.
                 return
             else:
-                queue = 'donations'
+                queue_name = 'donations'
         elif event_type in ('T11', 'T12'):
             out['gateway_refund_id'] = out['gateway_txn_id']
             out['gross_currency'] = out['currency']
@@ -179,23 +179,23 @@ class TrrFile(object):
                 log.info("-Unknown\t{id}\t{date}\t(Refundish type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=row['Transaction Event Code']))
                 return
 
-            queue = 'refund'
+            queue_name = 'refund'
 
-        out['gateway'] = self.determine_gateway(row, queue)
+        out['gateway'] = self.determine_gateway(row, queue_name)
 
-        if not self.should_send(out, queue, row, event_type):
+        if not self.should_send(out, queue_name, row, event_type):
             return
 
-        if 'last_name' not in out and queue != 'refund':
+        if 'last_name' not in out and queue_name != 'refund':
             out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
 
         if self.config.no_thankyou:
             out['thankyou_date'] = 0
 
-        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
-        self.send(queue, out)
+        log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
+        self.send(queue_name, out)
 
-    def determine_gateway(self, row, queue):
+    def determine_gateway(self, row, queue_name):
         # FIXME: This is weasly, see that we're also sending the raw payment
         # source value as payment_method.
         if row['Payment Source'] == 'Express Checkout':
@@ -203,35 +203,35 @@ class TrrFile(object):
 
         # FIXME: tenuous logic here
         # For refunds, only paypal_ec sets the invoice ID
-        if queue == 'refund' and row['Invoice ID']:
+        if queue_name == 'refund' and row['Invoice ID']:
             return 'paypal_ec'
 
         # Skating further onto thin ice, we identify recurring version by
         # the first character of the subscr_id
-        if queue == 'recurring' and row['PayPal Reference ID'][0] == 'I':
+        if queue_name == 'recurring' and row['PayPal Reference ID'][0] == 'I':
             return 'paypal_ec'
 
         return 'paypal'
 
-    def should_send(self, out, queue, row, event_type):
-        if not queue:
+    def should_send(self, out, queue_name, row, event_type):
+        if not queue_name:
             log.info("-Unknown\t{id}\t{date}\t(Type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=event_type))
             return False
 
-        if queue == 'donations' or queue == 'recurring':
+        if queue_name == 'donations' or queue_name == 'recurring':
             if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway=out['gateway']):
-                log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
+                log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
                 return False
 
-        if queue == 'recurring' and out['gateway'] == 'paypal_ec':
+        if queue_name == 'recurring' and out['gateway'] == 'paypal_ec':
             # Some legacy recurring payments have been re-coded with I- subscription IDs, making them look like
             # EC donations. Check for the txn ID in legacy as well, to make sure we don't duplicate.
             if self.crm.transaction_exists(gateway_txn_id=out['gateway_txn_id'], gateway='paypal'):
-                log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
+                log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
                 return False
 
-        if queue == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
-            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue))
+        if queue_name == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
+            log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
             return False
 
         return True

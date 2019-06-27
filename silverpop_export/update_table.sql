@@ -7,6 +7,7 @@
 
 SET autocommit = 1;
 
+DROP TABLE IF EXISTS silverpop_excluded;
 DROP TABLE IF EXISTS silverpop_export_staging;
 DROP TABLE IF EXISTS silverpop_export_latest;
 DROP TABLE IF EXISTS silverpop_export_highest;
@@ -78,12 +79,37 @@ INSERT INTO silverpop_export_staging
     v.opt_in
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
-  LEFT JOIN civicrm.wmf_donor d ON d.entity_id = c.id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0
     AND e.is_primary = 1;
+
+-- Collect email addresses which should be excluded for various reasons, such as:
+-- * Exclude non-primary addresses
+-- * Exclude any "former residence" email addresses.
+-- * Exclude addresses dropped during contact merge.
+-- We grab ALL addresses from the logs to start, then after we've figured out
+-- which of the addresses on the include list are good, we remove them from
+-- this table.
+
+CREATE TABLE IF NOT EXISTS silverpop_excluded(
+  id int AUTO_INCREMENT PRIMARY KEY,
+  email varchar(255),
+
+  INDEX sx_email (email),
+  CONSTRAINT sx_email_u UNIQUE (email)
+) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
+
+-- Same no-op update trick as with silverpop_export_latest
+INSERT INTO silverpop_excluded (email)
+  SELECT email
+    FROM log_civicrm.log_civicrm_email e
+   -- Ignore addresses created after the last address we picked
+   -- up in the staging table select query above, so we don't
+   -- opt-out contacts created since then.
+   WHERE id <= (SELECT MAX(id) FROM silverpop_export_staging)
+ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 
 -- Find the latest donation for each email address. Ordering by
 -- receive_date and total_amount descending should always insert
@@ -297,28 +323,7 @@ UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
 -- Still no language? Default 'em to English
 UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
 
---
--- Collect email addresses which should be excluded for various reasons, such as:
--- * Exclude non-primary addresses
--- * Exclude any "former residence" email addresses.
--- * Exclude addresses dropped during contact merge.
---
-DROP TABLE IF EXISTS silverpop_excluded;
-
-CREATE TABLE IF NOT EXISTS silverpop_excluded(
-  id int AUTO_INCREMENT PRIMARY KEY,
-  email varchar(255),
-
-  INDEX sx_email (email),
-  CONSTRAINT sx_email_u UNIQUE (email)
-) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
-
--- Same no-op update trick as with silverpop_export_latest
-INSERT INTO silverpop_excluded (email)
-  SELECT email
-    FROM log_civicrm.log_civicrm_email e
-ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
-
+-- Remove all the known-good addresses from the suppression list.
 DELETE silverpop_excluded
   FROM silverpop_excluded
   JOIN silverpop_export_staging s
