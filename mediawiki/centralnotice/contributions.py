@@ -9,7 +9,7 @@ import decimal
 from process.globals import get_config
 from database import db
 
-import time_util
+from . import time_util
 
 ct_banner_clause = "LEFT(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1), LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(utm_source, '.', 2),'.',1)))"
 
@@ -76,7 +76,7 @@ def get_totals(wheres=None, query=None, banner=None, campaign=None, country=None
     row = result.pop()
 
     # nasty hack for json encoding snafu:
-    for k, v in row.items():
+    for k, v in list(row.items()):
         if isinstance(v, decimal.Decimal):
             row[k] = str(v)
 

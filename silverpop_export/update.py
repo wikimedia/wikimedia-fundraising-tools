@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import logging
 import re
@@ -7,7 +7,7 @@ import os
 import process.globals
 
 from database.db import Connection as DbConnection
-import export
+from silverpop_export import export
 import process.lock as lock
 
 log = logging.getLogger(__name__)

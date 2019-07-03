@@ -137,7 +137,7 @@ class Query(object):
     def __repr__(self):
         # FIXME:
         qparams = {}
-        for k, s in self.params.items():
+        for k, s in list(self.params.items()):
             qparams[k] = "'%s'" % s
         return self.uninterpolated_sql() % qparams
 
@@ -195,7 +195,7 @@ def run_script(script_path):
 
 
 def close_all():
-    for conn in db_conn.values():
+    for conn in list(db_conn.values()):
         conn.close()
 
 

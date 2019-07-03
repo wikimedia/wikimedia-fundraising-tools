@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # FIXME: dayoffiscalyear, parameterize all this
 start_time = "20120701"
@@ -54,4 +54,4 @@ sum_query = """
     end=end_time,
     amount_slices_cols=amount_slices_cols
 )
-print sum_query
+print(sum_query)

@@ -5,7 +5,6 @@ Self-corrects stale locks unless "failopen" is True.
 '''
 import logging
 import os
-import os.path
 import sys
 
 log = logging.getLogger(__name__)

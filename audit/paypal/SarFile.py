@@ -7,7 +7,7 @@ import logging
 
 import process.globals
 import frqueue.redis_wrap
-import ppreport
+from . import ppreport
 
 import civicrm.civicrm
 

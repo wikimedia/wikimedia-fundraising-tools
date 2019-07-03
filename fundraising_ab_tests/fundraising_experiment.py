@@ -2,7 +2,7 @@ import logging
 
 import mediawiki.centralnotice.api
 from process.globals import get_config
-from results import get_banner_results
+from .results import get_banner_results
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class FrTest(object):
             if key in ignore:
                 ignore.pop(key)
         if ignore:
-            log.warning("ignoring columns: {columns}".format(columns=", ".join(ignore.keys())))
+            log.warning("ignoring columns: {columns}".format(columns=", ".join(list(ignore.keys()))))
 
         self.campaign = mediawiki.centralnotice.api.get_campaign(campaign)
         if not self.campaign:
@@ -35,7 +35,7 @@ class FrTest(object):
                 self.banners = banners
             else:
                 if self.campaign['banners']:
-                    self.banners = self.campaign['banners'].keys()
+                    self.banners = list(self.campaign['banners'].keys())
 
             # self.variations = [ FrTestVariation(banner=name) for name in self.banners ]
 

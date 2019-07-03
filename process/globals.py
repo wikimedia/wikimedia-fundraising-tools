@@ -1,5 +1,5 @@
 import logging
-import os.path
+import os
 from yaml import safe_load as load_yaml
 
 import process.log
@@ -27,7 +27,7 @@ def load_config(app_name):
         if not os.path.exists(filename):
             continue
 
-        _config = DictAsAttrDict(load_yaml(file(filename, 'r')))
+        _config = DictAsAttrDict(load_yaml(open(filename, 'r')))
         log.info("Loaded config from {path}.".format(path=filename))
 
         _config.app_name = app_name
@@ -48,7 +48,10 @@ def get_config():
 
 class DictAsAttrDict(dict):
     def __getattr__(self, name):
-        value = self[name]
-        if isinstance(value, dict):
-            value = DictAsAttrDict(value)
-        return value
+        try:
+            value = self[name]
+            if isinstance(value, dict):
+                value = DictAsAttrDict(value)
+            return value
+        except KeyError:
+            raise AttributeError

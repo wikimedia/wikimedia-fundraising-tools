@@ -1,7 +1,7 @@
-import httplib
-import urllib
-import urllib2
-import urlparse
+import http.client
+import urllib.request
+import urllib.error
+import urllib.parse
 
 import process.globals
 
@@ -23,10 +23,10 @@ class PaypalApiClassic(object):
 
         params.update(kw)
 
-        query = urllib.urlencode(params)
+        query = urllib.parse.urlencode(params)
         url = config.api.url + "?" + query
 
-        req = urllib2.Request(url)
+        req = urllib.request.Request(url)
 
         handlers = []
 
@@ -38,10 +38,10 @@ class PaypalApiClassic(object):
             # handlers.append(HTTPSClientAuthHandler(config.api.certificate_path, config.api.certificate_path, debuglevel=2))
             handlers.append(HTTPSClientAuthHandler(config.api.certificate_path, config.api.certificate_path))
 
-        opener = urllib2.build_opener(*handlers)
+        opener = urllib.request.build_opener(*handlers)
         out = opener.open(req)
 
-        result = urlparse.parse_qs(out.read())
+        result = urllib.parse.parse_qs(out.read())
 
         return result
 
@@ -53,9 +53,9 @@ class PaypalApiClassic(object):
 
 
 # from http://stackoverflow.com/questions/1875052/using-paired-certificates-with-urllib2
-class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
+class HTTPSClientAuthHandler(urllib.request.HTTPSHandler):
     def __init__(self, key, cert, **kw):
-        urllib2.HTTPSHandler.__init__(self, **kw)
+        urllib.request.HTTPSHandler.__init__(self, **kw)
         self.key = key
         self.cert = cert
 
@@ -66,4 +66,4 @@ class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
         return self.do_open(self.getConnection, req)
 
     def getConnection(self, host, timeout=20):
-        return httplib.HTTPSConnection(host, key_file=self.key, cert_file=self.cert, timeout=timeout)
+        return http.client.HTTPSConnection(host, key_file=self.key, cert_file=self.cert, timeout=timeout)

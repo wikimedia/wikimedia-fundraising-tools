@@ -6,7 +6,7 @@ import os
 import audit.paypal.TrrFile
 
 # weird thing we have to do to get better assert_equals feedback
-nose.tools.assert_equals.im_class.maxDiff = None
+nose.tools.assert_equals.__self__.maxDiff = None
 
 
 def get_base_row():
@@ -100,7 +100,7 @@ def get_csv_row(filename):
     path = os.path.dirname(__file__) + "/data/" + filename + ".csv"
     with open(path, 'r') as datafile:
         r = csv.DictReader(datafile)
-        return r.next()
+        return next(r)
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -123,7 +123,7 @@ def test_recurring_charge_without_subscription(MockPaypalApi, MockGlobals, MockC
 
     # Should have failed with a specific missing field error.
     # FIXME: Annoyingly, this masks any other, unexpected exception.
-    assert cm.exception.message == "Missing field subscr_id"
+    nose.tools.assert_equals("Missing field subscr_id", str(cm.exception))
 
     # Make sure we didn't try to send anything to the queue.
     MockRedis().send.assert_has_calls([])

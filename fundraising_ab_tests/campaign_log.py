@@ -18,7 +18,7 @@ def tests_from_entry(entry):
         # FIXME: assuming this is a banner test
         banners = entry[edge]['banners']
         if hasattr(banners, 'keys'):
-            banners = banners.keys()
+            banners = list(banners.keys())
 
         start = entry[edge]['start']
         if edge == 'end':

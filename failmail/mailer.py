@@ -18,7 +18,7 @@ class FailMailer(object):
             exception_info = "".join(traceback.format_exception(*sys.exc_info()))
             body = body + exception_info
         if data:
-            if not isinstance(data, basestring):
+            if not isinstance(data, str):
                 data = yaml.safe_dump([data], default_flow_style=False, allow_unicode=True)
             body = body + "\n\nWhile processing:\n{data}".format(data=data)
 

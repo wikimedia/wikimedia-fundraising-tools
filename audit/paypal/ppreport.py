@@ -3,10 +3,10 @@ import dateutil.parser
 import dateutil.tz
 import io
 import logging
-import os.path
+import os
 
 from failmail.mailer import FailMailer
-from unicode_csv_reader import unicode_csv_reader
+import csv
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
         version = [version]
 
     with io.open(path, 'r', encoding=encoding) as csvfile:
-        plainreader = unicode_csv_reader(csvfile, **dialect)
+        plainreader = csv.reader(csvfile, **dialect)
         rownum = 1
         for row in plainreader:
             column_type = row[0]
@@ -44,7 +44,7 @@ def read_encoded(path, version, callback, column_headers, encoding):
             elif column_type == 'CH':
                 column_headers = ['Column Type'] + row[1:]
             elif column_type == 'SB':
-                record = dict(zip(column_headers, row))
+                record = dict(list(zip(column_headers, row)))
                 try:
                     callback(record)
                 except Exception:

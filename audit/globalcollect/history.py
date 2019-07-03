@@ -1,11 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Parse GlobalCollect history dump and compare with Civi.
 
 Results are kept in a scratch table.
 '''
-
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from optparse import OptionParser
 import csv
 import atexit
@@ -67,7 +66,7 @@ def log(msg):
     global options, log_file
     if not log_file:
         log_file = open(options.logFile, 'a')
-        atexit.register(file.close, log_file)
+        atexit.register(log_file.close)
     log_file.write(msg + "\n")
 
 

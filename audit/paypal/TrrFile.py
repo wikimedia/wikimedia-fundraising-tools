@@ -8,10 +8,10 @@ import re
 
 import process.globals
 import frqueue.redis_wrap
-import ppreport
+from . import ppreport
 
 import civicrm.civicrm
-import paypal_api
+from . import paypal_api
 
 log = logging.getLogger(__name__)
 

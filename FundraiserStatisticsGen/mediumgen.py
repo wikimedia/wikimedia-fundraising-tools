@@ -3,7 +3,7 @@
 import pymysql as db
 import csv
 from optparse import OptionParser
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 
 def main():
@@ -49,7 +49,7 @@ def getData(host, port, username, password, database):
     cur.execute("""
         SELECT
           DATE_FORMAT(c.receive_date, "%Y-%m-%dT%00:00:00+0") as receive_date,
-          ct.utm_medium,
+          COALESCE(ct.utm_medium, ''),
           SUM(IF(c.total_amount >= 0, 1, 0)) as credit_count,
           SUM(c.total_amount) as usd_credit_total,
           AVG(c.total_amount) as usd_credit_avg,
@@ -89,22 +89,22 @@ def createSingleOutFile(stats, firstcols, filename, colnames=None):
                 reflect the primary key of stats
     """
     if colnames is None:
-        colnames = stats.itervalues().next().keys()
+        colnames = list(next(iter(stats.values())).keys())
         colindices = colnames
     else:
-        colindices = range(0, len(colnames))
+        colindices = list(range(0, len(colnames)))
 
-    if isinstance(firstcols, basestring):
+    if isinstance(firstcols, str):
         firstcols = [firstcols]
     else:
         firstcols = list(firstcols)
 
-    f = file(filename, 'w')
+    f = open(filename, 'w')
     csvf = csv.writer(f)
     csvf.writerow(firstcols + colnames)
 
     for linekey in sorted(stats.keys()):
-        if isinstance(linekey, basestring):
+        if isinstance(linekey, str):
             linekeyl = [linekey]
         else:
             linekeyl = list(linekey)

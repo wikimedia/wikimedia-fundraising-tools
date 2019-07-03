@@ -6,14 +6,14 @@ import os
 import audit.paypal.SarFile
 
 # weird thing we have to do to get better assert_equals feedback
-nose.tools.assert_equals.im_class.maxDiff = None
+nose.tools.assert_equals.__self__.maxDiff = None
 
 
 def get_csv_row(filename):
     path = os.path.dirname(__file__) + "/data/" + filename + ".csv"
     with open(path, 'r') as datafile:
         r = csv.DictReader(datafile)
-        return r.next()
+        return next(r)
 
 
 @patch("frqueue.redis_wrap.Redis")

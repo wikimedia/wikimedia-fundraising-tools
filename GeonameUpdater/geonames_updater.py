@@ -1,6 +1,6 @@
 #!/usr/bin/python3.5
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from optparse import OptionParser
 import dateutil.parser
 # import pytz
