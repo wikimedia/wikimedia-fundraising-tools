@@ -16,7 +16,7 @@ def get_csv_row(filename):
         return r.next()
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals.get_config")
 def test_subscr_signup(MockConfig, MockCivicrm, MockRedis):
@@ -40,7 +40,7 @@ def test_subscr_signup(MockConfig, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals.get_config")
 def test_subscr_cancel(MockConfig, MockCivicrm, MockRedis):

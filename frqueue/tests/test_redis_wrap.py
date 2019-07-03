@@ -1,6 +1,6 @@
 import json
 import mock
-from queue.redis_wrap import Redis
+from frqueue.redis_wrap import Redis
 
 # TODO:
 # Test source_meta

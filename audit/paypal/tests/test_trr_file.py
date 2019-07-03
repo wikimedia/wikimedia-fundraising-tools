@@ -103,7 +103,7 @@ def get_csv_row(filename):
         return r.next()
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 @patch("audit.paypal.paypal_api.PaypalApiClassic")
@@ -129,7 +129,7 @@ def test_recurring_charge_without_subscription(MockPaypalApi, MockGlobals, MockC
     MockRedis().send.assert_has_calls([])
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
@@ -151,7 +151,7 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
@@ -174,7 +174,7 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
@@ -197,7 +197,7 @@ def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
@@ -220,7 +220,7 @@ def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
@@ -243,7 +243,7 @@ def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_refund_duplicate(MockGlobals, MockCivicrm, MockRedis):
@@ -261,7 +261,7 @@ def test_refund_duplicate(MockGlobals, MockCivicrm, MockRedis):
     MockRedis().send.assert_has_calls([])
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_recurring(MockGlobals, MockCivicrm, MockRedis):
@@ -283,7 +283,7 @@ def test_recurring(MockGlobals, MockCivicrm, MockRedis):
     nose.tools.assert_equals(expected, actual)
 
 
-@patch("queue.redis_wrap.Redis")
+@patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_duplicate_recurring(MockGlobals, MockCivicrm, MockRedis):

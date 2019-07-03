@@ -6,7 +6,7 @@ See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Subs
 import logging
 
 import process.globals
-import queue.redis_wrap
+import frqueue.redis_wrap
 import ppreport
 
 import civicrm.civicrm
@@ -132,6 +132,6 @@ class SarFile(object):
 
     def send(self, msg):
         if not self.redis:
-            self.redis = queue.redis_wrap.Redis()
+            self.redis = frqueue.redis_wrap.Redis()
 
         self.redis.send('recurring', msg)
