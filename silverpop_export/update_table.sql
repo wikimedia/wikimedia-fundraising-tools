@@ -412,7 +412,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     timezone,
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
-    CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS opted_in,
+    CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,
     highest_usd_amount,
     highest_native_amount,
     highest_native_currency,
