@@ -1,7 +1,7 @@
-#!/usr/bin/python2
+#!/usr/bin/python3.5
 
 from optparse import OptionParser
-import MySQLdb as MySQL
+import pymysql as MySQL
 import csv
 import re
 import getpass

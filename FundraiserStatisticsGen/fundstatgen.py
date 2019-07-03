@@ -6,7 +6,7 @@ Fundraiser Statistics Generation
 Queries the CiviCRM database to
 """
 
-import MySQLdb as db
+import pymysql as db
 import csv
 import json
 from optparse import OptionParser
