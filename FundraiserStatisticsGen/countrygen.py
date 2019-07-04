@@ -3,7 +3,7 @@
 import pymysql as db
 import csv
 from optparse import OptionParser
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
     workingDir = args[0]
 
     # Load the configuration from the file
-    config = SafeConfigParser()
+    config = ConfigParser()
     fileList = ['./fundstatgen.cfg']
     if options.configFile is not None:
         fileList.append(options.configFile)

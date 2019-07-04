@@ -4,7 +4,7 @@ Parse GlobalCollect history dump and compare with Civi.
 
 Results are kept in a scratch table.
 '''
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from optparse import OptionParser
 import csv
 import atexit
@@ -27,7 +27,7 @@ def main():
     path = options.auditFile
     infile = csv.DictReader(open(path, "rU"), delimiter=";")
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     config.read(options.configFile)
 
     db = DbConnection(**config._sections['mysql'])

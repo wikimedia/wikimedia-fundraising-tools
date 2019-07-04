@@ -10,7 +10,7 @@ import pymysql as db
 import csv
 import json
 from optparse import OptionParser
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 import logging
 from logging.handlers import SysLogHandler
 
@@ -29,7 +29,7 @@ def main():
     workingDir = args[0]
 
     # Load the configuration from the file
-    config = SafeConfigParser()
+    config = ConfigParser()
     fileList = [CONFIG_DEFAULT_PATH]
     if options.configFile:
         fileList.append(options.configFile)
