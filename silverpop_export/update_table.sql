@@ -253,9 +253,12 @@ INSERT INTO silverpop_export_stat
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
   )
   SELECT
-    e.email, MAX(ex.id), SUM(ct.total_amount), COUNT(*),
+    e.email,
+    MAX(ex.id),
+    SUM(donor.lifetime_usd_total) as lifetime_usd_total,
+    SUM(donor.number_donations) as number_donations,
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
-    MIN(ct.receive_date),
+    MIN(donor.first_donation_date) as first_donation_date,
     SUM(donor.total_2018) as total_2018,
     SUM(donor.total_2019) as total_2019,
     SUM(donor.total_2020) as total_2020,

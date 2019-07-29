@@ -116,7 +116,10 @@ def test_refund_history():
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 20.15, 'CAD'),
         (2, 35.15, 'CAD');
-    """])
+     """, """
+        insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, number_donations) values
+            (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', 1);
+     """])
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, latest_usd_amount, latest_donation  from silverpop_export")
@@ -146,6 +149,9 @@ def test_first_donation():
         (1, 20.15, 'CAD'),
         (2, 35.15, 'CAD'),
         (3, 45.25, 'CAD');
+    """, """
+       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+       (1, 60.70, 45.25, 35.35, 'CAD', '2016-05-05');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -185,6 +191,9 @@ def test_timezone():
     insert into contribution_tracking (contribution_id, country) values
         (1, 'US'),
         (2, 'US');
+    """, """
+       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+       (1, 55.30, 25.25, 35.15, 'USD', '2015-01-03');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -214,6 +223,9 @@ def test_native_amount():
         (1, 1000, 'JPY'),
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
+        """, """
+    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+         (1, 30.45, 10.00, 10.00, 'USD', '2015-01-03');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -244,6 +256,9 @@ def test_currency_symbol():
         (1, 1000, 'JPY'),
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
+            """, """
+    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+        (1, 30.45, 10.00, 10.00, 'USD', '2015-01-03');
     """])
 
     cursor = conn.db_conn.cursor()
