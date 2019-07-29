@@ -117,8 +117,8 @@ def test_refund_history():
         (1, 20.15, 'CAD'),
         (2, 35.15, 'CAD');
      """, """
-        insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, number_donations) values
-            (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', 1);
+        insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, number_donations) values
+            (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', '2015-01-03', 1);
      """])
 
     cursor = conn.db_conn.cursor()
@@ -150,8 +150,8 @@ def test_first_donation():
         (2, 35.15, 'CAD'),
         (3, 45.25, 'CAD');
     """, """
-       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
-       (1, 60.70, 45.25, 35.35, 'CAD', '2016-05-05');
+       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
+       (1, 60.70, 45.25, 35.35, 'CAD', '2016-05-05', '2017-05-05');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -257,8 +257,8 @@ def test_currency_symbol():
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
             """, """
-    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
-        (1, 30.45, 10.00, 10.00, 'USD', '2015-01-03');
+    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
+        (1, 30.45, 10.00, 10.00, 'GBP', '2015-01-03', '2017-07-07');
     """])
 
     cursor = conn.db_conn.cursor()

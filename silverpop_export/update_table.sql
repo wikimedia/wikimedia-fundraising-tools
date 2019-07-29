@@ -134,26 +134,19 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
-    ex.original_currency,
-    COALESCE(cur.symbol, ex.original_currency),
-    ex.original_amount,
-    ct.total_amount,
-    ct.receive_date
+    d.last_donation_currency,
+    COALESCE(cur.symbol, d.last_donation_currency),
+    d.last_donation_amount,
+    d.last_donation_usd,
+    d.last_donation_date
   FROM
     silverpop_export_staging e
-    INNER JOIN civicrm.civicrm_contribution ct
-      ON ct.contact_id = e.contact_id
-    INNER JOIN civicrm.wmf_contribution_extra ex
-      ON ex.entity_id = ct.id
+    INNER JOIN civicrm.wmf_donor d ON d.entity_id = e.contact_id
     LEFT JOIN civicrm.civicrm_currency cur
-      ON cur.name = ex.original_currency
+      ON cur.name = d.last_donation_currency
   WHERE
-    ct.receive_date IS NOT NULL AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
-  ORDER BY
-    ct.receive_date DESC,
-    ct.total_amount DESC
+    d.last_donation_date IS NOT NULL
+  ORDER BY last_donation_date DESC, d.last_donation_usd DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
 CREATE TABLE silverpop_export_highest(
