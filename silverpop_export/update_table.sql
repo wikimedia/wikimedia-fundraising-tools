@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
 
+  -- Endowment stats ----
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations  decimal(20,2) not null default 0,
+
   -- Latest contribution statistics
   latest_currency varchar(3) not null default '',
   latest_currency_symbol varchar(8) not null default '',
@@ -235,19 +240,28 @@ CREATE TABLE silverpop_export_stat (
   total_2018 decimal(20,2) not null default 0,
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations  decimal(20,2) not null default 0,
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
 
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date, total_2018, total_2019, total_2020)
+  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
+   total_2018, total_2019, total_2020,
+   endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
+  )
   SELECT
     e.email, MAX(ex.id), SUM(ct.total_amount), COUNT(*),
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
     MIN(ct.receive_date),
     SUM(donor.total_2018) as total_2018,
     SUM(donor.total_2019) as total_2019,
-    SUM(donor.total_2020) as total_2020
+    SUM(donor.total_2020) as total_2020,
+    MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
+    MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
+    SUM(donor.endowment_number_donations) as endowment_number_donations
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
@@ -295,6 +309,9 @@ UPDATE silverpop_export_staging ex
     ex.total_2018 = exs.total_2018,
     ex.total_2019 = exs.total_2019,
     ex.total_2020 = exs.total_2020,
+    ex.endowment_last_donation_date = exs.endowment_last_donation_date,
+    ex.endowment_first_donation_date = exs.endowment_first_donation_date,
+    ex.endowment_number_donations = exs.endowment_number_donations,
     ex.donation_count = exs.cnt_total,
     ex.donation_count = COALESCE(exs.cnt_total, 0),
     ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
@@ -386,6 +403,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
 
+    -- Endowment stats ----
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations decimal(20,2) not null default 0,
+
   -- Latest contribution statistics
   latest_currency varchar(3),
   latest_currency_symbol varchar(8),
@@ -413,13 +435,14 @@ INSERT INTO silverpop_export (
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,timezone,
-  total_2018, total_2019, total_2020)
+  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,timezone,
-  total_2018, total_2019, total_2020
+  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
+  endowment_number_donations
 FROM silverpop_export_staging
 WHERE opted_out=0
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
@@ -453,5 +476,8 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date,
     total_2018,
     total_2019,
-    total_2020
+    total_2020,
+    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
+    IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
+    endowment_number_donations
   FROM silverpop_export;
