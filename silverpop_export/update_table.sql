@@ -36,6 +36,18 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   lifetime_usd_total decimal(20,2) not null default 0,
   donation_count int not null default 0,
 
+  -- Aggregate contribution statistics
+  -- Sadly these would need updating next year. I have doubts about doing something more
+  -- clever without reviewing the script more broadly as it's kinda tricky in straight sql
+  total_2018 decimal(20,2) not null default 0,
+  total_2019 decimal(20,2) not null default 0,
+  total_2020 decimal(20,2) not null default 0,
+
+  -- Endowment stats ----
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations  decimal(20,2) not null default 0,
+
   -- Latest contribution statistics
   latest_currency varchar(3) not null default '',
   latest_currency_symbol varchar(8) not null default '',
@@ -122,26 +134,19 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
-    ex.original_currency,
-    COALESCE(cur.symbol, ex.original_currency),
-    ex.original_amount,
-    ct.total_amount,
-    ct.receive_date
+    d.last_donation_currency,
+    COALESCE(cur.symbol, d.last_donation_currency),
+    d.last_donation_amount,
+    d.last_donation_usd,
+    d.last_donation_date
   FROM
     silverpop_export_staging e
-    INNER JOIN civicrm.civicrm_contribution ct
-      ON ct.contact_id = e.contact_id
-    INNER JOIN civicrm.wmf_contribution_extra ex
-      ON ex.entity_id = ct.id
+    INNER JOIN civicrm.wmf_donor d ON d.entity_id = e.contact_id
     LEFT JOIN civicrm.civicrm_currency cur
-      ON cur.name = ex.original_currency
+      ON cur.name = d.last_donation_currency
   WHERE
-    ct.receive_date IS NOT NULL AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
-  ORDER BY
-    ct.receive_date DESC,
-    ct.total_amount DESC
+    d.last_donation_date IS NOT NULL
+  ORDER BY last_donation_date DESC, d.last_donation_usd DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
 CREATE TABLE silverpop_export_highest(
@@ -224,19 +229,39 @@ CREATE TABLE silverpop_export_stat (
   total_usd decimal(20,2),
   cnt_total int unsigned,
   first_donation_date datetime,
+    -- Aggregate contribution statistics
+  total_2018 decimal(20,2) not null default 0,
+  total_2019 decimal(20,2) not null default 0,
+  total_2020 decimal(20,2) not null default 0,
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations  decimal(20,2) not null default 0,
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
 
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date)
+  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
+   total_2018, total_2019, total_2020,
+   endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
+  )
   SELECT
-    e.email, MAX(ex.id), SUM(ct.total_amount), COUNT(*),
+    e.email,
+    MAX(ex.id),
+    SUM(donor.lifetime_usd_total) as lifetime_usd_total,
+    SUM(donor.number_donations) as number_donations,
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
-    MIN(ct.receive_date)
+    MIN(donor.first_donation_date) as first_donation_date,
+    SUM(donor.total_2018) as total_2018,
+    SUM(donor.total_2019) as total_2019,
+    SUM(donor.total_2020) as total_2020,
+    MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
+    MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
+    SUM(donor.endowment_number_donations) as endowment_number_donations
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
   JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
+  LEFT JOIN wmf_donor donor ON donor.entity_id = ct.contact_id
   WHERE ct.receive_date IS NOT NULL AND
     ct.total_amount > 0 AND -- Refunds don't count
     ct.contribution_status_id = 1 -- Only completed status
@@ -276,18 +301,25 @@ UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
   LEFT JOIN silverpop_export_address addr ON ex.email = addr.email
   SET
-    ex.lifetime_usd_total = exs.total_usd,
+    ex.lifetime_usd_total = COALESCE(exs.total_usd, 0),
+    ex.total_2018 = exs.total_2018,
+    ex.total_2019 = exs.total_2019,
+    ex.total_2020 = exs.total_2020,
+    ex.endowment_last_donation_date = exs.endowment_last_donation_date,
+    ex.endowment_first_donation_date = exs.endowment_first_donation_date,
+    ex.endowment_number_donations = exs.endowment_number_donations,
     ex.donation_count = exs.cnt_total,
-    ex.has_recurred_donation = exs.has_recurred_donation,
+    ex.donation_count = COALESCE(exs.cnt_total, 0),
+    ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
     ex.first_donation_date = exs.first_donation_date,
-    ex.latest_currency = lt.latest_currency,
-    ex.latest_currency_symbol = lt.latest_currency_symbol,
-    ex.latest_native_amount = lt.latest_native_amount,
-    ex.latest_usd_amount = lt.latest_usd_amount,
+    ex.latest_currency = COALESCE(lt.latest_currency, ''),
+    ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
+    ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
+    ex.latest_usd_amount = COALESCE(lt.latest_usd_amount, 0),
     ex.latest_donation = lt.latest_donation,
-    ex.highest_native_currency = hg.highest_native_currency,
-    ex.highest_native_amount = hg.highest_native_amount,
-    ex.highest_usd_amount = hg.highest_usd_amount,
+    ex.highest_native_currency = COALESCE(hg.highest_native_currency, ''),
+    ex.highest_native_amount = COALESCE(hg.highest_native_amount, 0),
+    ex.highest_usd_amount = COALESCE(hg.highest_usd_amount, 0),
     ex.highest_donation_date = hg.highest_donation_date,
     ex.city = addr.city,
     ex.country = addr.country,
@@ -362,6 +394,16 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   lifetime_usd_total decimal(20,2),
   donation_count int,
 
+  -- Aggregate contribution statistics
+  total_2018 decimal(20,2) not null default 0,
+  total_2019 decimal(20,2) not null default 0,
+  total_2020 decimal(20,2) not null default 0,
+
+    -- Endowment stats ----
+  endowment_last_donation_date datetime null,
+  endowment_first_donation_date datetime null,
+  endowment_number_donations decimal(20,2) not null default 0,
+
   -- Latest contribution statistics
   latest_currency varchar(3),
   latest_currency_symbol varchar(8),
@@ -388,12 +430,15 @@ INSERT INTO silverpop_export (
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
-  latest_donation, first_donation_date,city,country,state,postal_code,timezone )
+  latest_donation, first_donation_date,city,country,state,postal_code,timezone,
+  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
-  latest_donation,first_donation_date,city,country,state,postal_code,timezone
+  latest_donation,first_donation_date,city,country,state,postal_code,timezone,
+  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
+  endowment_number_donations
 FROM silverpop_export_staging
 WHERE opted_out=0
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
@@ -412,7 +457,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     timezone,
     SUBSTRING(preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
-    CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS opted_in,
+    CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,
     highest_usd_amount,
     highest_native_amount,
     highest_native_currency,
@@ -424,5 +469,11 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_currency_symbol,
     latest_native_amount,
     donation_count,
-    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date
+    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date,
+    total_2018,
+    total_2019,
+    total_2020,
+    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
+    IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
+    endowment_number_donations
   FROM silverpop_export;

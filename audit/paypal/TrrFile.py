@@ -7,7 +7,7 @@ import logging
 import re
 
 import process.globals
-import queue.redis_wrap
+import frqueue.redis_wrap
 import ppreport
 
 import civicrm.civicrm
@@ -238,6 +238,6 @@ class TrrFile(object):
 
     def send(self, queue_name, msg):
         if not self.redis:
-            self.redis = queue.redis_wrap.Redis()
+            self.redis = frqueue.redis_wrap.Redis()
 
         self.redis.send(queue_name, msg)

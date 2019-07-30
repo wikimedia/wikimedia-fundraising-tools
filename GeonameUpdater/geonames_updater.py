@@ -1,10 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/python3.5
 
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 import dateutil.parser
 # import pytz
-import MySQLdb as MySQL
+import pymysql as MySQL
 import sys
 import os
 import re

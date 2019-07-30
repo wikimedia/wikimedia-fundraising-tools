@@ -2,7 +2,7 @@ ConfigParser
 export
 gdata
 python-Levenshtein
-MySQL-python>=1.2.5
+pymysql
 netaddr
 paramiko>=1.16.0
 python-dateutil
