@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import pymysql as db
+import MySQLdb as db
 import csv
 from optparse import OptionParser
 from ConfigParser import SafeConfigParser
