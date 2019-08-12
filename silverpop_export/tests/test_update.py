@@ -2,7 +2,7 @@
 import datetime
 from decimal import Decimal
 import mock
-import pymysql
+import MySQLdb
 import os
 import warnings
 
@@ -357,7 +357,7 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
             MockConfig().log_civicrm_db.db = db_name
 
             # Silence predictable warnings about "if not exists" table stuff.
-            warnings.filterwarnings('ignore', category=pymysql.Warning)
+            warnings.filterwarnings('ignore', category=MySQLdb.Warning)
 
             # Create fixtures
             tests_dir = os.path.dirname(__file__)
@@ -376,7 +376,7 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
                     conn.execute(statement)
 
             # Reenable warnings
-            warnings.filterwarnings('default', category=pymysql.Warning)
+            warnings.filterwarnings('default', category=MySQLdb.Warning)
 
             # Run the bulk update.
             # FIXME: Implementation should provide this as a single function.
