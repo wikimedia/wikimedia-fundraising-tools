@@ -1,7 +1,7 @@
 '''
 Mysql wrapper providing query composition
 '''
-import pymysql
+import MySQLdb as Dbi
 import atexit
 import logging
 import os
@@ -15,9 +15,8 @@ log = logging.getLogger(__name__)
 
 class Connection(object):
     def __init__(self, debug=False, **kw):
-        kw['client_flag'] = pymysql.constants.CLIENT.MULTI_STATEMENTS
         self.connectionArgs = kw
-        self.db_conn = pymysql.connect(**kw)
+        self.db_conn = Dbi.connect(**kw)
         self.debug = debug
         self.connection_id = self.execute('SELECT CONNECTION_ID() AS cid', None, 0)[0]['cid']
 
@@ -25,7 +24,7 @@ class Connection(object):
         self.db_conn.commit()
 
     def execute(self, sql, params=None, timeout=0):
-        cursor = self.db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+        cursor = self.db_conn.cursor(cursorclass=Dbi.cursors.DictCursor)
         deathClock = None
 
         if self.debug:
@@ -56,7 +55,7 @@ class Connection(object):
 
     def kill_connection(self):
         log.warning('Query taking too long - killing connection {}'.format(self.connection_id))
-        killerConnection = pymysql.connect(**self.connectionArgs)
+        killerConnection = Dbi.connect(**self.connectionArgs)
         cursor = killerConnection.cursor()
         cursor.execute('KILL CONNECTION {}'.format(self.connection_id))
         killerConnection.close()
