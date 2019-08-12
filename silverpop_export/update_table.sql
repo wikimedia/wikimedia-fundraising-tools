@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   -- Aggregate contribution statistics
   -- Sadly these would need updating next year. I have doubts about doing something more
   -- clever without reviewing the script more broadly as it's kinda tricky in straight sql
+  total_2014 decimal(20,2) not null default 0,
+  total_2015 decimal(20,2) not null default 0,
+  total_2016 decimal(20,2) not null default 0,
+  total_2017 decimal(20,2) not null default 0,
   total_2018 decimal(20,2) not null default 0,
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
@@ -230,6 +234,10 @@ CREATE TABLE silverpop_export_stat (
   cnt_total int unsigned,
   first_donation_date datetime,
     -- Aggregate contribution statistics
+  total_2014 decimal(20,2) not null default 0,
+  total_2015 decimal(20,2) not null default 0,
+  total_2016 decimal(20,2) not null default 0,
+  total_2017 decimal(20,2) not null default 0,
   total_2018 decimal(20,2) not null default 0,
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
@@ -242,6 +250,7 @@ CREATE TABLE silverpop_export_stat (
 
 INSERT INTO silverpop_export_stat
   (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
+   total_2014, total_2015, total_2016, total_2017,
    total_2018, total_2019, total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
   )
@@ -252,6 +261,10 @@ INSERT INTO silverpop_export_stat
     SUM(donor.number_donations) as number_donations,
     MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
     MIN(donor.first_donation_date) as first_donation_date,
+    SUM(donor.total_2014) as total_2014,
+    SUM(donor.total_2015) as total_2015,
+    SUM(donor.total_2016) as total_2016,
+    SUM(donor.total_2017) as total_2017,
     SUM(donor.total_2018) as total_2018,
     SUM(donor.total_2019) as total_2019,
     SUM(donor.total_2020) as total_2020,
@@ -302,6 +315,10 @@ UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_address addr ON ex.email = addr.email
   SET
     ex.lifetime_usd_total = COALESCE(exs.total_usd, 0),
+    ex.total_2014 = exs.total_2014,
+    ex.total_2015 = exs.total_2015,
+    ex.total_2016 = exs.total_2016,
+    ex.total_2017 = exs.total_2017,
     ex.total_2018 = exs.total_2018,
     ex.total_2019 = exs.total_2019,
     ex.total_2020 = exs.total_2020,
@@ -395,6 +412,10 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   donation_count int,
 
   -- Aggregate contribution statistics
+  total_2014 decimal(20,2) not null default 0,
+  total_2015 decimal(20,2) not null default 0,
+  total_2016 decimal(20,2) not null default 0,
+  total_2017 decimal(20,2) not null default 0,
   total_2018 decimal(20,2) not null default 0,
   total_2019 decimal(20,2) not null default 0,
   total_2020 decimal(20,2) not null default 0,
@@ -431,12 +452,14 @@ INSERT INTO silverpop_export (
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,timezone,
+  total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,timezone,
+  total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations
 FROM silverpop_export_staging
@@ -470,6 +493,10 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_native_amount,
     donation_count,
     IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date,
+    total_2014,
+    total_2015,
+    total_2016,
+    total_2017,
     total_2018,
     total_2019,
     total_2020,
