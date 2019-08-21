@@ -3,7 +3,7 @@
 -- TODO: Most of the complexity will go away once our contacts' exact email
 -- matches have been deduped.
 --
--- Timing is from a 2016-04-07 production job.
+-- Timing is from a 2019-08-22 Staging test.
 
 SET autocommit = 1;
 
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
--- (15 minutes)
+-- (11 min 17.25 sec)
 INSERT INTO silverpop_export_staging
   (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in)
   SELECT
@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded(
 ) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
 
 -- Same no-op update trick as with silverpop_export_latest
+-- 44 min 38.01 sec
 INSERT INTO silverpop_excluded (email)
   SELECT email
     FROM log_civicrm.log_civicrm_email e
@@ -134,7 +135,7 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
 -- the latter throws warnings.
--- (12 minutes)
+-- (8 min 6.67 sec)
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
@@ -161,6 +162,7 @@ CREATE TABLE silverpop_export_highest(
   highest_donation_date datetime
 ) COLLATE 'utf8_unicode_ci';
 
+-- (18 min 13.39 sec)
 INSERT INTO silverpop_export_highest
   SELECT
     e.email,
@@ -197,6 +199,7 @@ CREATE TABLE silverpop_export_dedupe_email (
   INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
+-- 1 min 31.96 sec
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
    SELECT email, max(id) maxid, max(opted_out) opted_out
      FROM silverpop_export_staging
@@ -206,6 +209,7 @@ INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
 
 -- We pull in language from the parent table so that we
 -- can preserve it and not propagate nulls
+-- 30.85 sec
 UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
   SET
     exde.preferred_language = ex.preferred_language
@@ -213,11 +217,13 @@ UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
     ex.email = exde.email AND
     ex.preferred_language IS NOT NULL;
 
+-- (1 min 2.15 sec
 DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
   WHERE
     silverpop_export_staging.email = silverpop_export_dedupe_email.email AND
     silverpop_export_staging.id != silverpop_export_dedupe_email.maxid;
 
+--  (18.34 sec)
 UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
@@ -247,7 +253,7 @@ CREATE TABLE silverpop_export_stat (
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
-
+-- 44 min 41.82 sec
 INSERT INTO silverpop_export_stat
   (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
    total_2014, total_2015, total_2016, total_2017,
