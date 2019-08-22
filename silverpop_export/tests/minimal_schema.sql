@@ -117,11 +117,23 @@ drop table if exists civicrm_contribution;
 create table civicrm_contribution (
     id int(10) unsigned,
     contact_id int(10) unsigned,
+    contribution_recur_id int(10) unsigned,
     receive_date datetime,
     total_amount decimal(20,2),
     trxn_id varchar(255) COLLATE utf8_unicode_ci,
-    contribution_status_id int(10) unsigned
+    contribution_status_id int(10) unsigned,
+    financial_type_id int(10) unsigned
 );
+
+drop table if exists civicrm_contribution_recur;
+CREATE TABLE civicrm_contribution_recur
+(
+    id int(10) unsigned,
+    contact_id int(10) unsigned NOT NULL COMMENT 'Foreign key to civicrm_contact.id.',
+    amount decimal(20, 2)   NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
+    contribution_status_id int(10) unsigned DEFAULT '1'
+);
+
 
 drop table if exists civicrm_address;
 create table civicrm_address (

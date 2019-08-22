@@ -109,9 +109,9 @@ def test_refund_history():
     insert into civicrm_contact (id) values
         (1);
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 15.25, 'xyz123', 1),
-        (2, 1, '2016-05-05', 25.25, 'abc456', 9);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 1, 1),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 9, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 20.15, 'CAD'),
@@ -140,10 +140,10 @@ def test_first_donation():
     insert into civicrm_contact (id) values
         (1);
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 15.25, 'xyz123', 9),
-        (2, 1, '2016-05-05', 25.25, 'abc456', 1),
-        (3, 1, '2017-05-05', 35.35, 'def789', 1);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 9, 1),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 1, 1),
+        (3, 1, '2017-05-05', 35.35, 'def789', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 20.15, 'CAD'),
@@ -180,9 +180,9 @@ def test_timezone():
     insert into civicrm_address (contact_id, is_primary, country_id, postal_code, timezone) values
         (1, 1, 1, '10027', 'UTC-5');
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 15.25, 'xyz123', 1),
-        (2, 1, '2016-05-05', 25.25, 'abc456', 1);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 15.25, 'xyz123', 1, 1),
+        (2, 1, '2016-05-05', 25.25, 'abc456', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 20.15, 'USD'),
@@ -214,10 +214,10 @@ def test_native_amount():
     insert into civicrm_contact (id) values
         (1);
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 9.50, 'xyz123', 1),
-        (2, 1, '2016-07-07', 10.95, 'nnn777', 1),
-        (3, 1, '2016-05-05', 10.00, 'abc456', 1);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1, 1),
+        (2, 1, '2016-07-07', 10.95, 'nnn777', 1, 1),
+        (3, 1, '2016-05-05', 10.00, 'abc456', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 1000, 'JPY'),
@@ -247,10 +247,10 @@ def test_currency_symbol():
     insert into civicrm_contact (id) values
         (1);
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 9.50, 'xyz123', 1),
-        (2, 1, '2017-07-07', 10.95, 'nnn777', 1),
-        (3, 1, '2016-05-05', 10.00, 'abc456', 1);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1,1),
+        (2, 1, '2017-07-07', 10.95, 'nnn777', 1, 1),
+        (3, 1, '2016-05-05', 10.00, 'abc456', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 1000, 'JPY'),
@@ -298,8 +298,8 @@ def test_bad_ct_country():
     insert into civicrm_contact (id) values
         (1);
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id) values
-        (1, 1, '2015-01-03', 9.50, 'xyz123', 1);
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 1000, 'JPY');

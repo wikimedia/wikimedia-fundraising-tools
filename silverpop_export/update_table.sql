@@ -179,7 +179,8 @@ INSERT INTO silverpop_export_highest
     ex.entity_id = ct.id AND
     ct.receive_date IS NOT NULL AND
     ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
+    ct.contribution_status_id = 1 AND-- 'Completed'
+    ct.financial_type_id <> 26 -- endowments
   ORDER BY
     ct.total_amount DESC,
     ct.receive_date DESC
@@ -235,7 +236,7 @@ UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
 CREATE TABLE silverpop_export_stat (
   email varchar(255) PRIMARY KEY,
   exid INT,
-  has_recurred_donation tinyint(1),
+  has_recurred_donation tinyint(1) not null default 0,
   total_usd decimal(20,2),
   cnt_total int unsigned,
   first_donation_date datetime,
@@ -253,9 +254,9 @@ CREATE TABLE silverpop_export_stat (
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
--- 44 min 41.82 sec
+-- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
+  (email, exid, total_usd, cnt_total, first_donation_date,
    total_2014, total_2015, total_2016, total_2017,
    total_2018, total_2019, total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
@@ -263,28 +264,37 @@ INSERT INTO silverpop_export_stat
   SELECT
     e.email,
     MAX(ex.id),
-    SUM(donor.lifetime_usd_total) as lifetime_usd_total,
-    SUM(donor.number_donations) as number_donations,
-    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
+    COALESCE(SUM(donor.lifetime_usd_total), 0) as lifetime_usd_total,
+    COALESCE(SUM(donor.number_donations), 0) as number_donations,
     MIN(donor.first_donation_date) as first_donation_date,
-    SUM(donor.total_2014) as total_2014,
-    SUM(donor.total_2015) as total_2015,
-    SUM(donor.total_2016) as total_2016,
-    SUM(donor.total_2017) as total_2017,
-    SUM(donor.total_2018) as total_2018,
-    SUM(donor.total_2019) as total_2019,
-    SUM(donor.total_2020) as total_2020,
+    COALESCE(SUM(donor.total_2014), 0) as total_2014,
+    COALESCE(SUM(donor.total_2015), 0) as total_2015,
+    COALESCE(SUM(donor.total_2016), 0) as total_2016,
+    COALESCE(SUM(donor.total_2017), 0) as total_2017,
+    COALESCE(SUM(donor.total_2018), 0) as total_2018,
+    COALESCE(SUM(donor.total_2019), 0) as total_2019,
+    COALESCE(SUM(donor.total_2020), 0) as total_2020,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
-    SUM(donor.endowment_number_donations) as endowment_number_donations
+    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
-  JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
-  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = ct.contact_id
-  WHERE ct.receive_date IS NOT NULL AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- Only completed status
+  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+  # We need to be careful with this group by. We want the sum by email but we don't want
+  # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
+
+-- 1 min 31.95 sec
+UPDATE
+  civicrm.civicrm_contribution_recur recur
+  INNER JOIN civicrm.civicrm_contribution contributions
+    ON recur.id = contributions.contribution_recur_id
+    AND contributions.contribution_status_id = 1
+    AND contributions.financial_type_id != 26
+    AND contributions.total_amount > 0
+  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id
+  INNER JOIN silverpop_export_stat stat ON stat.email = email.email
+  SET has_recurred_donation = 1;
 
 -- Postal addresses by email
 CREATE TABLE silverpop_export_address (
