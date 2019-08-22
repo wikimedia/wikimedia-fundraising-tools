@@ -3,7 +3,7 @@
 -- TODO: Most of the complexity will go away once our contacts' exact email
 -- matches have been deduped.
 --
--- Timing is from a 2016-04-07 production job.
+-- Timing is from a 2019-08-22 Staging test.
 
 SET autocommit = 1;
 
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
--- (15 minutes)
+-- (11 min 17.25 sec)
 INSERT INTO silverpop_export_staging
   (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in)
   SELECT
@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded(
 ) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
 
 -- Same no-op update trick as with silverpop_export_latest
+-- 44 min 38.01 sec
 INSERT INTO silverpop_excluded (email)
   SELECT email
     FROM log_civicrm.log_civicrm_email e
@@ -134,7 +135,7 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
 -- the latter throws warnings.
--- (12 minutes)
+-- (8 min 6.67 sec)
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
@@ -161,6 +162,7 @@ CREATE TABLE silverpop_export_highest(
   highest_donation_date datetime
 ) COLLATE 'utf8_unicode_ci';
 
+-- (18 min 13.39 sec)
 INSERT INTO silverpop_export_highest
   SELECT
     e.email,
@@ -177,7 +179,8 @@ INSERT INTO silverpop_export_highest
     ex.entity_id = ct.id AND
     ct.receive_date IS NOT NULL AND
     ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
+    ct.contribution_status_id = 1 AND-- 'Completed'
+    ct.financial_type_id <> 26 -- endowments
   ORDER BY
     ct.total_amount DESC,
     ct.receive_date DESC
@@ -197,6 +200,7 @@ CREATE TABLE silverpop_export_dedupe_email (
   INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
+-- 1 min 31.96 sec
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
    SELECT email, max(id) maxid, max(opted_out) opted_out
      FROM silverpop_export_staging
@@ -206,6 +210,7 @@ INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
 
 -- We pull in language from the parent table so that we
 -- can preserve it and not propagate nulls
+-- 30.85 sec
 UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
   SET
     exde.preferred_language = ex.preferred_language
@@ -213,11 +218,13 @@ UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
     ex.email = exde.email AND
     ex.preferred_language IS NOT NULL;
 
+-- (1 min 2.15 sec
 DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
   WHERE
     silverpop_export_staging.email = silverpop_export_dedupe_email.email AND
     silverpop_export_staging.id != silverpop_export_dedupe_email.maxid;
 
+--  (18.34 sec)
 UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
@@ -229,7 +236,7 @@ UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
 CREATE TABLE silverpop_export_stat (
   email varchar(255) PRIMARY KEY,
   exid INT,
-  has_recurred_donation tinyint(1),
+  has_recurred_donation tinyint(1) not null default 0,
   total_usd decimal(20,2),
   cnt_total int unsigned,
   first_donation_date datetime,
@@ -247,9 +254,9 @@ CREATE TABLE silverpop_export_stat (
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
-
+-- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, has_recurred_donation, first_donation_date,
+  (email, exid, total_usd, cnt_total, first_donation_date,
    total_2014, total_2015, total_2016, total_2017,
    total_2018, total_2019, total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
@@ -257,28 +264,37 @@ INSERT INTO silverpop_export_stat
   SELECT
     e.email,
     MAX(ex.id),
-    SUM(donor.lifetime_usd_total) as lifetime_usd_total,
-    SUM(donor.number_donations) as number_donations,
-    MAX(IF(SUBSTRING(ct.trxn_id, 1, 9) = 'RECURRING', 1, 0)),
+    COALESCE(SUM(donor.lifetime_usd_total), 0) as lifetime_usd_total,
+    COALESCE(SUM(donor.number_donations), 0) as number_donations,
     MIN(donor.first_donation_date) as first_donation_date,
-    SUM(donor.total_2014) as total_2014,
-    SUM(donor.total_2015) as total_2015,
-    SUM(donor.total_2016) as total_2016,
-    SUM(donor.total_2017) as total_2017,
-    SUM(donor.total_2018) as total_2018,
-    SUM(donor.total_2019) as total_2019,
-    SUM(donor.total_2020) as total_2020,
+    COALESCE(SUM(donor.total_2014), 0) as total_2014,
+    COALESCE(SUM(donor.total_2015), 0) as total_2015,
+    COALESCE(SUM(donor.total_2016), 0) as total_2016,
+    COALESCE(SUM(donor.total_2017), 0) as total_2017,
+    COALESCE(SUM(donor.total_2018), 0) as total_2018,
+    COALESCE(SUM(donor.total_2019), 0) as total_2019,
+    COALESCE(SUM(donor.total_2020), 0) as total_2020,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
-    SUM(donor.endowment_number_donations) as endowment_number_donations
+    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
   JOIN silverpop_export_staging ex ON e.email=ex.email
-  JOIN civicrm.civicrm_contribution ct ON e.contact_id=ct.contact_id
-  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = ct.contact_id
-  WHERE ct.receive_date IS NOT NULL AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- Only completed status
+  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+  # We need to be careful with this group by. We want the sum by email but we don't want
+  # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
+
+-- 1 min 31.95 sec
+UPDATE
+  civicrm.civicrm_contribution_recur recur
+  INNER JOIN civicrm.civicrm_contribution contributions
+    ON recur.id = contributions.contribution_recur_id
+    AND contributions.contribution_status_id = 1
+    AND contributions.financial_type_id != 26
+    AND contributions.total_amount > 0
+  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id
+  INNER JOIN silverpop_export_stat stat ON stat.email = email.email
+  SET has_recurred_donation = 1;
 
 -- Postal addresses by email
 CREATE TABLE silverpop_export_address (
