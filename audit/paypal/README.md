@@ -10,7 +10,7 @@ Update the paypal-audit.yaml config values to match your environment equivalents
 ## Overview (probably not complete)
 
 #### download_nightly.py
-This script uses an SFTP client to download files from the stfp server specified in the 'sftp:' config block. The files are then dropped in to the path specified in the 'incoming_path:' config value. Currently, the scrip is pulling  PayPal audit CSV files in down which are then used by the
+This script uses an SFTP client to download files from the stfp server specified in the 'sftp:' config block. The files are then dropped in to the path specified in the 'incoming_path:' config value. Currently, the script is pulling PayPal audit CSV files down which are then used by the
 parse_nightly.py script.
 
 #### parse_nightly.py
