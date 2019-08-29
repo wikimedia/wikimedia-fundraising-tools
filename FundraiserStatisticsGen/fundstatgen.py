@@ -10,7 +10,7 @@ import pymysql as db
 import csv
 import json
 from optparse import OptionParser
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 import logging
 from logging.handlers import SysLogHandler
 
@@ -29,7 +29,7 @@ def main():
     workingDir = args[0]
 
     # Load the configuration from the file
-    config = SafeConfigParser()
+    config = ConfigParser()
     fileList = [CONFIG_DEFAULT_PATH]
     if options.configFile:
         fileList.append(options.configFile)
@@ -136,8 +136,8 @@ def getPerCampaignData(host, port, username, password, database):
     cur = con.cursor()
     cur.execute("""
         SELECT
-          ct.utm_medium,
-          ct.utm_campaign,
+          COALESCE(ct.utm_medium, ''),
+          COALESCE(ct.utm_campaign, ''),
           min(c.receive_date),
           max(c.receive_date),
           count(*),
@@ -185,7 +185,7 @@ def pivotDataByYear(stats):
     years = []
     pivot = {}
 
-    reports = stats.values()[0].keys()
+    reports = list(stats.values())[0].keys()
     for report in reports:
         pivot[report] = {}
 
@@ -220,7 +220,7 @@ def createOutputFiles(stats, firstcol, basename, colnames=None):
     """
     Creates a CSV file for each report in stats
     """
-    reports = stats.keys()
+    reports = list(stats.keys())
     for report in reports:
         createSingleOutFile(stats[report], firstcol, basename + report, colnames)
 
@@ -236,24 +236,24 @@ def createSingleOutFile(stats, firstcols, basefilename, colnames=None):
                 reflect the primary key of stats
     """
     if colnames is None:
-        colnames = stats.itervalues().next().keys()
+        colnames = list(next(iter(stats.values())).keys())
         colindices = colnames
     else:
-        colindices = range(0, len(colnames))
+        colindices = list(range(0, len(colnames)))
 
-    if isinstance(firstcols, basestring):
+    if isinstance(firstcols, str):
         firstcols = [firstcols]
     else:
         firstcols = list(firstcols)
 
     csvfilename = basefilename + ".csv"
-    f = file(csvfilename, 'w')
+    f = open(csvfilename, 'w')
     csvf = csv.writer(f)
     csvf.writerow(firstcols + colnames)
 
     alldata = []
     for linekey in sorted(stats.keys()):
-        if isinstance(linekey, basestring):
+        if isinstance(linekey, str):
             linekeyl = [linekey]
         else:
             linekeyl = list(linekey)
@@ -264,8 +264,8 @@ def createSingleOutFile(stats, firstcols, basefilename, colnames=None):
     f.close()
 
     jsonfilename = basefilename + ".json"
-    f = file(jsonfilename, 'w')
-    mapstats = [dict(zip(firstcols + colnames, line)) for line in alldata]
+    f = open(jsonfilename, 'w')
+    mapstats = [dict(list(zip(firstcols + colnames, line))) for line in alldata]
     json.dump(mapstats, f)
     f.close()
 
@@ -292,6 +292,6 @@ if __name__ == "__main__":
     # Run the program
     try:
         main()
-    except Exception as ex:
+    except Exception:
         logging.exception('Unexpected exception! Death is me.')
         exit(1)

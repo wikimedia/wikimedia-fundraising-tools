@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 from optparse import OptionParser
-import httplib
-import urllib
+import http.client
+import urllib.request
+import urllib.parse
+import urllib.error
 import os
 import fnmatch
 import json
@@ -43,7 +45,7 @@ def main():
     params = []
     for slot in range(1, options.slots + 1):
         params.append(
-            '/wiki/Special:BannerRandom?' + urllib.urlencode({
+            '/wiki/Special:BannerRandom?' + urllib.parse.urlencode({
                 'uselang': options.language,
                 'project': options.project,
                 'anonymous': str(options.anon).lower(),
@@ -96,7 +98,7 @@ def loadPybal(pattern):
 
 
 def getSlotContents(host, headers, urls):
-    conn = httplib.HTTPConnection(host)
+    conn = http.client.HTTPConnection(host)
 
     contents = []
     for url in urls:
@@ -113,7 +115,7 @@ def getSlotContents(host, headers, urls):
 
 def compareBanners(auth, test, host):
     if len(auth) != len(test):
-        print "Response lengths not equal from %s" % host
+        print("Response lengths not equal from %s" % host)
         return
 
     for i in range(0, len(test)):

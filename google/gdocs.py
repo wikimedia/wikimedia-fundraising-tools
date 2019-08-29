@@ -89,7 +89,7 @@ class Spreadsheet(object):
 
     def append_row(self, row):
         rendered = {}
-        for key, e in row.items():
+        for key, e in list(row.items()):
             if e is None:
                 e = 'none'
             if not hasattr(e, 'decode'):
@@ -105,7 +105,7 @@ class Spreadsheet(object):
             pass
         feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
         entry = feed.entry[index - 1]
-        for k, v in props.items():
+        for k, v in list(props.items()):
             if k in entry.custom:
                 entry.custom[k].text = str(v)
         for a_link in entry.link:
@@ -128,7 +128,7 @@ class Spreadsheet(object):
         if row > len(feed.entry):
             return None
         ret = {}
-        for key, value in feed.entry[row - 1].custom.items():
+        for key, value in list(feed.entry[row - 1].custom.items()):
             ret[key] = value.text
         return ret
 
@@ -142,7 +142,7 @@ class Spreadsheet(object):
         feed = self.client.GetListFeed(self.doc_key, wksht_id=self.worksheet_id)
         for line in feed.entry:
             row = {}
-            for key, value in line.custom.items():
+            for key, value in list(line.custom.items()):
                 row[key] = value.text
             yield row
 

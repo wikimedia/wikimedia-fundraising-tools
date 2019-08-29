@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Script to dump campaign logs to a file
 """
@@ -41,7 +41,7 @@ def fetch():
 
         for test in logs:
             if is_relevant(test):
-                for banner in test['end']['banners'].keys():
+                for banner in list(test['end']['banners'].keys()):
                     out.writerow({
                         'campaign': test['campaign'].encode('utf-8'),
                         'banner': banner.encode('utf-8'),

@@ -10,7 +10,7 @@ cached_campaigns = {}
 def get_banners(**kw):
     if 'campaign' in kw:
         campaign = get_campaign(kw['campaign'])
-        return campaign['banners'].keys()
+        return list(campaign['banners'].keys())
     return get_allocations(**kw)
 
 

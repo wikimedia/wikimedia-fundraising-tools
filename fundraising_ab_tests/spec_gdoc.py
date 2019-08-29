@@ -1,6 +1,6 @@
 import logging
 
-from spec import FrTestSpec, parse_spec
+from .spec import FrTestSpec, parse_spec
 from google.gdocs import Spreadsheet
 
 log = logging.getLogger(__name__)

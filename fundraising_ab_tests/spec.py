@@ -10,7 +10,7 @@ import logging
 import re
 
 from fundraising_ab_tests.fundraising_experiment import FrTest
-import campaign_log
+from . import campaign_log
 from process.globals import get_config
 
 log = logging.getLogger(__name__)

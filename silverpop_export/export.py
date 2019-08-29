@@ -1,16 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
+import csv
 import errno
 import logging
 import os
-import os.path
 import time
 
 import process.globals
 
 from database.db import Connection as DbConnection, Query as DbQuery
 import process.lock as lock
-import unicode_csv_writer
+
 
 log = logging.getLogger(__name__)
 
@@ -45,15 +45,15 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
 
     # Get a file-like object
     if not hasattr(output, 'write'):
-        output = open(output, 'wb')
+        output = open(output, 'w')
 
-    w = unicode_csv_writer.UnicodeCsvWriter(output)
+    w = csv.writer(output)
 
     gen = db.execute_paged(query=query, pageIndex=sort_by_index, pageSize=10000)
 
     # Make sure we've got the table headers
     try:
-        first = gen.next()
+        first = next(gen)
         num_rows = 1
 
         # Get the order of keys and sort them alphabetically so it doesn't come

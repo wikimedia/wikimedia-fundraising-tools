@@ -28,12 +28,12 @@ def main(host, port, user, password, database, tablename, delete, autoindex, sch
     f = open(filename, 'r')
     c = csv.reader(f)
 
-    headers = c.next()
+    headers = next(c)
 
     # === Create the schema ===
     if len(headers) != len(schema):
         raise Exception('Num of columns must be the same as num of schema cols')
-    if re.match("[^%s]" % ''.join(colproto.keys()), schema):
+    if re.match("[^%s]" % ''.join(list(colproto.keys())), schema):
         raise Exception("Unknown schema column type detected")
 
     schemaStr = []

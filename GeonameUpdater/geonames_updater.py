@@ -1,6 +1,6 @@
 #!/usr/bin/python3.5
 
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 from optparse import OptionParser
 import dateutil.parser
 # import pytz
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     # === Do some initial setup of useful globals ===
     # --- Like the configuration file :) ---
     localdir = os.path.dirname(os.path.abspath(__file__))
-    _config = SafeConfigParser()
+    _config = ConfigParser()
     fileList = ["%s/geonames.cfg" % localdir]
     if options.configFile is not None:
         fileList.append(options.configFile)

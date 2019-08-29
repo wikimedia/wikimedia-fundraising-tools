@@ -1,9 +1,8 @@
 import os
-import os.path
 import base64
 import logging
 import paramiko
-import StringIO
+import io
 
 import process.globals
 
@@ -22,7 +21,7 @@ class Client(object):
 
     def connect(self):
         log.info("Connecting to {host}".format(host=self.config.sftp.host))
-        transport = paramiko.Transport((self.config.sftp.host, 22))
+        transport = paramiko.Transport(self.config.sftp.host, 22)
         params = {
             'username': self.config.sftp.username,
         }
@@ -124,16 +123,16 @@ def make_key(keystr=None):
     '''
 
     if 'BEGIN RSA PRIVATE KEY' in keystr:
-        fileish = StringIO.StringIO(keystr)
+        fileish = io.StringIO(keystr)
         return paramiko.RSAKey.from_private_key(fileish)
     elif 'ssh-rsa' in keystr:
-        return paramiko.RSAKey(data=base64.decodestring(keystr.split(' ')[1]))
+        return paramiko.RSAKey(data=base64.b64decode(keystr.split(' ')[1]))
     elif 'BEGIN DSS PRIVATE KEY' in keystr:
-        fileish = StringIO.StringIO(keystr)
+        fileish = io.StringIO(keystr)
         return paramiko.DSSKey.from_private_key(fileish)
     elif 'ssh-dss' in keystr:
-        return paramiko.DSSKey(data=base64.decodestring(keystr.split(' ')[1]))
+        return paramiko.DSSKey(data=base64.b64decode(keystr.split(' ')[1]))
     elif 'ecdsa-' in keystr:
-        return paramiko.ECDSAKey(data=base64.decodestring(keystr.split(' ')[1]))
+        return paramiko.ECDSAKey(data=base64.b64decode(keystr.split(' ')[1]))
 
     raise Exception('Unknown key provided')

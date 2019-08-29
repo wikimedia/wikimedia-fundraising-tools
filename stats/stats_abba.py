@@ -217,7 +217,7 @@ class ProportionComparison(object):
 
         baseline_limits = self._binomial_coverage_interval(baseline_distribution, coverage_alpha)
         p_value = 0
-        for baseline_successes in xrange(baseline_limits[0], baseline_limits[1] + 1):
+        for baseline_successes in range(baseline_limits[0], baseline_limits[1] + 1):
             baseline_proportion = 1.0 * baseline_successes / self.baseline.num_trials
             if improvement_only:
                 lower_trial_count = -1

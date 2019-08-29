@@ -76,7 +76,7 @@ def initIpFilter():
     for subnet in localSubnets:
         (network, mask) = subnet.split('/')
         network = struct.unpack('L', socket.inet_aton(network))[0]
-        mask = (2L << mask - 1) - 1
+        mask = (2 << mask - 1) - 1
         subnets.append((mask, network))
     localSubnets = subnets
 
