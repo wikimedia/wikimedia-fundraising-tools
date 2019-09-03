@@ -24,7 +24,8 @@ create table civicrm_contact (
     first_name varchar(64) COLLATE utf8_unicode_ci,
     middle_name varchar(64) COLLATE utf8_unicode_ci,
     last_name varchar(64) COLLATE utf8_unicode_ci,
-    is_deleted tinyint(4) default '0'
+    is_deleted tinyint(4) default '0',
+    gender_id tinyint(4)
 );
 
 drop table if exists civicrm_currency;
@@ -181,4 +182,22 @@ create table log_civicrm_email (
 drop table if exists civicrm_uf_match;
 create table civicrm_uf_match (
     uf_name varchar(128) COLLATE utf8_unicode_ci
+);
+
+drop table if exists civicrm_value_1_prospect_5;
+create table civicrm_value_1_prospect_5
+(
+    `id`                              int(10) unsigned,
+    `entity_id`                       int(10) unsigned,
+    `income_range`                    varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `charitable_contributions_decile` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `disc_income_decile`              varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `voter_party`                     varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `subject_area_interest`           varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `university_affiliation`          varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `estimated_net_worth_144`         varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `endowment_stage_169`             varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `net_worth_170`                   varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `family_composition_173`          varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `occupation_175`                  varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
 );
