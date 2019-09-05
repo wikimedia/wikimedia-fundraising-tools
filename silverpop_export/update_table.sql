@@ -486,15 +486,15 @@ ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 CREATE OR REPLACE VIEW silverpop_export_view AS
   SELECT
     contact_id ContactID,
-    contact_hash,
+    e.contact_hash,
     email,
-    IFNULL(first_name, '') firstname,
-    IFNULL(last_name, '') lastname,
+    IFNULL(e.first_name, '') firstname,
+    IFNULL(e.last_name, '') lastname,
     IFNULL(country, 'XX') country,
     state,
     postal_code,
     timezone,
-    SUBSTRING(preferred_language, 1, 2) IsoLang,
+    SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,
     highest_usd_amount,
@@ -518,5 +518,103 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     total_2020,
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
-    endowment_number_donations
-  FROM silverpop_export;
+    endowment_number_donations,
+    CASE
+        WHEN family_composition_173 = '1' THEN 'Single'
+        WHEN family_composition_173 = '2' THEN 'Single with Children'
+        WHEN family_composition_173 = '3' THEN 'Couple'
+        WHEN family_composition_173 = '4' THEN 'Couple with children'
+        WHEN family_composition_173 = '5' THEN 'Multiple Generations'
+        WHEN family_composition_173 = '6' THEN 'Multiple Surnames (3+)'
+        WHEN family_composition_173 = '7' THEN 'Other'
+        ELSE ''
+    END as z_family_composition,
+    CASE
+        WHEN estimated_net_worth_144 = '1' THEN'$20 Million +'
+        WHEN estimated_net_worth_144 = '2' THEN '$10 Million - $19.99 Million'
+        WHEN estimated_net_worth_144 = '3' THEN '$5 Million - $9.99 Million'
+        WHEN estimated_net_worth_144 = '4' THEN '$2 Million - $4.99 Million'
+        WHEN estimated_net_worth_144 = '5' THEN '$1 Million - $1.99 Million'
+        WHEN estimated_net_worth_144 = '6' THEN '$500,000 - $999,999'
+        WHEN estimated_net_worth_144 = '7' THEN '>$5B'
+        WHEN estimated_net_worth_144 = '8' THEN '>$1B'
+        WHEN estimated_net_worth_144 = '9' THEN '>$10B'
+        WHEN estimated_net_worth_144 = '10' THEN '$100 Million +'
+        WHEN estimated_net_worth_144 = 'A' THEN 'Below $25,000'
+        WHEN estimated_net_worth_144 = 'B' THEN '$25,000 - $49,999'
+        WHEN estimated_net_worth_144 = 'C' THEN '$50,000 - $74,999'
+        WHEN estimated_net_worth_144 = 'D' THEN '$75,000 - $99,999'
+        WHEN estimated_net_worth_144 = 'E' THEN '$150,000 - $199,999'
+        WHEN estimated_net_worth_144 = 'F' THEN '$150,000 - $199,999'
+        WHEN estimated_net_worth_144 = 'G' THEN '$200,000 - $249,999'
+        WHEN estimated_net_worth_144 = 'H' THEN '$250,000 - $499,999'
+        WHEN estimated_net_worth_144 = 'I' THEN '$500,000 - $749,999'
+        WHEN estimated_net_worth_144 = 'J' THEN '$750,000 - $999,999'
+        WHEN estimated_net_worth_144 = 'K' THEN '$1,000,000 - $2,499,999'
+        WHEN estimated_net_worth_144 = 'L' THEN '$2,500,000 - $4,999,999'
+        WHEN estimated_net_worth_144 = 'M' THEN '$5,000,000 - $9,999,999'
+        WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
+        ELSE ''
+    END as z_estimated_net_worth,
+    charitable_contributions_decile as z_charitable_contributions_decile,
+    CASE
+        WHEN voter_party = 'democrat' THEN 'Democrat'
+        WHEN voter_party = 'republican' THEN 'Republican'
+        WHEN voter_party = 'green' THEN 'Green'
+        WHEN voter_party = 'independent' THEN 'Independent'
+        WHEN voter_party = 'libertarian' THEN 'Libertarian'
+        WHEN voter_party = 'no_party' THEN 'No Party'
+        WHEN voter_party = 'other' THEN 'Other'
+        WHEN voter_party = 'unaffiliated' THEN 'Unaffiliated'
+        WHEN voter_party =  'unregistered' THEN 'Unregistered'
+        WHEN voter_party = 'working_fam' THEN 'Working Fam'
+        WHEN voter_party = 'conservative' THEN 'Conservative'
+        ELSE ''
+     END as z_voter_party,
+    disc_income_decile as z_disc_income_decile,
+    CASE
+        WHEN occupation_175 = '1' THEN 'Professional/Technical'
+        WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
+        WHEN occupation_175 = '3' THEN 'Sales/Service'
+        WHEN occupation_175 = '4' THEN 'Office/Clerical'
+        WHEN occupation_175 = '5' THEN 'Skilled Trade'
+        WHEN occupation_175 = '6' THEN 'Retired'
+        WHEN occupation_175 = '7' THEN 'Administrative/Management'
+        WHEN occupation_175 = '8' THEN 'Self Employed'
+        WHEN occupation_175 = '9' THEN 'Military'
+        WHEN occupation_175 = '10' THEN 'Farming/Agriculture'
+        WHEN occupation_175 = '11' THEN 'Medical/Health Services'
+        WHEN occupation_175 = '12' THEN 'Financial Services'
+        WHEN occupation_175 = '13' THEN 'Teacher/Educator'
+        WHEN occupation_175 = '14' THEN 'Legal Services'
+        WHEN occupation_175 = '15' THEN 'Religious'
+        ELSE ''
+    END as z_occupation,
+    CASE
+        WHEN income_range = 'a' THEN 'Below $30,000'
+        WHEN income_range = 'b' THEN '$30,000 - $39,999'
+        WHEN income_range = 'c' THEN '$40,000 - $49,999'
+        WHEN income_range = 'd' THEN '$50,000 - $59,999'
+        WHEN income_range = 'e' THEN '$60,000 - $74,999'
+        WHEN income_range = 'f' THEN '$75,000 - $99,999'
+        WHEN income_range = 'g' THEN '$100,000 - $124,999'
+        WHEN income_range = 'h' THEN '$125,000 - $149,999'
+        WHEN income_range = 'i' THEN '$150,000 - $199,999'
+        WHEN income_range = 'j' THEN '$200,000 - $249,999'
+        WHEN income_range = 'k' THEN '$250,000 - $299,999'
+        WHEN income_range = 'l' THEN '$300,000 - $499,999'
+        WHEN income_range = 'm' THEN 'Above $500,000'
+        ELSE ''
+    END as z_income_range,
+    CASE
+        WHEN gender_id =1 THEN 'Female'
+        WHEN gender_id =2 THEN 'Male'
+        WHEN gender_id =3 THEN 'Transgender'
+        ELSE ''
+    END as z_gender
+
+  FROM silverpop_export e
+  LEFT JOIN civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
+  LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id;
+
+
