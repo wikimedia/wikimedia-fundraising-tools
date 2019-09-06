@@ -614,7 +614,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     END as z_gender
 
   FROM silverpop_export e
-  LEFT JOIN civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
+  LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id;
 
 
