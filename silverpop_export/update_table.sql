@@ -556,7 +556,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
         WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
         ELSE ''
     END as z_estimated_net_worth,
-    charitable_contributions_decile as z_charitable_contributions_decile,
+    COALESCE(charitable_contributions_decile, '') as z_charitable_contributions_decile,
     CASE
         WHEN voter_party = 'democrat' THEN 'Democrat'
         WHEN voter_party = 'republican' THEN 'Republican'
@@ -571,7 +571,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
         WHEN voter_party = 'conservative' THEN 'Conservative'
         ELSE ''
      END as z_voter_party,
-    disc_income_decile as z_disc_income_decile,
+    COALESCE(disc_income_decile, '') as z_disc_income_decile,
     CASE
         WHEN occupation_175 = '1' THEN 'Professional/Technical'
         WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
@@ -614,7 +614,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     END as z_gender
 
   FROM silverpop_export e
-  LEFT JOIN civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
+  LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id;
 
 
