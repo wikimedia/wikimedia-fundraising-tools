@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 class SarFile(object):
     VERSION = 2
+    FILE_ENCODING = 'utf-16'
     redis = None
     column_headers = [
         "Column Type",
@@ -56,7 +57,7 @@ class SarFile(object):
         self.crm = civicrm.civicrm.Civicrm(self.config.civicrm_db)
 
     def parse(self):
-        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers)
+        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers, self.FILE_ENCODING)
 
     def parse_line(self, row):
         required_fields = [
