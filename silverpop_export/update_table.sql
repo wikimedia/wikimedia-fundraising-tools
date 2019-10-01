@@ -611,7 +611,8 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
         WHEN gender_id =2 THEN 'Male'
         WHEN gender_id =3 THEN 'Transgender'
         ELSE ''
-    END as z_gender
+    END as z_gender,
+    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') z_birth_date
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
