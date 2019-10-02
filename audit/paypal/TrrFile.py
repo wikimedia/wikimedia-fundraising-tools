@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 class TrrFile(object):
     VERSION = [4, 8]
+    FILE_ENCODING = 'utf-8'
     redis = None
     # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
     column_headers = [
@@ -90,7 +91,7 @@ class TrrFile(object):
 
     def parse(self):
         # FIXME: encapsulation issues
-        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers)
+        ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers, self.FILE_ENCODING)
 
     def parse_line(self, row):
         if row['Billing Address Line1']:

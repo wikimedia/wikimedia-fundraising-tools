@@ -16,14 +16,7 @@ dialect = dict(
 )
 
 
-def read(path, version, callback, column_headers):
-    try:
-        read_encoded(path, version, callback, column_headers, encoding='utf-16')
-    except UnicodeError:
-        read_encoded(path, version, callback, column_headers, encoding='utf-8-sig')
-
-
-def read_encoded(path, version, callback, column_headers, encoding):
+def read(path, version, callback, column_headers, encoding):
     # Coerce to a list
     if not hasattr(version, 'extend'):
         version = [version]
