@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class TrrFile(object):
     VERSION = [4, 8]
-    FILE_ENCODING = 'utf-8'
+    FILE_ENCODING = 'utf_8_sig'
     redis = None
     # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
     column_headers = [
