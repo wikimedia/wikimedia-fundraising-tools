@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class SarFile(object):
     VERSION = 2
-    FILE_ENCODING = 'utf-16'
+    FILE_ENCODING = 'utf_16'
     redis = None
     column_headers = [
         "Column Type",
