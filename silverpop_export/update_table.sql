@@ -395,7 +395,8 @@ DELETE silverpop_excluded
   FROM silverpop_excluded
   JOIN silverpop_export_staging s
     ON s.email = silverpop_excluded.email
-    WHERE s.opted_out = 0;
+    WHERE s.opted_out = 0
+    AND (s.opted_in IS NULL OR s.opted_in = 1);
 
 -- We don't want to suppress emails of Civi users.
 -- Conveniently, the account name is the email address in
@@ -482,6 +483,8 @@ SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   endowment_number_donations
 FROM silverpop_export_staging
 WHERE opted_out=0
+AND (opted_in IS NULL OR opted_in = 1)
+
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 
 -- Create a nice view to export from

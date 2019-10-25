@@ -343,6 +343,41 @@ def test_exclusion():
     assert cursor.fetchone() == ('formerperson1@localhost',)
 
 
+def test_optin_negative_exclusion():
+    '''
+    Test that we exclude former email addresses from the log table.
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'optinnull@localhost', 1, 0),
+        (2, 'optinone@localhost', 1, 0),
+        (3, 'optinzero@localhost', 1, 0);
+    """, """
+    insert into log_civicrm_email (id, email) values
+        (1, 'optinnull@localhost'),
+        (2, 'optinone@localhost'),
+        (3, 'optinzero@localhost');
+    """, """
+    insert into civicrm_contact (id) values
+        (1),
+        (2),
+        (3);
+    """, """
+    insert into civicrm_value_1_communication_4 (entity_id, opt_in) values
+        (2, 1),
+        (3, 0);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select count(email) from silverpop_export")
+    assert cursor.fetchone() == (2,)
+    cursor.execute("select count(email) from silverpop_excluded")
+    assert cursor.fetchone() == (1,)
+    cursor.execute("select email from silverpop_excluded")
+    assert cursor.fetchone() == ('optinzero@localhost',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 
