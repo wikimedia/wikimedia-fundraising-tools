@@ -101,14 +101,6 @@ INSERT INTO silverpop_export_staging
     AND c.is_deleted = 0
     AND e.is_primary = 1;
 
--- Collect email addresses which should be excluded for various reasons, such as:
--- * Exclude non-primary addresses
--- * Exclude any "former residence" email addresses.
--- * Exclude addresses dropped during contact merge.
--- We grab ALL addresses from the logs to start, then after we've figured out
--- which of the addresses on the include list are good, we remove them from
--- this table.
-
 CREATE TABLE IF NOT EXISTS silverpop_excluded(
   id int AUTO_INCREMENT PRIMARY KEY,
   email varchar(255),
@@ -117,6 +109,13 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded(
   CONSTRAINT sx_email_u UNIQUE (email)
 ) COLLATE 'utf8_unicode_ci' AUTO_INCREMENT=1;
 
+-- Collect email addresses which should be excluded for various reasons, such as:
+-- * Exclude non-primary addresses
+-- * Exclude any "former residence" email addresses.
+-- * Exclude addresses dropped during contact merge.
+-- We grab ALL addresses from the logs to start, then after we've figured out
+-- which of the addresses on the include list are good, we remove them from
+-- this table.
 -- Same no-op update trick as with silverpop_export_latest
 -- 44 min 38.01 sec
 INSERT INTO silverpop_excluded (email)
@@ -162,6 +161,7 @@ CREATE TABLE silverpop_export_highest(
   highest_donation_date datetime
 ) COLLATE 'utf8_unicode_ci';
 
+-- Populate table for highest donation amount and date
 -- (18 min 13.39 sec)
 INSERT INTO silverpop_export_highest
   SELECT
@@ -186,10 +186,6 @@ INSERT INTO silverpop_export_highest
     ct.receive_date DESC
 ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
 
--- Deduplicate rows that have the same email address, we will
--- have to merge in more data later, but this is ~1.5M rows we're
--- getting rid of here which is more better than taking them all the way
--- through.
 CREATE TABLE silverpop_export_dedupe_email (
   id INT PRIMARY KEY AUTO_INCREMENT,
   email varchar(255),
@@ -200,6 +196,10 @@ CREATE TABLE silverpop_export_dedupe_email (
   INDEX spexde_email (email)
 ) COLLATE 'utf8_unicode_ci';
 
+-- Deduplicate rows that have the same email address.
+-- We will have to merge in more data later, but this is ~1.5M rows we're
+-- getting rid of here which is more better than taking them all the way
+-- through.
 -- 1 min 31.96 sec
 INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
    SELECT email, max(id) maxid, max(opted_out) opted_out
@@ -218,13 +218,15 @@ UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
     ex.email = exde.email AND
     ex.preferred_language IS NOT NULL;
 
--- (1 min 2.15 sec
+-- Delete duplicated email addresses from the main staging table
+-- (1 min 2.15 sec)
 DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
   WHERE
     silverpop_export_staging.email = silverpop_export_dedupe_email.email AND
     silverpop_export_staging.id != silverpop_export_dedupe_email.maxid;
 
---  (18.34 sec)
+-- Make sure the remaining rows all have opt-out and language set correctly
+-- (18.34 sec)
 UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   SET
     ex.opted_out = exde.opted_out,
@@ -232,7 +234,6 @@ UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
   WHERE
     exde.maxid = ex.id;
 
--- Create an aggregate table from a full contribution table scan
 CREATE TABLE silverpop_export_stat (
   email varchar(255) PRIMARY KEY,
   exid INT,
@@ -254,6 +255,7 @@ CREATE TABLE silverpop_export_stat (
   INDEX stat_exid (exid)
 ) COLLATE 'utf8_unicode_ci';
 
+-- Populate the aggregate table from a full contribution table scan
 -- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
   (email, exid, total_usd, cnt_total, first_donation_date,
@@ -284,6 +286,7 @@ INSERT INTO silverpop_export_stat
   # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
 
+-- Mark all emails associated with a recurring donations
 -- 1 min 31.95 sec
 UPDATE
   civicrm.civicrm_contribution_recur recur
@@ -296,7 +299,6 @@ UPDATE
   INNER JOIN silverpop_export_stat stat ON stat.email = email.email
   SET has_recurred_donation = 1;
 
--- Postal addresses by email
 CREATE TABLE silverpop_export_address (
   email varchar(255) PRIMARY KEY,
   city varchar(128),
@@ -306,8 +308,8 @@ CREATE TABLE silverpop_export_address (
   timezone varchar(8)
 ) COLLATE 'utf8_unicode_ci';
 
+-- Get latest postal address for each email.
 -- (16 minutes)
--- Get latest address for each email.
 INSERT INTO silverpop_export_address
 SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
   FROM      civicrm.civicrm_email e
@@ -360,7 +362,7 @@ UPDATE silverpop_export_staging ex
     ex.state = addr.state,
     ex.timezone = addr.timezone;
 
--- Fill in missing addresses from contribution_tracking
+-- Fill in missing countries from contribution_tracking
 -- (15 minutes)
 UPDATE
     silverpop_export_staging ex,
@@ -393,7 +395,8 @@ DELETE silverpop_excluded
   FROM silverpop_excluded
   JOIN silverpop_export_staging s
     ON s.email = silverpop_excluded.email
-    WHERE s.opted_out = 0;
+    WHERE s.opted_out = 0
+    AND (s.opted_in IS NULL OR s.opted_in = 1);
 
 -- We don't want to suppress emails of Civi users.
 -- Conveniently, the account name is the email address in
@@ -480,6 +483,8 @@ SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   endowment_number_donations
 FROM silverpop_export_staging
 WHERE opted_out=0
+AND (opted_in IS NULL OR opted_in = 1)
+
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 
 -- Create a nice view to export from
@@ -617,5 +622,3 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id;
-
-
