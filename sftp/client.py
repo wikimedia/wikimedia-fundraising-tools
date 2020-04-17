@@ -31,6 +31,9 @@ class Client(object):
             params['password'] = self.config.sftp.password
         if hasattr(self.config.sftp, 'private_key'):
             params['pkey'] = make_key(self.config.sftp.private_key)
+        if hasattr(self.config.sftp, 'compression'):
+            transport.use_compression(self.config.sftp.compression)
+
         transport.connect(**params)
         self.client = paramiko.SFTPClient.from_transport(transport)
 

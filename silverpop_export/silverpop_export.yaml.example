@@ -15,6 +15,7 @@ sftp:
     host_key:
 
     remote_root: /upload/
+    compression: true
 
 civicrm_db:
     db: dev_civicrm
