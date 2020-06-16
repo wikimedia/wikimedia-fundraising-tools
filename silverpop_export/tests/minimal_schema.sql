@@ -26,7 +26,8 @@ create table civicrm_contact (
     last_name varchar(64) COLLATE utf8_unicode_ci,
     is_deleted tinyint(4) default '0',
     gender_id tinyint(4),
-    birth_date datetime default NULL
+    birth_date datetime default NULL,
+    modified_date datetime default NULL
 );
 
 drop table if exists civicrm_currency;

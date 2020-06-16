@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
 
   -- General information about the contact
   contact_id int unsigned,
+  modified_date datetime null,
   contact_hash varchar(32),
   first_name varchar(128),
   last_name varchar(128),
@@ -69,7 +70,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
   INDEX spex_country (country),
-  INDEX spex_opted_out (opted_out)
+  INDEX spex_opted_out (opted_out),
+  INDEX spex_modified_date(modified_date),
+  INDEX spex_id(id)
 ) COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_latest(
@@ -82,11 +85,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
--- (11 min 17.25 sec)
+-- (16 min 25.15 sec)
 INSERT INTO silverpop_export_staging
-  (id, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in)
+  (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in)
   SELECT
-    e.id, e.contact_id, c.hash, e.email, c.first_name, c.last_name,
+    e.id,
+    c.modified_date,
+    e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
     (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)),
     v.opt_in
