@@ -60,10 +60,22 @@ if __name__ == '__main__':
     log.info("Begin Silverpop Update")
     lock.begin()
 
+    log.info("Loading schema update set ")
+    drop_queries = load_queries('drop_schema.sql')
+
+    log.info("Loading schema update set ")
+    rebuild_queries = load_queries('rebuild_schema.sql')
+
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
 
     db = DbConnection(**config.silverpop_db)
+
+    log.info("Dropping schema (temporary step)")
+    run_queries(db, drop_queries)
+
+    log.info("Rebuilding schema (temporary step)")
+    run_queries(db, rebuild_queries)
 
     log.info("Starting update query run")
     run_queries(db, update_queries)

@@ -371,7 +371,11 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
             # Reenable warnings
             warnings.filterwarnings('default', category=pymysql.Warning)
 
-            # Run the bulk update.
-            # FIXME: Implementation should provide this as a single function.
+            drop_queries = silverpop_export.update.load_queries('drop_schema.sql')
+            silverpop_export.update.run_queries(conn, drop_queries)
+
+            rebuild_queries = silverpop_export.update.load_queries('rebuild_schema.sql')
+            silverpop_export.update.run_queries(conn, rebuild_queries)
+
             update_queries = silverpop_export.update.load_queries('update_table.sql')
             silverpop_export.update.run_queries(conn, update_queries)
