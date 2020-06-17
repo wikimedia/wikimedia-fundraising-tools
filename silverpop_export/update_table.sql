@@ -56,7 +56,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   latest_currency varchar(3) not null default '',
   latest_currency_symbol varchar(8) not null default '',
   latest_native_amount decimal(20,2) not null default 0,
-  latest_usd_amount decimal(20,2) not null default 0,
   latest_donation datetime null,
   first_donation_date datetime null,
   highest_donation_date datetime null,
@@ -78,7 +77,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest(
   latest_currency varchar(3),
   latest_currency_symbol varchar(8),
   latest_native_amount decimal(20,2),
-  latest_usd_amount decimal(20,2),
   latest_donation datetime
 ) COLLATE 'utf8_unicode_ci';
 
@@ -140,7 +138,6 @@ INSERT INTO silverpop_export_latest
     d.last_donation_currency,
     COALESCE(cur.symbol, d.last_donation_currency),
     d.last_donation_amount,
-    d.last_donation_usd,
     d.last_donation_date
   FROM
     silverpop_export_staging e
@@ -348,7 +345,6 @@ UPDATE silverpop_export_staging ex
     ex.latest_currency = COALESCE(lt.latest_currency, ''),
     ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
     ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
-    ex.latest_usd_amount = COALESCE(lt.latest_usd_amount, 0),
     ex.latest_donation = lt.latest_donation,
     ex.highest_native_currency = COALESCE(hg.highest_native_currency, ''),
     ex.highest_native_amount = COALESCE(hg.highest_native_amount, 0),
@@ -445,7 +441,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   latest_currency varchar(3),
   latest_currency_symbol varchar(8),
   latest_native_amount decimal(20,2),
-  latest_usd_amount decimal(20,2),
   latest_donation datetime,
   first_donation_date datetime,
 
@@ -465,14 +460,14 @@ INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
-  latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
+  latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
-  latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
+  latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
@@ -503,7 +498,6 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') highest_donation_date,
     lifetime_usd_total,
     IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') latest_donation_date,
-    latest_usd_amount,
     latest_currency,
     latest_currency_symbol,
     latest_native_amount,

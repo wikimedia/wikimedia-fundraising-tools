@@ -85,7 +85,7 @@ def test_no_donations():
             highest_native_amount, highest_native_currency,
             highest_donation_date, lifetime_usd_total,
             donation_count, latest_currency, latest_native_amount,
-            latest_usd_amount, latest_donation_date
+            latest_donation_date
         from silverpop_export_view
     """)
     actual = cursor.fetchone()
@@ -93,7 +93,7 @@ def test_no_donations():
                 Decimal('0.00'), '',
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
-                Decimal('0.00'), '')
+                '')
     assert actual == expected
 
 
@@ -122,8 +122,8 @@ def test_refund_history():
      """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, latest_usd_amount, latest_donation  from silverpop_export")
-    expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), Decimal('15.25'), datetime.datetime(2015, 1, 3))
+    cursor.execute("select highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, latest_donation  from silverpop_export")
+    expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
 
 
