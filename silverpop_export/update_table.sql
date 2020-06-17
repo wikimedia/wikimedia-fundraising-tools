@@ -66,7 +66,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  timezone varchar(8),
 
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
@@ -304,14 +303,13 @@ CREATE TABLE silverpop_export_address (
   city varchar(128),
   country varchar(2),
   state varchar(64),
-  postal_code varchar(128),
-  timezone varchar(8)
+  postal_code varchar(128)
 ) COLLATE 'utf8_unicode_ci';
 
 -- Get latest postal address for each email.
 -- (16 minutes)
 INSERT INTO silverpop_export_address
-SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code, a.timezone
+SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code
   FROM      civicrm.civicrm_email e
   JOIN      silverpop_export_staging ex
     ON      e.email = ex.email
@@ -359,8 +357,7 @@ UPDATE silverpop_export_staging ex
     ex.city = addr.city,
     ex.country = addr.country,
     ex.postal_code = addr.postal_code,
-    ex.state = addr.state,
-    ex.timezone = addr.timezone;
+    ex.state = addr.state;
 
 -- Fill in missing countries from contribution_tracking
 -- (15 minutes)
@@ -457,7 +454,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
   country varchar(2),
   state varchar(64),
   postal_code varchar(128),
-  timezone varchar(8),
 
   CONSTRAINT sp_email UNIQUE (email),
   CONSTRAINT sp_contact_id UNIQUE (contact_id)
@@ -470,14 +466,14 @@ INSERT INTO silverpop_export (
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
-  latest_donation, first_donation_date,city,country,state,postal_code,timezone,
+  latest_donation, first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,latest_usd_amount,
-  latest_donation,first_donation_date,city,country,state,postal_code,timezone,
+  latest_donation,first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations
@@ -498,7 +494,6 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
-    timezone,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,

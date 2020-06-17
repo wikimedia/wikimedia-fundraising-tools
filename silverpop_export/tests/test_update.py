@@ -160,48 +160,6 @@ def test_first_donation():
     assert cursor.fetchone() == expected
 
 
-def test_timezone():
-    '''
-    Test that we export timezone records where they exist
-    '''
-
-    run_update_with_fixtures(fixture_queries=["""
-    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
-        (1, 'person1@localhost', 1, 0),
-        (2, 'person1@localhost', 1, 0);
-    """, """
-    insert into civicrm_contact (id) values
-        (1),
-        (2);
-    """, """
-    insert into civicrm_country (id, iso_code) values
-        (1, 'US');
-    """, """
-    insert into civicrm_address (contact_id, is_primary, country_id, postal_code, timezone) values
-        (1, 1, 1, '10027', 'UTC-5');
-    """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
-        (1, 1, '2015-01-03', 15.25, 'xyz123', 1, 1),
-        (2, 1, '2016-05-05', 25.25, 'abc456', 1, 1);
-    """, """
-    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
-        (1, 20.15, 'USD'),
-        (2, 35.15, 'USD');
-    """, """
-    insert into contribution_tracking (contribution_id, country) values
-        (1, 'US'),
-        (2, 'US');
-    """, """
-       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
-       (1, 55.30, 25.25, 35.15, 'USD', '2015-01-03');
-    """])
-
-    cursor = conn.db_conn.cursor()
-    cursor.execute("select email, country, postal_code, timezone from silverpop_export")
-    expected = ('person1@localhost', 'US', '10027', 'UTC-5')
-    assert cursor.fetchone() == expected
-
-
 def test_native_amount():
     '''
     Test that we correctly calculate the highest native amount and currency
