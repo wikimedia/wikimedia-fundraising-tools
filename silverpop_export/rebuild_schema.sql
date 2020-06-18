@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
     email varchar(255),
     opted_out tinyint(1),
     opted_in tinyint(1),
+    employer_id int unsigned,
 
     -- Lifetime contribution statistics
     has_recurred_donation tinyint(1) not null default 0,
@@ -113,6 +114,18 @@ CREATE TABLE silverpop_export_address (
   postal_code varchar(128)
 ) COLLATE 'utf8_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift` (
+  `id` int(10) unsigned,
+  `name` varchar(255),
+  `matching_gifts_provider_info_url` varchar(255),
+  `guide_url` varchar(255),
+  `online_form_url` varchar(255) ,
+  `minimum_gift_matched_usd` decimal(20,2),
+  `match_policy_last_updated` datetime,
+  `subsidiaries` varchar(5000), -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
+  INDEX company_id (`id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS silverpop_export(
     id int unsigned PRIMARY KEY,  -- This is actually civicrm_email.id
 
@@ -124,6 +137,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
     preferred_language varchar(12),
     email varchar(255),
     opted_in tinyint(1),
+    employer_id int unsigned,
 
     -- Lifetime contribution statistics
     has_recurred_donation tinyint(1),

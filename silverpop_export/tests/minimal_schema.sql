@@ -27,7 +27,8 @@ create table civicrm_contact (
     is_deleted tinyint(4) default '0',
     gender_id tinyint(4),
     birth_date datetime default NULL,
-    modified_date datetime default NULL
+    modified_date datetime default NULL,
+    employer_id int(10) unsigned DEFAULT NULL
 );
 
 drop table if exists civicrm_currency;
@@ -203,3 +204,18 @@ create table civicrm_value_1_prospect_5
     `family_composition_173`          varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `occupation_175`                  varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
 );
+
+DROP TABLE IF EXISTS civicrm_value_matching_gift;
+CREATE TABLE `civicrm_value_matching_gift` (
+    `id` INT(10) UNSIGNED NOT NULL,
+    `entity_id` INT(10) UNSIGNED NOT NULL,
+    `matching_gifts_provider_id` VARCHAR(255) COLLATE UTF8_UNICODE_CI DEFAULT NULL,
+    `matching_gifts_provider_info_url` VARCHAR(255) COLLATE UTF8_UNICODE_CI DEFAULT NULL,
+    `name_from_matching_gift_db` VARCHAR(255) COLLATE UTF8_UNICODE_CI DEFAULT NULL,
+    `guide_url` VARCHAR(255) COLLATE UTF8_UNICODE_CI DEFAULT NULL,
+    `online_form_url` VARCHAR(255) COLLATE UTF8_UNICODE_CI DEFAULT NULL,
+    `minimum_gift_matched_usd` DECIMAL(20 , 2 ) DEFAULT NULL,
+    `match_policy_last_updated` DATETIME DEFAULT NULL,
+    `suppress_from_employer_field` TINYINT(4) DEFAULT '0',
+    `subsidiaries` VARCHAR(5000) -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
+)  COLLATE = UTF8_UNICODE_CI;
