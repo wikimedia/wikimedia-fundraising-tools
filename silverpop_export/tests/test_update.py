@@ -379,3 +379,6 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
 
             update_queries = silverpop_export.update.load_queries('update_table.sql')
             silverpop_export.update.run_queries(conn, update_queries)
+
+            update_suppression_queries = silverpop_export.update.load_queries('update_suppression_list.sql')
+            silverpop_export.update.run_queries(conn, update_suppression_queries)

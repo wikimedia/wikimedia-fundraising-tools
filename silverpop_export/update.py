@@ -69,6 +69,9 @@ if __name__ == '__main__':
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
 
+    log.info("Loading update query set")
+    update_suppression_queries = load_queries('update_suppression_list.sql')
+
     db = DbConnection(**config.silverpop_db)
 
     log.info("Dropping schema (temporary step)")
@@ -79,6 +82,9 @@ if __name__ == '__main__':
 
     log.info("Starting update query run")
     run_queries(db, update_queries)
+
+    log.info("Starting update query run")
+    run_queries(db, update_suppression_queries)
 
     export.export_all()
 
