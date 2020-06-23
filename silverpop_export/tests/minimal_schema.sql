@@ -180,7 +180,9 @@ create table contribution_tracking (
 drop table if exists log_civicrm_email;
 create table log_civicrm_email (
     id int(10) unsigned,
-    email varchar(254) COLLATE utf8_unicode_ci
+    contact_id int(10) unsigned,
+    email varchar(254) COLLATE utf8_unicode_ci,
+    log_date datetime default NULL
 );
 
 drop table if exists civicrm_uf_match;

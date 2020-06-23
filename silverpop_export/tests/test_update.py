@@ -286,12 +286,12 @@ def test_exclusion():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into log_civicrm_email (id, email) values
-        (1, 'formerperson1@localhost'),
-        (1, 'person1@localhost');
+    insert into log_civicrm_email (id, email, log_date) values
+        (1, 'formerperson1@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (1, 'person1@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """])
 
     cursor = conn.db_conn.cursor()
@@ -312,10 +312,10 @@ def test_optin_negative_exclusion():
         (2, 'optinone@localhost', 1, 0),
         (3, 'optinzero@localhost', 1, 0);
     """, """
-    insert into log_civicrm_email (id, email) values
-        (1, 'optinnull@localhost'),
-        (2, 'optinone@localhost'),
-        (3, 'optinzero@localhost');
+    insert into log_civicrm_email (id, email, log_date) values
+        (1, 'optinnull@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, 'optinone@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, 'optinzero@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contact (id) values
         (1),
@@ -331,8 +331,8 @@ def test_optin_negative_exclusion():
     cursor.execute("select count(email) from silverpop_export")
     assert cursor.fetchone() == (2,)
     cursor.execute("select count(email) from silverpop_excluded")
-    assert cursor.fetchone() == (1,)
-    cursor.execute("select email from silverpop_excluded")
+    assert cursor.fetchone() == (2,)
+    cursor.execute("select email from silverpop_excluded order by id desc")
     assert cursor.fetchone() == ('optinzero@localhost',)
 
 
