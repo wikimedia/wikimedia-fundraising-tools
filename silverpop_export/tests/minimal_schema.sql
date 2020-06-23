@@ -24,6 +24,7 @@ create table civicrm_contact (
     first_name varchar(64) COLLATE utf8_unicode_ci,
     middle_name varchar(64) COLLATE utf8_unicode_ci,
     last_name varchar(64) COLLATE utf8_unicode_ci,
+    organization_name varchar(64) COLLATE utf8_unicode_ci,
     is_deleted tinyint(4) default '0',
     gender_id tinyint(4),
     birth_date datetime default NULL,

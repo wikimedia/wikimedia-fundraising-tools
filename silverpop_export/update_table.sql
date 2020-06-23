@@ -11,16 +11,17 @@ SET autocommit = 1;
 -- have an email address. ID is civicrm_email.id.
 -- (16 min 25.15 sec)
 INSERT INTO silverpop_export_staging
-  (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in, employer_id)
+  (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in, employer_id, employer_name)
   SELECT
     e.id,
     c.modified_date,
     e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
     (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)),
-    v.opt_in, c.employer_id
+    v.opt_in, c.employer_id, oc.organization_name
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
+  LEFT JOIN civicrm.civicrm_contact oc ON oc.id = c.employer_id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
@@ -300,14 +301,14 @@ DELETE silverpop_excluded
 -- Move the data from the staging table into the persistent one
 -- (12 minutes)
 INSERT INTO silverpop_export (
-  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id,
+  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
-SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id,
+SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
@@ -332,7 +333,8 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
-    c.employer_id,
+    e.employer_id,
+    employer_name,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,

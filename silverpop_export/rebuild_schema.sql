@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
     opted_out tinyint(1),
     opted_in tinyint(1),
     employer_id int unsigned,
+    employer_name varchar(255),
 
     -- Lifetime contribution statistics
     has_recurred_donation tinyint(1) not null default 0,
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export(
     email varchar(255),
     opted_in tinyint(1),
     employer_id int unsigned,
+    employer_name varchar(255),
 
     -- Lifetime contribution statistics
     has_recurred_donation tinyint(1),
