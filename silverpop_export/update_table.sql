@@ -82,11 +82,12 @@ INSERT INTO silverpop_export_latest
       ON cur.name = d.last_donation_currency
   WHERE
     d.last_donation_date IS NOT NULL
+-- @todo - speed test without the second desc.
   ORDER BY last_donation_date DESC, d.last_donation_usd DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
 -- Populate table for highest donation amount and date
--- (18 min 13.39 sec)
+-- Query OK, 19161855 rows affected, 78 warnings (22 min 47.28 sec)
 INSERT INTO silverpop_export_highest
   SELECT
     e.email,
@@ -143,7 +144,7 @@ INSERT INTO silverpop_export_stat
   GROUP BY e.email;
 
 -- Mark all emails associated with a recurring donations
--- 1 min 31.95 sec
+-- Query OK, 492359 rows affected (1 min 46.59 sec)
 UPDATE
   civicrm.civicrm_contribution_recur recur
   INNER JOIN civicrm.civicrm_contribution contributions
@@ -157,6 +158,7 @@ UPDATE
 
 
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
+-- Query OK, 19637463 rows affected, 648 warnings (42 min 17.85 sec)
 UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
   LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
@@ -201,7 +203,7 @@ UPDATE silverpop_export_staging ex
     ex.opted_out = dedupe_table.opted_out ;
 
 -- Fill in missing countries from contribution_tracking
--- (15 minutes)
+-- Query OK, 222524 rows affected (1 min 11.00 sec)
 UPDATE
     silverpop_export_staging ex,
     civicrm.civicrm_contribution ct,
@@ -217,6 +219,7 @@ UPDATE
 
 -- Reconstruct the donors likely language from their country if it
 -- exists from a table of major language to country.
+-- Query OK, 30628 rows affected (1 min 17.96 sec)
 UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
   SET ex.preferred_language = cl.lang
   WHERE
@@ -226,6 +229,7 @@ UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
     ex.opted_out = 0;
 
 -- Still no language? Default 'em to English
+-- Query OK, 31473 rows affected (34.12 sec)
 UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
 
 -- Move the data from the staging table into the persistent one
@@ -256,6 +260,7 @@ AND (opted_in IS NULL OR opted_in = 1)
 
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 
+-- Query OK, 0 rows affected (0.00 sec)
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS
   SELECT
