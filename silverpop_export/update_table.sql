@@ -1,37 +1,5 @@
--- Updates the silverpop_export table
---
--- TODO: Most of the complexity will go away once our contacts' exact email
--- matches have been deduped.
---
--- Timing is from a 2019-08-22 Staging test.
-
-SET autocommit = 1;
-
--- Populate, or append to, the storage table all contacts that
--- have an email address. ID is civicrm_email.id.
--- (16 min 25.15 sec)
-INSERT INTO silverpop_export_staging
-  (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in, employer_id, employer_name)
-  SELECT
-    e.id,
-    c.modified_date,
-    e.contact_id, c.hash, e.email, c.first_name, c.last_name,
-    REPLACE(c.preferred_language, '_', '-'),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)) as opted_out,
-    v.opt_in as opted_in,
-    c.employer_id,
-    IF(c.employer_id, c.organization_name, '') as employer_name
-  FROM civicrm.civicrm_email e
-  LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
-  LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
-  WHERE
-    e.email IS NOT NULL AND e.email != ''
-    AND c.is_deleted = 0
-    AND e.is_primary = 1;
-
-
 INSERT INTO silverpop_export_matching_gift
-  (id, name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated, subsidiaries)
+(id, name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated, subsidiaries)
 SELECT
     id,
     name_from_matching_gift_db,
@@ -44,6 +12,54 @@ SELECT
 FROM
     civicrm.civicrm_value_matching_gift;
 
+-- Updates the silverpop_export table
+
+SET autocommit = 1;
+
+-- Populate, or append to, the storage table all contacts that
+-- have an email address. ID is civicrm_email.id.
+-- 24 June 2020 Query OK, 23988864 rows affected (19 min 41.23 sec)
+INSERT INTO silverpop_export_staging
+  (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in,
+   employer_id, employer_name, address_id, city, postal_code, country, state)
+  SELECT
+    e.id,
+    c.modified_date,
+    e.contact_id, c.hash, e.email, c.first_name, c.last_name,
+    REPLACE(c.preferred_language, '_', '-') as preferred_language,
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)) as opted_out,
+    v.opt_in as opted_in,
+    c.employer_id,
+    IF(c.employer_id, c.organization_name, '') as employer_name,
+    a.id as address_id,
+    a.city,
+    a.postal_code,
+    ctry.iso_code as country,
+    st.name as state
+  FROM civicrm.civicrm_email e
+  LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
+  LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
+  LEFT JOIN civicrm.civicrm_address a ON a.contact_id = e.contact_id AND a.is_primary = 1
+  LEFT JOIN civicrm.civicrm_country ctry
+            ON a.country_id = ctry.id
+  LEFT JOIN civicrm.civicrm_state_province st
+            ON a.state_province_id = st.id
+  WHERE
+    e.email IS NOT NULL AND e.email != ''
+    AND c.is_deleted = 0
+    AND e.is_primary = 1;
+
+-- Query OK, 23200800 rows affected (9 min 22.15 sec)
+INSERT INTO silverpop_email_map
+  SELECT email, MAX(id) as master_email_id, MAX(address_id) as address_id,
+    MAX(preferred_language) as preferred_language,
+    MAX(opted_out) as opted_out
+  FROM silverpop_export_staging
+    -- This index force seems to not change the speed much....
+    FORCE INDEX (spex_email)
+  GROUP BY email
+;
+
 -- Find the latest donation for each email address. Ordering by
 -- receive_date and total_amount descending should always insert
 -- the latest donation first, with the larger prevailing for an
@@ -51,7 +67,7 @@ FROM
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
 -- the latter throws warnings.
--- (8 min 6.67 sec)
+-- Query OK, 19162022 rows affected, 11 warnings (8 min 55.71 sec)
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
@@ -94,53 +110,6 @@ INSERT INTO silverpop_export_highest
     ct.receive_date DESC
 ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
 
-CREATE TABLE silverpop_export_dedupe_email (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  email varchar(255),
-  maxid int,
-  preferred_language varchar(12),
-  opted_out tinyint(1),
-
-  INDEX spexde_email (email)
-) COLLATE 'utf8_unicode_ci';
-
--- Deduplicate rows that have the same email address.
--- We will have to merge in more data later, but this is ~1.5M rows we're
--- getting rid of here which is more better than taking them all the way
--- through.
--- 1 min 31.96 sec
-INSERT INTO silverpop_export_dedupe_email (email, maxid, opted_out)
-   SELECT email, max(id) maxid, max(opted_out) opted_out
-     FROM silverpop_export_staging
-       FORCE INDEX (spex_email)
-       GROUP BY email
-       HAVING count(*) > 1;
-
--- We pull in language from the parent table so that we
--- can preserve it and not propagate nulls
--- 30.85 sec
-UPDATE silverpop_export_dedupe_email exde, silverpop_export_staging ex
-  SET
-    exde.preferred_language = ex.preferred_language
-  WHERE
-    ex.email = exde.email AND
-    ex.preferred_language IS NOT NULL;
-
--- Delete duplicated email addresses from the main staging table
--- (1 min 2.15 sec)
-DELETE silverpop_export_staging FROM silverpop_export_staging, silverpop_export_dedupe_email
-  WHERE
-    silverpop_export_staging.email = silverpop_export_dedupe_email.email AND
-    silverpop_export_staging.id != silverpop_export_dedupe_email.maxid;
-
--- Make sure the remaining rows all have opt-out and language set correctly
--- (18.34 sec)
-UPDATE silverpop_export_staging ex, silverpop_export_dedupe_email exde
-  SET
-    ex.opted_out = exde.opted_out,
-    ex.preferred_language = exde.preferred_language
-  WHERE
-    exde.maxid = ex.id;
 
 -- Populate the aggregate table from a full contribution table scan
 -- 28 min 41.38 sec
@@ -186,29 +155,18 @@ UPDATE
   INNER JOIN silverpop_export_stat stat ON stat.email = email.email
   SET has_recurred_donation = 1;
 
--- Get latest postal address for each email.
--- (16 minutes)
-INSERT INTO silverpop_export_address
-SELECT      e.email, a.city, ctry.iso_code, st.name, a.postal_code
-  FROM      civicrm.civicrm_email e
-  JOIN      silverpop_export_staging ex
-    ON      e.email = ex.email
-  JOIN      civicrm.civicrm_address a
-    ON      e.contact_id = a.contact_id AND a.is_primary = 1
-  JOIN      civicrm.civicrm_country ctry
-    ON      a.country_id = ctry.id
-  LEFT JOIN civicrm.civicrm_state_province st
-    ON      a.state_province_id = st.id
-  WHERE     ex.opted_out = 0
-  ORDER BY  a.id DESC
-ON DUPLICATE KEY UPDATE email = e.email;
 
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
 UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
   LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
   LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
-  LEFT JOIN silverpop_export_address addr ON ex.email = addr.email
+  -- this INNER JOIN limits us to only the highest values.
+  INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
+  -- there is a question whether we should just join in the live address table at this
+  -- point or store the whole address. It seems query time is not much affected but less tables
+  -- may be locked.
+  LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
   SET
     ex.lifetime_usd_total = COALESCE(exs.total_usd, 0),
     ex.total_2014 = exs.total_2014,
@@ -236,7 +194,11 @@ UPDATE silverpop_export_staging ex
     ex.city = addr.city,
     ex.country = addr.country,
     ex.postal_code = addr.postal_code,
-    ex.state = addr.state;
+    ex.state = addr.state,
+    -- get the one associated with the master email, failing that 'any'
+    ex.preferred_language = COALESCE(ex.preferred_language, dedupe_table.preferred_language),
+    -- this gets the 'max' - ie if ANY are 1 then we get that.
+    ex.opted_out = dedupe_table.opted_out ;
 
 -- Fill in missing countries from contribution_tracking
 -- (15 minutes)
@@ -267,7 +229,7 @@ UPDATE silverpop_export_staging ex, silverpop_countrylangs cl
 UPDATE silverpop_export_staging SET preferred_language='en' WHERE preferred_language IS NULL;
 
 -- Move the data from the staging table into the persistent one
--- (12 minutes)
+-- Query OK, 19081073 rows affected (10 min 45.45 sec)
 INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
@@ -276,7 +238,7 @@ INSERT INTO silverpop_export (
   latest_donation, first_donation_date,city,country,state,postal_code,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
-SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
+SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
@@ -284,8 +246,12 @@ SELECT id,contact_id,contact_hash,first_name,last_name,preferred_language,email,
   total_2014, total_2015, total_2016, total_2017,
   total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations
-FROM silverpop_export_staging
-WHERE opted_out=0
+FROM silverpop_export_staging ex
+-- this inner join is restricting us to only one record per email.
+-- currently it is the highest email_id. Ideally it will later to change to
+-- email_id associated with the highest donation.
+INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
+WHERE ex.opted_out=0
 AND (opted_in IS NULL OR opted_in = 1)
 
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;

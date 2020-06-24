@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
     highest_donation_date datetime null,
 
     -- Address information
+    address_id int(16),
     city varchar(128),
     country varchar(2),
     state varchar(64),
@@ -57,9 +58,20 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging(
     INDEX spex_country (country),
     INDEX spex_opted_out (opted_out),
     INDEX spex_modified_date(modified_date),
-    INDEX spex_id(id)
+    INDEX spex_id(id),
+    INDEX address_id(address_id)
 ) COLLATE 'utf8_unicode_ci';
 
+CREATE TABLE `silverpop_email_map` (
+   `email` varchar(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+   `master_email_id` int(16) NOT NULL,
+   `address_id` int(16) DEFAULT NULL,
+   `preferred_language` varchar(12) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+   `opted_out` tinyint(1) DEFAULT NULL,
+   KEY `master_email_id` (`master_email_id`),
+   KEY `address_id` (`address_id`),
+   KEY `email` (`email`)
+) COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_latest(
   email varchar(255) PRIMARY KEY,
