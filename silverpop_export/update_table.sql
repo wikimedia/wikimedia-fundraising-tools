@@ -17,11 +17,12 @@ INSERT INTO silverpop_export_staging
     c.modified_date,
     e.contact_id, c.hash, e.email, c.first_name, c.last_name,
     REPLACE(c.preferred_language, '_', '-'),
-    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)),
-    v.opt_in, c.employer_id, oc.organization_name
+    (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)) as opted_out,
+    v.opt_in as opted_in,
+    c.employer_id,
+    IF(c.employer_id, c.organization_name, '') as employer_name
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
-  LEFT JOIN civicrm.civicrm_contact oc ON oc.id = c.employer_id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   WHERE
     e.email IS NOT NULL AND e.email != ''
