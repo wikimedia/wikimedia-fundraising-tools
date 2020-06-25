@@ -66,6 +66,10 @@ if __name__ == '__main__':
     log.info("Loading schema update set ")
     rebuild_queries = load_queries('rebuild_schema.sql')
 
+    log.info("Loading schema update set ")
+    # Probably this should be in the rebuild but leaving for later to keep commits readable.
+    language_queries = load_queries('silverpop_countrylangs.sql')
+
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
 
@@ -79,6 +83,9 @@ if __name__ == '__main__':
 
     log.info("Rebuilding schema (temporary step)")
     run_queries(db, rebuild_queries)
+
+    log.info("Rebuilding language table.")
+    run_queries(db, language_queries)
 
     log.info("Starting update query run")
     run_queries(db, update_queries)
