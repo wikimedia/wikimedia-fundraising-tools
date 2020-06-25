@@ -301,8 +301,11 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
-    e.employer_id,
-    employer_name,
+    -- placeholder pending co-ordination of removal with Katie.
+    '' as timezone,
+    -- these 2 pending Katie
+    -- e.employer_id,
+    -- employer_name,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,
@@ -312,6 +315,8 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') highest_donation_date,
     lifetime_usd_total,
     IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') latest_donation_date,
+    -- placeholder pending co-ordination of removal with Katie.
+    0 as latest_usd_amount,
     latest_currency,
     latest_currency_symbol,
     latest_native_amount,
