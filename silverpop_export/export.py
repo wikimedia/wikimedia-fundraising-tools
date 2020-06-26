@@ -32,9 +32,14 @@ def export_all():
         config.working_path,
         'Unsubscribes-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
     )
+    matchingiftsfile = os.path.join(
+        config.working_path,
+        'MatchingGifts-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
+    )
 
     export_data(output_path=updatefile)
     export_unsubscribes(output_path=unsubfile)
+    export_matching_gifts(output_path=matchingiftsfile)
     rotate_files()
 
     log.info("End Silverpop Export")
@@ -99,6 +104,23 @@ def export_unsubscribes(output_path=None):
     log.info("Starting unsubscribe data export")
     exportq = DbQuery()
     exportq.tables.append('silverpop_excluded')
+    exportq.columns.append('*')
+    run_export_query(
+        db=db,
+        query=exportq,
+        output=output_path,
+        sort_by_index="id"
+    )
+
+
+def export_matching_gifts(output_path=None):
+    config = process.globals.get_config()
+
+    db = DbConnection(**config.silverpop_db)
+
+    log.info("Starting matching gifts data export")
+    exportq = DbQuery()
+    exportq.tables.append('silverpop_export_matching_gift')
     exportq.columns.append('*')
     run_export_query(
         db=db,

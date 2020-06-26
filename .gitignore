@@ -1,6 +1,6 @@
 /.tox
 *.pyc
-
+silverpop_export/silverpop_export.yaml
 # editor tempfiles
 .idea
 .*.sw*
