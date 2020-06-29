@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
 -- Aggregate contribution statistics
 -- Sadly these would need updating next year. I have doubts about doing something more
 -- clever without reviewing the script more broadly as it's kinda tricky in straight sql
-  total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
 
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
@@ -113,13 +113,13 @@ CREATE TABLE silverpop_export_stat
   cnt_total INT UNSIGNED,
   first_donation_date DATETIME,
 -- Aggregate contribution statistics
-  total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
@@ -174,13 +174,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   donation_count INT,
 
 -- Aggregate contribution statistics
-  total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
 
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,

@@ -136,8 +136,8 @@ ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highe
 -- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
   (email, exid, total_usd, cnt_total, first_donation_date,
-   total_2014, total_2015, total_2016, total_2017,
-   total_2018, total_2019, total_2020,
+   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
+   foundation_total_2018, foundation_total_2019, foundation_total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
   )
   SELECT
@@ -146,13 +146,13 @@ INSERT INTO silverpop_export_stat
     COALESCE(SUM(donor.lifetime_usd_total), 0) as lifetime_usd_total,
     COALESCE(SUM(donor.number_donations), 0) as number_donations,
     MIN(donor.first_donation_date) as first_donation_date,
-    COALESCE(SUM(donor.total_2014), 0) as total_2014,
-    COALESCE(SUM(donor.total_2015), 0) as total_2015,
-    COALESCE(SUM(donor.total_2016), 0) as total_2016,
-    COALESCE(SUM(donor.total_2017), 0) as total_2017,
-    COALESCE(SUM(donor.total_2018), 0) as total_2018,
-    COALESCE(SUM(donor.total_2019), 0) as total_2019,
-    COALESCE(SUM(donor.total_2020), 0) as total_2020,
+    COALESCE(SUM(donor.total_2014), 0) as foundation_total_2014,
+    COALESCE(SUM(donor.total_2015), 0) as foundation_total_2015,
+    COALESCE(SUM(donor.total_2016), 0) as foundation_total_2016,
+    COALESCE(SUM(donor.total_2017), 0) as foundation_total_2017,
+    COALESCE(SUM(donor.total_2018), 0) as foundation_total_2018,
+    COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
+    COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
@@ -191,13 +191,13 @@ UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
   SET
     ex.lifetime_usd_total = COALESCE(exs.total_usd, 0),
-    ex.total_2014 = exs.total_2014,
-    ex.total_2015 = exs.total_2015,
-    ex.total_2016 = exs.total_2016,
-    ex.total_2017 = exs.total_2017,
-    ex.total_2018 = exs.total_2018,
-    ex.total_2019 = exs.total_2019,
-    ex.total_2020 = exs.total_2020,
+    ex.foundation_total_2014 = exs.foundation_total_2014,
+    ex.foundation_total_2015 = exs.foundation_total_2015,
+    ex.foundation_total_2016 = exs.foundation_total_2016,
+    ex.foundation_total_2017 = exs.foundation_total_2017,
+    ex.foundation_total_2018 = exs.foundation_total_2018,
+    ex.foundation_total_2019 = exs.foundation_total_2019,
+    ex.foundation_total_2020 = exs.foundation_total_2020,
     ex.endowment_last_donation_date = exs.endowment_last_donation_date,
     ex.endowment_first_donation_date = exs.endowment_first_donation_date,
     ex.endowment_number_donations = exs.endowment_number_donations,
@@ -230,15 +230,15 @@ INSERT INTO silverpop_export (
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation, first_donation_date,city,country,state,postal_code,
-  total_2014, total_2015, total_2016, total_2017,
-  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
+  foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
+  foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation,first_donation_date,city,country,state,postal_code,
-  total_2014, total_2015, total_2016, total_2017,
-  total_2018, total_2019, total_2020, endowment_last_donation_date, endowment_first_donation_date,
+  foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
+  foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations
 FROM silverpop_export_staging ex
 -- this inner join is restricting us to only one record per email.
@@ -400,13 +400,13 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     latest_currency as foundation_latest_currency,
     latest_currency_symbol as foundation_latest_currency_symbol,
     IF(has_recurred_donation, 'YES', 'NO') as foundation_has_recurred_donation,
-    total_2014 as foundation_total_2014,
-    total_2015 as foundation_total_2015,
-    total_2016 as foundation_total_2016,
-    total_2017 as foundation_total_2017,
-    total_2018 as foundation_total_2018,
-    total_2019 as foundation_total_2019,
-    total_2020 as foundation_total_2020
+    foundation_total_2014 as foundation_total_2014,
+    foundation_total_2015 as foundation_total_2015,
+    foundation_total_2016 as foundation_total_2016,
+    foundation_total_2017 as foundation_total_2017,
+    foundation_total_2018 as foundation_total_2018,
+    foundation_total_2019 as foundation_total_2019,
+    foundation_total_2020 as foundation_total_2020
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
