@@ -81,11 +81,11 @@ def test_no_donations():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("""
-        select has_recurred_donation, highest_usd_amount,
-            highest_native_amount, highest_native_currency,
-            highest_donation_date, lifetime_usd_total,
-            donation_count, latest_currency, latest_native_amount,
-            latest_donation_date
+        select foundation_has_recurred_donation, foundation_highest_usd_amount,
+            foundation_highest_native_amount, foundation_highest_native_currency,
+            foundation_highest_donation_date, foundation_lifetime_usd_total,
+            foundation_donation_count, foundation_latest_currency, foundation_latest_native_amount,
+            foundation_latest_donation_date
         from silverpop_export_view
     """)
     actual = cursor.fetchone()

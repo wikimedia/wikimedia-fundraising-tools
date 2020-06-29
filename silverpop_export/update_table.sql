@@ -296,136 +296,156 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     contact_id ContactID,
     e.contact_hash,
     email,
-    IFNULL(e.first_name, '') firstname,
-    IFNULL(e.last_name, '') lastname,
-    IFNULL(country, 'XX') country,
+    IFNULL(e.first_name, '')                                               firstname,
+    IFNULL(e.last_name, '')                                                lastname,
+    CASE
+      WHEN gender_id =1 THEN 'Female'
+      WHEN gender_id =2 THEN 'Male'
+      WHEN gender_id =3 THEN 'Transgender'
+      ELSE ''
+    END as gender,
+    IFNULL(country, 'XX')                                                  country,
     state,
     postal_code,
-    -- placeholder pending co-ordination of removal with Katie.
-    '' as timezone,
-    -- these 2 pending Katie
-    -- e.employer_id,
-    -- employer_name,
+    e.employer_name,
+    e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
-    IF(has_recurred_donation, 'YES', 'NO') has_recurred_donation,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'YES','NO') END AS latest_optin_response,
-    highest_usd_amount,
-    highest_native_amount,
-    highest_native_currency,
-    IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') highest_donation_date,
-    lifetime_usd_total,
-    IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') latest_donation_date,
-    -- placeholder pending co-ordination of removal with Katie.
-    0 as latest_usd_amount,
-    latest_currency,
-    latest_currency_symbol,
-    latest_native_amount,
-    donation_count,
-    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') first_donation_date,
-    total_2014,
-    total_2015,
-    total_2016,
-    total_2017,
-    total_2018,
-    total_2019,
-    total_2020,
+    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') prospect_birth_date,
+    COALESCE(charitable_contributions_decile, '') as prospect_charitable_contributions_decile,
+    COALESCE(disc_income_decile, '') as prospect_disc_income_decile,
+    CASE
+      WHEN estimated_net_worth_144 = '1' THEN'$20 Million +'
+      WHEN estimated_net_worth_144 = '2' THEN '$10 Million - $19.99 Million'
+      WHEN estimated_net_worth_144 = '3' THEN '$5 Million - $9.99 Million'
+      WHEN estimated_net_worth_144 = '4' THEN '$2 Million - $4.99 Million'
+      WHEN estimated_net_worth_144 = '5' THEN '$1 Million - $1.99 Million'
+      WHEN estimated_net_worth_144 = '6' THEN '$500,000 - $999,999'
+      WHEN estimated_net_worth_144 = '7' THEN '>$5B'
+      WHEN estimated_net_worth_144 = '8' THEN '>$1B'
+      WHEN estimated_net_worth_144 = '9' THEN '>$10B'
+      WHEN estimated_net_worth_144 = '10' THEN '$100 Million +'
+      WHEN estimated_net_worth_144 = 'A' THEN 'Below $25,000'
+      WHEN estimated_net_worth_144 = 'B' THEN '$25,000 - $49,999'
+      WHEN estimated_net_worth_144 = 'C' THEN '$50,000 - $74,999'
+      WHEN estimated_net_worth_144 = 'D' THEN '$75,000 - $99,999'
+      WHEN estimated_net_worth_144 = 'E' THEN '$150,000 - $199,999'
+      WHEN estimated_net_worth_144 = 'F' THEN '$150,000 - $199,999'
+      WHEN estimated_net_worth_144 = 'G' THEN '$200,000 - $249,999'
+      WHEN estimated_net_worth_144 = 'H' THEN '$250,000 - $499,999'
+      WHEN estimated_net_worth_144 = 'I' THEN '$500,000 - $749,999'
+      WHEN estimated_net_worth_144 = 'J' THEN '$750,000 - $999,999'
+      WHEN estimated_net_worth_144 = 'K' THEN '$1,000,000 - $2,499,999'
+      WHEN estimated_net_worth_144 = 'L' THEN '$2,500,000 - $4,999,999'
+      WHEN estimated_net_worth_144 = 'M' THEN '$5,000,000 - $9,999,999'
+      WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
+      ELSE ''
+    END as prospect_estimated_net_worth,
+    CASE
+      WHEN family_composition_173 = '1' THEN 'Single'
+      WHEN family_composition_173 = '2' THEN 'Single with Children'
+      WHEN family_composition_173 = '3' THEN 'Couple'
+      WHEN family_composition_173 = '4' THEN 'Couple with children'
+      WHEN family_composition_173 = '5' THEN 'Multiple Generations'
+      WHEN family_composition_173 = '6' THEN 'Multiple Surnames (3+)'
+      WHEN family_composition_173 = '7' THEN 'Other'
+      ELSE ''
+    END as prospect_family_composition,
+    CASE
+      WHEN income_range = 'a' THEN 'Below $30,000'
+      WHEN income_range = 'b' THEN '$30,000 - $39,999'
+      WHEN income_range = 'c' THEN '$40,000 - $49,999'
+      WHEN income_range = 'd' THEN '$50,000 - $59,999'
+      WHEN income_range = 'e' THEN '$60,000 - $74,999'
+      WHEN income_range = 'f' THEN '$75,000 - $99,999'
+      WHEN income_range = 'g' THEN '$100,000 - $124,999'
+      WHEN income_range = 'h' THEN '$125,000 - $149,999'
+      WHEN income_range = 'i' THEN '$150,000 - $199,999'
+      WHEN income_range = 'j' THEN '$200,000 - $249,999'
+      WHEN income_range = 'k' THEN '$250,000 - $299,999'
+      WHEN income_range = 'l' THEN '$300,000 - $499,999'
+      WHEN income_range = 'm' THEN 'Above $500,000'
+      ELSE ''
+    END as prospect_income_range,
+    CASE
+      WHEN occupation_175 = '1' THEN 'Professional/Technical'
+      WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
+      WHEN occupation_175 = '3' THEN 'Sales/Service'
+      WHEN occupation_175 = '4' THEN 'Office/Clerical'
+      WHEN occupation_175 = '5' THEN 'Skilled Trade'
+      WHEN occupation_175 = '6' THEN 'Retired'
+      WHEN occupation_175 = '7' THEN 'Administrative/Management'
+      WHEN occupation_175 = '8' THEN 'Self Employed'
+      WHEN occupation_175 = '9' THEN 'Military'
+      WHEN occupation_175 = '10' THEN 'Farming/Agriculture'
+      WHEN occupation_175 = '11' THEN 'Medical/Health Services'
+      WHEN occupation_175 = '12' THEN 'Financial Services'
+      WHEN occupation_175 = '13' THEN 'Teacher/Educator'
+      WHEN occupation_175 = '14' THEN 'Legal Services'
+      WHEN occupation_175 = '15' THEN 'Religious'
+      ELSE ''
+    END as prospect_occupation,
+
+    CASE
+      WHEN voter_party = 'democrat' THEN 'Democrat'
+      WHEN voter_party = 'republican' THEN 'Republican'
+      WHEN voter_party = 'green' THEN 'Green'
+      WHEN voter_party = 'independent' THEN 'Independent'
+      WHEN voter_party = 'libertarian' THEN 'Libertarian'
+      WHEN voter_party = 'no_party' THEN 'No Party'
+      WHEN voter_party = 'other' THEN 'Other'
+      WHEN voter_party = 'unaffiliated' THEN 'Unaffiliated'
+      WHEN voter_party =  'unregistered' THEN 'Unregistered'
+      WHEN voter_party = 'working_fam' THEN 'Working Fam'
+      WHEN voter_party = 'conservative' THEN 'Conservative'
+      ELSE ''
+    END as prospect_party,
+    -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
+    (donation_count + endowment_number_donations) as all_funds_donation_count,
+    IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR first_donation_date < endowment_first_donation_date , first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
+      as all_funds_first_donation_date,
+    -- Placeholder, this requires extra work above to calculate.
+    '' as all_funds_highest_donation_date,
+    -- Placeholder, this requires extra work above to calculate.
+    0 as all_funds_highest_usd_amount,
+    IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR highest_donation_date > endowment_last_donation_date , highest_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
+      as all_funds_latest_donation_date,
+    0 as all_funds_latest_native_amount,
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
     endowment_number_donations,
-    CASE
-        WHEN family_composition_173 = '1' THEN 'Single'
-        WHEN family_composition_173 = '2' THEN 'Single with Children'
-        WHEN family_composition_173 = '3' THEN 'Couple'
-        WHEN family_composition_173 = '4' THEN 'Couple with children'
-        WHEN family_composition_173 = '5' THEN 'Multiple Generations'
-        WHEN family_composition_173 = '6' THEN 'Multiple Surnames (3+)'
-        WHEN family_composition_173 = '7' THEN 'Other'
-        ELSE ''
-    END as z_family_composition,
-    CASE
-        WHEN estimated_net_worth_144 = '1' THEN'$20 Million +'
-        WHEN estimated_net_worth_144 = '2' THEN '$10 Million - $19.99 Million'
-        WHEN estimated_net_worth_144 = '3' THEN '$5 Million - $9.99 Million'
-        WHEN estimated_net_worth_144 = '4' THEN '$2 Million - $4.99 Million'
-        WHEN estimated_net_worth_144 = '5' THEN '$1 Million - $1.99 Million'
-        WHEN estimated_net_worth_144 = '6' THEN '$500,000 - $999,999'
-        WHEN estimated_net_worth_144 = '7' THEN '>$5B'
-        WHEN estimated_net_worth_144 = '8' THEN '>$1B'
-        WHEN estimated_net_worth_144 = '9' THEN '>$10B'
-        WHEN estimated_net_worth_144 = '10' THEN '$100 Million +'
-        WHEN estimated_net_worth_144 = 'A' THEN 'Below $25,000'
-        WHEN estimated_net_worth_144 = 'B' THEN '$25,000 - $49,999'
-        WHEN estimated_net_worth_144 = 'C' THEN '$50,000 - $74,999'
-        WHEN estimated_net_worth_144 = 'D' THEN '$75,000 - $99,999'
-        WHEN estimated_net_worth_144 = 'E' THEN '$150,000 - $199,999'
-        WHEN estimated_net_worth_144 = 'F' THEN '$150,000 - $199,999'
-        WHEN estimated_net_worth_144 = 'G' THEN '$200,000 - $249,999'
-        WHEN estimated_net_worth_144 = 'H' THEN '$250,000 - $499,999'
-        WHEN estimated_net_worth_144 = 'I' THEN '$500,000 - $749,999'
-        WHEN estimated_net_worth_144 = 'J' THEN '$750,000 - $999,999'
-        WHEN estimated_net_worth_144 = 'K' THEN '$1,000,000 - $2,499,999'
-        WHEN estimated_net_worth_144 = 'L' THEN '$2,500,000 - $4,999,999'
-        WHEN estimated_net_worth_144 = 'M' THEN '$5,000,000 - $9,999,999'
-        WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
-        ELSE ''
-    END as z_estimated_net_worth,
-    COALESCE(charitable_contributions_decile, '') as z_charitable_contributions_decile,
-    CASE
-        WHEN voter_party = 'democrat' THEN 'Democrat'
-        WHEN voter_party = 'republican' THEN 'Republican'
-        WHEN voter_party = 'green' THEN 'Green'
-        WHEN voter_party = 'independent' THEN 'Independent'
-        WHEN voter_party = 'libertarian' THEN 'Libertarian'
-        WHEN voter_party = 'no_party' THEN 'No Party'
-        WHEN voter_party = 'other' THEN 'Other'
-        WHEN voter_party = 'unaffiliated' THEN 'Unaffiliated'
-        WHEN voter_party =  'unregistered' THEN 'Unregistered'
-        WHEN voter_party = 'working_fam' THEN 'Working Fam'
-        WHEN voter_party = 'conservative' THEN 'Conservative'
-        ELSE ''
-     END as z_voter_party,
-    COALESCE(disc_income_decile, '') as z_disc_income_decile,
-    CASE
-        WHEN occupation_175 = '1' THEN 'Professional/Technical'
-        WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
-        WHEN occupation_175 = '3' THEN 'Sales/Service'
-        WHEN occupation_175 = '4' THEN 'Office/Clerical'
-        WHEN occupation_175 = '5' THEN 'Skilled Trade'
-        WHEN occupation_175 = '6' THEN 'Retired'
-        WHEN occupation_175 = '7' THEN 'Administrative/Management'
-        WHEN occupation_175 = '8' THEN 'Self Employed'
-        WHEN occupation_175 = '9' THEN 'Military'
-        WHEN occupation_175 = '10' THEN 'Farming/Agriculture'
-        WHEN occupation_175 = '11' THEN 'Medical/Health Services'
-        WHEN occupation_175 = '12' THEN 'Financial Services'
-        WHEN occupation_175 = '13' THEN 'Teacher/Educator'
-        WHEN occupation_175 = '14' THEN 'Legal Services'
-        WHEN occupation_175 = '15' THEN 'Religious'
-        ELSE ''
-    END as z_occupation,
-    CASE
-        WHEN income_range = 'a' THEN 'Below $30,000'
-        WHEN income_range = 'b' THEN '$30,000 - $39,999'
-        WHEN income_range = 'c' THEN '$40,000 - $49,999'
-        WHEN income_range = 'd' THEN '$50,000 - $59,999'
-        WHEN income_range = 'e' THEN '$60,000 - $74,999'
-        WHEN income_range = 'f' THEN '$75,000 - $99,999'
-        WHEN income_range = 'g' THEN '$100,000 - $124,999'
-        WHEN income_range = 'h' THEN '$125,000 - $149,999'
-        WHEN income_range = 'i' THEN '$150,000 - $199,999'
-        WHEN income_range = 'j' THEN '$200,000 - $249,999'
-        WHEN income_range = 'k' THEN '$250,000 - $299,999'
-        WHEN income_range = 'l' THEN '$300,000 - $499,999'
-        WHEN income_range = 'm' THEN 'Above $500,000'
-        ELSE ''
-    END as z_income_range,
-    CASE
-        WHEN gender_id =1 THEN 'Female'
-        WHEN gender_id =2 THEN 'Male'
-        WHEN gender_id =3 THEN 'Transgender'
-        ELSE ''
-    END as z_gender,
-    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') z_birth_date
+    -- Placeholder, this requires extra work above to calculate.
+    '' as endowment_highest_donation_date,
+    -- Placeholder, this requires extra work above to calculate.
+    0 as endowment_highest_native_amount,
+    -- Placeholder, this requires extra work above to calculate.
+    '' as endowment_highest_native_currency,
+    -- Placeholder, this requires extra work above to calculate.
+    0 as endowment_highest_usd_amount,
+    -- Placeholder, this requires extra work above to calculate.
+    '' as endowment_latest_currency,
+    -- Placeholder, this requires extra work above to calculate.
+    0 as endowment_latest_native_amount,
+
+    donation_count as foundation_donation_count,
+    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') foundation_first_donation_date,
+    IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') foundation_highest_donation_date,
+    highest_usd_amount as foundation_highest_usd_amount,
+    IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') foundation_latest_donation_date,
+    latest_native_amount as foundation_latest_native_amount,
+    highest_native_amount as foundation_highest_native_amount,
+    highest_native_currency as foundation_highest_native_currency,
+    lifetime_usd_total as foundation_lifetime_usd_total,
+    latest_currency as foundation_latest_currency,
+    latest_currency_symbol as foundation_latest_currency_symbol,
+    IF(has_recurred_donation, 'YES', 'NO') as foundation_has_recurred_donation,
+    total_2014 as foundation_total_2014,
+    total_2015 as foundation_total_2015,
+    total_2016 as foundation_total_2016,
+    total_2017 as foundation_total_2017,
+    total_2018 as foundation_total_2018,
+    total_2019 as foundation_total_2019,
+    total_2020 as foundation_total_2020
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
