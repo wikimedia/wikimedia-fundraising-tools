@@ -261,11 +261,7 @@ UPDATE silverpop_export_staging ex
     ex.city = addr.city,
     ex.country = addr.country,
     ex.postal_code = addr.postal_code,
-    ex.state = addr.state,
-    -- get the one associated with the master email, failing that 'any'
-    ex.preferred_language = COALESCE(ex.preferred_language, dedupe_table.preferred_language),
-    -- this gets the 'max' - ie if ANY are 1 then we get that.
-    ex.opted_out = dedupe_table.opted_out ;
+    ex.state = addr.state;
 
 -- Move the data from the staging table into the persistent one
 -- Query OK, 19081073 rows affected (10 min 45.45 sec)
@@ -281,7 +277,10 @@ INSERT INTO silverpop_export (
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
-SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
+SELECT id,contact_id,contact_hash,first_name,last_name,
+  -- get the one associated with the master email, failing that 'any'
+  COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
+  ex.email,opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,
   COALESCE(foundation_lifetime_usd_total, 0) as foundation_lifetime_usd_total,
@@ -301,7 +300,8 @@ INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email
 LEFT JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
 
-WHERE ex.opted_out=0
+-- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
+WHERE dedupe_table.opted_out=0
 AND (opted_in IS NULL OR opted_in = 1)
 
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
