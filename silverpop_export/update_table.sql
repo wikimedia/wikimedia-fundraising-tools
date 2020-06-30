@@ -46,9 +46,7 @@ GROUP BY c.contact_id;
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
--- 24 June 2020 Query OK, 23988864 rows affected (19 min 41.23 sec)
--- Query OK, 23988880 rows affected (22 min 27.07 sec)
--- Query OK, 23988869 rows affected (23 min 19.54 sec)
+-- Query OK, 23986414 rows affected (23 min 34.44 sec)
 INSERT INTO silverpop_export_staging
   (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in,
    employer_id, employer_name, address_id, city, postal_code, country, state)
@@ -284,7 +282,10 @@ INSERT INTO silverpop_export (
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation, foundation_first_donation_date,city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
-  foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
+  foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  endowment_last_donation_date, endowment_first_donation_date,
+  endowment_number_donations, endowment_highest_usd_amount
+)
 SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
   ex.has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,
@@ -293,8 +294,10 @@ SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation,foundation_first_donation_date,city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
-  foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date,
-  endowment_number_donations
+  foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  endowment_last_donation_date, endowment_first_donation_date,
+  endowment_number_donations,
+  COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount
 FROM silverpop_export_staging ex
 -- this inner join is restricting us to only one record per email.
 -- currently it is the highest email_id. Ideally it will later to change to
@@ -435,8 +438,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     endowment_highest_donation_date,
     endowment_highest_native_amount,
     endowment_highest_native_currency,
-    -- Placeholder, this requires extra work above to calculate.
-    0 as endowment_highest_usd_amount,
+    endowment_highest_usd_amount,
     endowment_latest_currency,
     endowment_latest_native_amount,
     donation_count as foundation_donation_count,

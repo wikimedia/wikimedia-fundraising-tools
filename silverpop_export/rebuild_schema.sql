@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics
   latest_currency VARCHAR(3),
