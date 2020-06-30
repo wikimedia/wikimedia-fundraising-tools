@@ -228,24 +228,20 @@ WHERE c.total_amount = export.endowment_highest_usd_amount
   AND c.contribution_status_id = 1
 GROUP BY email.email;
 
--- Mark all emails associated with a recurring donations
--- Query OK, 492359 rows affected (1 min 46.59 sec)
-UPDATE
-  civicrm.civicrm_contribution_recur recur
-  INNER JOIN civicrm.civicrm_contribution contributions
-    ON recur.id = contributions.contribution_recur_id
-    AND contributions.contribution_status_id = 1
-    AND contributions.financial_type_id != 26
-    AND contributions.total_amount > 0
-  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id
-  INNER JOIN silverpop_export_stat stat ON stat.email = email.email
-  SET has_recurred_donation = 1;
-
+-- Query OK, 492395 rows affected (24.78 sec)
+INSERT INTO silverpop_has_recur
+ SELECT DISTINCT email, 1 as has_recurred_donation FROM
+   civicrm.civicrm_contribution_recur recur
+ INNER JOIN civicrm.civicrm_contribution contributions
+   ON recur.id = contributions.contribution_recur_id
+   AND contributions.contribution_status_id = 1
+   AND contributions.financial_type_id != 26
+   AND contributions.total_amount > 0
+ INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1;
 
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
 -- Query OK, 19637463 rows affected, 648 warnings (42 min 17.85 sec)
 UPDATE silverpop_export_staging ex
-  LEFT JOIN silverpop_export_stat exs ON ex.id = exs.exid
   LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
   LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
   -- this INNER JOIN limits us to only the highest values.
@@ -255,7 +251,6 @@ UPDATE silverpop_export_staging ex
   -- may be locked.
   LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
   SET
-    ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
     ex.latest_currency = COALESCE(lt.latest_currency, ''),
     ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
     ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
@@ -276,7 +271,7 @@ UPDATE silverpop_export_staging ex
 -- Query OK, 19081073 rows affected (10 min 45.45 sec)
 INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
-  has_recurred_donation,
+  foundation_has_recurred_donation,
   foundation_highest_usd_amount,highest_native_amount,
   highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
@@ -287,7 +282,7 @@ INSERT INTO silverpop_export (
   endowment_number_donations, endowment_highest_usd_amount
 )
 SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
-  ex.has_recurred_donation,highest_usd_amount,highest_native_amount,
+  foundation_has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,
   COALESCE(foundation_lifetime_usd_total, 0) as foundation_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
@@ -304,6 +299,7 @@ FROM silverpop_export_staging ex
 -- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
 LEFT JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
+LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
 
 WHERE ex.opted_out=0
 AND (opted_in IS NULL OR opted_in = 1)
@@ -453,7 +449,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     lifetime_usd_total as foundation_lifetime_usd_total,
     latest_currency as foundation_latest_currency,
     latest_currency_symbol as foundation_latest_currency_symbol,
-    IF(has_recurred_donation, 'YES', 'NO') as foundation_has_recurred_donation,
+    IF(foundation_has_recurred_donation, 'YES', 'NO') as foundation_has_recurred_donation,
     foundation_total_2014 as foundation_total_2014,
     foundation_total_2015 as foundation_total_2015,
     foundation_total_2016 as foundation_total_2016,

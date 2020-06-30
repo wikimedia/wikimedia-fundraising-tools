@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS silverpop_email_map;
 DROP TABLE IF EXISTS silverpop_missing_countries;
 DROP TABLE IF EXISTS silverpop_endowment_latest;
 DROP TABLE IF EXISTS silverpop_endowment_highest;
+DROP TABLE IF EXISTS silverpop_has_recur;
 # We are no longer dropping and re-creating this table - just adding to it
 # eventually this file might play a different schema re-set role
 # so commenting for now.
