@@ -100,7 +100,7 @@ INSERT INTO silverpop_email_map
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
 -- the latter throws warnings.
--- Query OK, 19162022 rows affected, 11 warnings (8 min 55.71 sec)
+-- Query OK, 19160114 rows affected, 11 warnings (10 min 15.50 sec)
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
@@ -120,7 +120,7 @@ INSERT INTO silverpop_export_latest
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
 
 -- Populate table for highest donation amount and date
--- Query OK, 19161855 rows affected, 78 warnings (22 min 47.28 sec)
+-- Query OK, 19160133 rows affected, 78 warnings (26 min 24.83 sec)
 INSERT INTO silverpop_export_highest
   SELECT
     e.email,
@@ -146,7 +146,7 @@ ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highe
 
 
 -- Populate the aggregate table from a full contribution table scan
--- Query OK, 23199197 rows affected (37 min 46.75 sec)
+-- Query OK, 23198921 rows affected (42 min 32.54 sec)
 INSERT INTO silverpop_export_stat
   (email, exid,
    all_funds_latest_donation_date,
@@ -186,7 +186,7 @@ INSERT INTO silverpop_export_stat
   # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
 
--- Query OK, 869035 rows affected (53.60 sec)
+-- Query OK, 869024 rows affected (56.89 sec)
 INSERT INTO silverpop_endowment_latest
 SELECT
   email.email,
@@ -207,7 +207,7 @@ WHERE c.receive_date = export.endowment_last_donation_date
   AND c.total_amount > 0
 GROUP BY email.email;
 
--- Query OK, 869067 rows affected (58.79 sec)
+-- Query OK, 869058 rows affected (2 min 52.56 sec)
 INSERT INTO silverpop_endowment_highest
 SELECT
   email.email,
@@ -240,7 +240,7 @@ INSERT INTO silverpop_has_recur
  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1;
 
 -- Pull in address and latest/greatest/cumulative stats from intermediate tables
--- Query OK, 19637463 rows affected, 648 warnings (42 min 17.85 sec)
+-- Query OK, 19160658 rows affected (33 min 39.28 sec)
 UPDATE silverpop_export_staging ex
   LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
   LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
@@ -264,7 +264,7 @@ UPDATE silverpop_export_staging ex
     ex.state = addr.state;
 
 -- Move the data from the staging table into the persistent one
--- Query OK, 19081073 rows affected (10 min 45.45 sec)
+-- Query OK, 19044058 rows affected, 152 warnings (15 min 49.04 sec)
 INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,
