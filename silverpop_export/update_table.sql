@@ -203,7 +203,6 @@ UPDATE silverpop_export_staging ex
     ex.endowment_last_donation_date = exs.endowment_last_donation_date,
     ex.endowment_first_donation_date = exs.endowment_first_donation_date,
     ex.endowment_number_donations = exs.endowment_number_donations,
-    ex.donation_count = exs.foundation_donation_count,
     ex.donation_count = COALESCE(exs.foundation_donation_count, 0),
     ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
     ex.foundation_first_donation_date = exs.foundation_first_donation_date,
