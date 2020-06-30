@@ -1,3 +1,4 @@
+SET autocommit = 1;
 INSERT INTO silverpop_export_matching_gift
 (id, name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated, subsidiaries)
 SELECT
@@ -13,8 +14,6 @@ FROM
     civicrm.civicrm_value_matching_gift;
 
 -- Updates the silverpop_export table
-
-SET autocommit = 1;
 
 -- Explanation of tables (as of now, still being re-worked).
 -- silverpop_export_staging - summarised contact data with complexities around country, language, opt in, opt out resolved
