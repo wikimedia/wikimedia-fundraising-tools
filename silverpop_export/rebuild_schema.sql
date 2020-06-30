@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
   latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   latest_donation DATETIME NULL,
-  first_donation_date DATETIME NULL,
+  foundation_first_donation_date DATETIME NULL,
   highest_donation_date DATETIME NULL,
 
 -- Address information
@@ -110,8 +110,8 @@ CREATE TABLE silverpop_export_stat
   exid INT,
   has_recurred_donation TINYINT(1) NOT NULL DEFAULT 0,
   total_usd DECIMAL(20, 2),
-  cnt_total INT UNSIGNED,
-  first_donation_date DATETIME,
+  foundation_donation_count INT UNSIGNED,
+  foundation_first_donation_date DATETIME,
 -- Aggregate contribution statistics
   foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2),
   latest_donation DATETIME,
-  first_donation_date DATETIME,
+  foundation_first_donation_date DATETIME,
 
 -- Address information
   city VARCHAR(128),

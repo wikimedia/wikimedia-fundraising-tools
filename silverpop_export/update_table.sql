@@ -135,7 +135,7 @@ ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highe
 -- Populate the aggregate table from a full contribution table scan
 -- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, cnt_total, first_donation_date,
+  (email, exid, total_usd, foundation_donation_count, foundation_first_donation_date,
    foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
    foundation_total_2018, foundation_total_2019, foundation_total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
@@ -145,7 +145,7 @@ INSERT INTO silverpop_export_stat
     MAX(ex.id),
     COALESCE(SUM(donor.lifetime_usd_total), 0) as lifetime_usd_total,
     COALESCE(SUM(donor.number_donations), 0) as number_donations,
-    MIN(donor.first_donation_date) as first_donation_date,
+    MIN(donor.first_donation_date) as foundation_first_donation_date,
     COALESCE(SUM(donor.total_2014), 0) as foundation_total_2014,
     COALESCE(SUM(donor.total_2015), 0) as foundation_total_2015,
     COALESCE(SUM(donor.total_2016), 0) as foundation_total_2016,
@@ -201,10 +201,10 @@ UPDATE silverpop_export_staging ex
     ex.endowment_last_donation_date = exs.endowment_last_donation_date,
     ex.endowment_first_donation_date = exs.endowment_first_donation_date,
     ex.endowment_number_donations = exs.endowment_number_donations,
-    ex.donation_count = exs.cnt_total,
-    ex.donation_count = COALESCE(exs.cnt_total, 0),
+    ex.donation_count = exs.foundation_donation_count,
+    ex.donation_count = COALESCE(exs.foundation_donation_count, 0),
     ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
-    ex.first_donation_date = exs.first_donation_date,
+    ex.foundation_first_donation_date = exs.foundation_first_donation_date,
     ex.latest_currency = COALESCE(lt.latest_currency, ''),
     ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
     ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
@@ -229,14 +229,14 @@ INSERT INTO silverpop_export (
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
-  latest_donation, first_donation_date,city,country,state,postal_code,
+  latest_donation, foundation_first_donation_date,city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
   has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
-  latest_donation,first_donation_date,city,country,state,postal_code,
+  latest_donation,foundation_first_donation_date,city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations
@@ -363,7 +363,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     END as prospect_party,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as all_funds_donation_count,
-    IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR first_donation_date < endowment_first_donation_date , first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
+    IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
       as all_funds_first_donation_date,
     -- Placeholder, this requires extra work above to calculate.
     '' as all_funds_highest_donation_date,
@@ -389,7 +389,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     0 as endowment_latest_native_amount,
 
     donation_count as foundation_donation_count,
-    IFNULL(DATE_FORMAT(first_donation_date, '%m/%d/%Y'), '') foundation_first_donation_date,
+    IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') foundation_first_donation_date,
     IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') foundation_highest_donation_date,
     highest_usd_amount as foundation_highest_usd_amount,
     IFNULL(DATE_FORMAT(latest_donation, '%m/%d/%Y'), '') foundation_latest_donation_date,

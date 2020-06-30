@@ -155,7 +155,7 @@ def test_first_donation():
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select first_donation_date from silverpop_export")
+    cursor.execute("select foundation_first_donation_date from silverpop_export")
     expected = (datetime.datetime(2016, 5, 5),)
     assert cursor.fetchone() == expected
 
