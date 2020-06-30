@@ -20,31 +20,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   highest_usd_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_currency VARCHAR(3) NOT NULL DEFAULT '',
-  lifetime_usd_total DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  donation_count INT NOT NULL DEFAULT 0,
 
--- Aggregate contribution statistics
--- Sadly these would need updating next year. I have doubts about doing something more
--- clever without reviewing the script more broadly as it's kinda tricky in straight sql
-  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-
--- Endowment stats ----
-  endowment_last_donation_date DATETIME NULL,
-  endowment_first_donation_date DATETIME NULL,
-  endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
-
--- Latest contribution statistics
+  -- Latest contribution statistics
   latest_currency VARCHAR(3) NOT NULL DEFAULT '',
   latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
   latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   latest_donation DATETIME NULL,
-  foundation_first_donation_date DATETIME NULL,
   highest_donation_date DATETIME NULL,
 
 -- Address information

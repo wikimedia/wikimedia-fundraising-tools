@@ -16,6 +16,22 @@ FROM
 
 SET autocommit = 1;
 
+-- Explanation of tables (as of now, still being re-worked).
+-- silverpop_export_staging - summarised contact data with complexities around country, language, opt in, opt out resolved
+-- silverpop_missing_countries - support table for building the above table
+-- silverpop_email_map - summary table of contact data where we want 'the one that has this data', provides master_id
+--    for later filtering. Note master_id currently calculated by highest email id - ideally would be most recent donor
+-- silverpop_export_stat aggregate data about contact's contibutions
+-- silverpop_export_latest - data about contact's most recent foundation donation
+-- silverpop_export_highest - data about contact's highest foundation donation
+-- silverpop_endowment_latest - data about contact's most recent endowment donation
+-- silverpop_endowment_highest - data about contact's highest endowment donation
+-- silverpop_export - collation of data from above tables
+-- silverpop_export_view - collation of data from above tables + formatting.
+
+-- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
+-- although I believe that theory needs testing.
+
 -- Create a table of countries and languages for contacts with no country
 -- pulling data from contribution tracking.
 -- Query OK, 369156 rows affected (2 min 59.66 sec)
@@ -242,20 +258,7 @@ UPDATE silverpop_export_staging ex
   -- may be locked.
   LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
   SET
-    ex.lifetime_usd_total = COALESCE(exs.foundation_lifetime_usd_total, 0),
-    ex.foundation_total_2014 = exs.foundation_total_2014,
-    ex.foundation_total_2015 = exs.foundation_total_2015,
-    ex.foundation_total_2016 = exs.foundation_total_2016,
-    ex.foundation_total_2017 = exs.foundation_total_2017,
-    ex.foundation_total_2018 = exs.foundation_total_2018,
-    ex.foundation_total_2019 = exs.foundation_total_2019,
-    ex.foundation_total_2020 = exs.foundation_total_2020,
-    ex.endowment_last_donation_date = exs.endowment_last_donation_date,
-    ex.endowment_first_donation_date = exs.endowment_first_donation_date,
-    ex.endowment_number_donations = exs.endowment_number_donations,
-    ex.donation_count = COALESCE(exs.foundation_donation_count, 0),
     ex.has_recurred_donation = COALESCE(exs.has_recurred_donation, 0),
-    ex.foundation_first_donation_date = exs.foundation_first_donation_date,
     ex.latest_currency = COALESCE(lt.latest_currency, ''),
     ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
     ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
@@ -284,8 +287,10 @@ INSERT INTO silverpop_export (
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020, endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations)
 SELECT id,contact_id,contact_hash,first_name,last_name,ex.preferred_language,ex.email,opted_in, employer_id, employer_name,
-  has_recurred_donation,highest_usd_amount,highest_native_amount,
-  highest_native_currency,highest_donation_date,lifetime_usd_total,donation_count,
+  ex.has_recurred_donation,highest_usd_amount,highest_native_amount,
+  highest_native_currency,highest_donation_date,
+  COALESCE(foundation_lifetime_usd_total, 0) as foundation_lifetime_usd_total,
+  COALESCE(foundation_donation_count, 0) as foundation_donation_count,
   latest_currency,latest_currency_symbol,latest_native_amount,
   latest_donation,foundation_first_donation_date,city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
@@ -296,6 +301,7 @@ FROM silverpop_export_staging ex
 -- currently it is the highest email_id. Ideally it will later to change to
 -- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
+LEFT JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 
 WHERE ex.opted_out=0
 AND (opted_in IS NULL OR opted_in = 1)
