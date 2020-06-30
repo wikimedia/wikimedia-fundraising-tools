@@ -135,7 +135,9 @@ ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highe
 -- Populate the aggregate table from a full contribution table scan
 -- 28 min 41.38 sec
 INSERT INTO silverpop_export_stat
-  (email, exid, total_usd, foundation_donation_count, foundation_first_donation_date,
+  (email, exid,
+   foundation_lifetime_usd_total,
+   foundation_donation_count, foundation_first_donation_date,
    foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
    foundation_total_2018, foundation_total_2019, foundation_total_2020,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
@@ -143,8 +145,8 @@ INSERT INTO silverpop_export_stat
   SELECT
     e.email,
     MAX(ex.id),
-    COALESCE(SUM(donor.lifetime_usd_total), 0) as lifetime_usd_total,
-    COALESCE(SUM(donor.number_donations), 0) as number_donations,
+    COALESCE(SUM(donor.lifetime_usd_total), 0) as foundation_lifetime_usd_total,
+    COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
     MIN(donor.first_donation_date) as foundation_first_donation_date,
     COALESCE(SUM(donor.total_2014), 0) as foundation_total_2014,
     COALESCE(SUM(donor.total_2015), 0) as foundation_total_2015,
@@ -190,7 +192,7 @@ UPDATE silverpop_export_staging ex
   -- may be locked.
   LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
   SET
-    ex.lifetime_usd_total = COALESCE(exs.total_usd, 0),
+    ex.lifetime_usd_total = COALESCE(exs.foundation_lifetime_usd_total, 0),
     ex.foundation_total_2014 = exs.foundation_total_2014,
     ex.foundation_total_2015 = exs.foundation_total_2015,
     ex.foundation_total_2016 = exs.foundation_total_2016,

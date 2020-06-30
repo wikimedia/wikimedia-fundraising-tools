@@ -109,7 +109,7 @@ CREATE TABLE silverpop_export_stat
   email VARCHAR(255) PRIMARY KEY,
   exid INT,
   has_recurred_donation TINYINT(1) NOT NULL DEFAULT 0,
-  total_usd DECIMAL(20, 2),
+  foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED,
   foundation_first_donation_date DATETIME,
 -- Aggregate contribution statistics
