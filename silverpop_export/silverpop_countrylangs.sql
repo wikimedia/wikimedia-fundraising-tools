@@ -1,11 +1,15 @@
 DROP TABLE IF EXISTS silverpop_countrylangs;
  CREATE TABLE `silverpop_countrylangs` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `country` varbinary(2) DEFAULT NULL,
-  `lang` varbinary(20) DEFAULT NULL,
+  -- For joining to drupal table.
+  `country` VARCHAR(2) COLLATE utf8_general_ci DEFAULT NULL,
+  -- For joining to civi table.
+  `country_unicode` VARCHAR(4) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `lang` VARCHAR(20) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `spcl_country` (`country`)
-) ENGINE=InnoDB DEFAULT CHARSET=binary;
+  KEY `spcl_country` (`country`),
+  KEY (country_unicode)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO silverpop_countrylangs (country, lang) VALUES
   ('AF', 'prs'),
@@ -248,3 +252,5 @@ INSERT INTO silverpop_countrylangs (country, lang) VALUES
   ('ZM', 'en'),
   ('ZW', 'en'),
   ('RE', 'fr');
+
+UPDATE silverpop_countrylangs SET country_unicode = country;
