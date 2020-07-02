@@ -122,7 +122,7 @@ def test_refund_history():
      """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, lifetime_usd_total, donation_count, latest_currency, latest_native_amount, foundation_last_donation_date  from silverpop_export")
+    cursor.execute("select foundation_highest_usd_amount, lifetime_usd_total, donation_count, foundation_latest_currency, foundation_latest_native_amount, foundation_last_donation_date  from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
 
@@ -187,7 +187,7 @@ def test_native_amount():
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, highest_native_amount, highest_native_currency from silverpop_export")
+    cursor.execute("select foundation_highest_usd_amount, foundation_highest_native_amount, foundation_highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
     actual = cursor.fetchone()
     assert actual == expected
@@ -220,7 +220,7 @@ def test_currency_symbol():
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select latest_currency, latest_currency_symbol from silverpop_export")
+    cursor.execute("select foundation_latest_currency, foundation_latest_currency_symbol from silverpop_export")
     expected = ('GBP', u'£')
     actual = cursor.fetchone()
     assert actual == expected

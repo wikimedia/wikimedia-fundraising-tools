@@ -243,54 +243,37 @@ INSERT INTO silverpop_has_recur
    AND contributions.total_amount > 0
  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1;
 
--- Pull in address and latest/greatest/cumulative stats from intermediate tables
--- Query OK, 19160658 rows affected (33 min 39.28 sec)
-UPDATE silverpop_export_staging ex
-  LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
-  LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
-  -- this INNER JOIN limits us to only the highest values.
-  INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
-  -- there is a question whether we should just join in the live address table at this
-  -- point or store the whole address. It seems query time is not much affected but less tables
-  -- may be locked.
-  LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
-  SET
-    ex.latest_currency = COALESCE(lt.latest_currency, ''),
-    ex.latest_currency_symbol = COALESCE(lt.latest_currency_symbol, ''),
-    ex.latest_native_amount = COALESCE(lt.latest_native_amount, 0),
-    ex.highest_native_currency = COALESCE(hg.highest_native_currency, ''),
-    ex.highest_native_amount = COALESCE(hg.highest_native_amount, 0),
-    ex.highest_usd_amount = COALESCE(hg.highest_usd_amount, 0),
-    ex.highest_donation_date = hg.highest_donation_date,
-    ex.city = addr.city,
-    ex.country = addr.country,
-    ex.postal_code = addr.postal_code,
-    ex.state = addr.state;
-
 -- Move the data from the staging table into the persistent one
--- Query OK, 19044058 rows affected, 152 warnings (15 min 49.04 sec)
+-- Query OK, 19044058 rows affected, 152 warnings (26 min 37.42 sec)
 INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,
-  foundation_highest_usd_amount,highest_native_amount,
-  highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
-  latest_currency,latest_currency_symbol,latest_native_amount,
-  foundation_last_donation_date, foundation_first_donation_date,city,country,state,postal_code,
+  foundation_highest_usd_amount,foundation_highest_native_amount,
+  foundation_highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
+  foundation_latest_currency,foundation_latest_currency_symbol,foundation_latest_native_amount,
+  foundation_last_donation_date, foundation_first_donation_date,
+  city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
-SELECT id,contact_id,contact_hash,first_name,last_name,
+SELECT ex.id,ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email,ex.opted_in, employer_id, employer_name,
-  foundation_has_recurred_donation,highest_usd_amount,highest_native_amount,
-  highest_native_currency,highest_donation_date,
+  ex.email,ex.opted_in, ex.employer_id, ex.employer_name,
+  foundation_has_recurred_donation,
+  COALESCE(hg.highest_usd_amount, 0) as foundation_highest_usd_amount,
+  COALESCE(hg.highest_native_amount, 0) as foundation_highest_native_amount,
+  COALESCE(hg.highest_native_currency, '') as foundation_highest_native_currency,
+  hg.highest_donation_date as foundation_highest_donation_date,
   COALESCE(foundation_lifetime_usd_total, 0) as foundation_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
-  latest_currency,latest_currency_symbol,latest_native_amount,
-  foundation_last_donation_date,foundation_first_donation_date,city,country,state,postal_code,
+  lt.latest_currency as foundation_latest_currency,
+  lt.latest_currency_symbol as foundation_latest_currency_symbol,
+  COALESCE(lt.latest_native_amount, 0) as foundation_latest_native_amount,
+  foundation_last_donation_date,foundation_first_donation_date,
+  addr.city,addr.country,addr.state,addr.postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
   endowment_last_donation_date, endowment_first_donation_date,
@@ -303,12 +286,13 @@ FROM silverpop_export_staging ex
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
 INNER JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
+LEFT JOIN silverpop_export_latest lt ON ex.email = lt.email
+LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
+LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
 
 -- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
 WHERE dedupe_table.opted_out=0
-AND (ex.opted_in IS NULL OR ex.opted_in = 1)
-
-ON DUPLICATE KEY UPDATE email = silverpop_export.email;
+AND (ex.opted_in IS NULL OR ex.opted_in = 1);
 
 -- Query OK, 0 rows affected (0.00 sec)
 -- Create a nice view to export from
@@ -431,7 +415,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
       as all_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_last_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
       as all_funds_latest_donation_date,
-    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , latest_native_amount, endowment_latest_native_amount)
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_native_amount, endowment_latest_native_amount)
      as all_funds_latest_native_amount,
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
@@ -447,12 +431,12 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') foundation_highest_donation_date,
     foundation_highest_usd_amount as foundation_highest_usd_amount,
     IFNULL(DATE_FORMAT(foundation_last_donation_date, '%m/%d/%Y'), '') foundation_latest_donation_date,
-    latest_native_amount as foundation_latest_native_amount,
-    highest_native_amount as foundation_highest_native_amount,
-    highest_native_currency as foundation_highest_native_currency,
+    COALESCE(foundation_latest_native_amount, 0) as foundation_latest_native_amount,
+    foundation_highest_native_amount,
+    foundation_highest_native_currency,
     lifetime_usd_total as foundation_lifetime_usd_total,
-    latest_currency as foundation_latest_currency,
-    latest_currency_symbol as foundation_latest_currency_symbol,
+    COALESCE(foundation_latest_currency, '') as foundation_latest_currency,
+    COALESCE(foundation_latest_currency_symbol, '') as foundation_latest_currency_symbol,
     IF(foundation_has_recurred_donation, 'YES', 'NO') as foundation_has_recurred_donation,
     foundation_total_2014 as foundation_total_2014,
     foundation_total_2015 as foundation_total_2015,
