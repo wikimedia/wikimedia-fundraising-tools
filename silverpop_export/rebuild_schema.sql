@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   employer_name VARCHAR(255),
 
 -- Lifetime contribution statistics
-  has_recurred_donation TINYINT(1) NOT NULL DEFAULT 0,
   highest_usd_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_currency VARCHAR(3) NOT NULL DEFAULT '',
@@ -103,7 +102,6 @@ CREATE TABLE silverpop_export_stat
   email VARCHAR(255) PRIMARY KEY,
   exid INT,
   all_funds_latest_donation_date DATETIME,
-  has_recurred_donation TINYINT(1) NOT NULL DEFAULT 0,
   foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED,
   foundation_first_donation_date DATETIME,
@@ -166,7 +164,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   employer_name VARCHAR(255),
 
 -- Lifetime contribution statistics
-  has_recurred_donation TINYINT(1),
+  foundation_has_recurred_donation TINYINT(1),
   foundation_highest_usd_amount DECIMAL(20, 2),
   highest_native_amount DECIMAL(20, 2),
   highest_native_currency VARCHAR(3),
@@ -215,4 +213,9 @@ CREATE TABLE `silverpop_missing_countries`
   `preferred_language` VARCHAR(32) DEFAULT NULL,
   KEY `contact_id` (`contact_id`),
   KEY `country` (`country`)
+) COLLATE 'utf8_unicode_ci';
+
+CREATE TABLE `silverpop_has_recur` (
+ `email` VARCHAR(255) PRIMARY KEY,
+ `foundation_has_recurred_donation` int(1) NOT NULL
 ) COLLATE 'utf8_unicode_ci';
