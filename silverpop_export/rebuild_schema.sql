@@ -20,31 +20,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   highest_usd_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_native_currency VARCHAR(3) NOT NULL DEFAULT '',
-  lifetime_usd_total DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  donation_count INT NOT NULL DEFAULT 0,
 
--- Aggregate contribution statistics
--- Sadly these would need updating next year. I have doubts about doing something more
--- clever without reviewing the script more broadly as it's kinda tricky in straight sql
-  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-
--- Endowment stats ----
-  endowment_last_donation_date DATETIME NULL,
-  endowment_first_donation_date DATETIME NULL,
-  endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
-
--- Latest contribution statistics
+  -- Latest contribution statistics
   latest_currency VARCHAR(3) NOT NULL DEFAULT '',
   latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
   latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  latest_donation DATETIME NULL,
-  foundation_first_donation_date DATETIME NULL,
   highest_donation_date DATETIME NULL,
 
 -- Address information
@@ -84,6 +64,20 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   latest_donation DATETIME
 ) COLLATE 'utf8_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
+  `email` varchar(255)  PRIMARY KEY,
+  `endowment_latest_currency` VARCHAR(8),
+  `endowment_latest_native_amount` DECIMAL(20, 2),
+  KEY `email` (`email`)
+) COLLATE 'utf8_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
+ `email` varchar(255) PRIMARY KEY,
+ `endowment_highest_donation_date` DATETIME,
+ `endowment_highest_native_currency` VARCHAR(8),
+ `endowment_highest_native_amount` DECIMAL(20, 2)
+) COLLATE 'utf8_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_excluded
 (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -108,10 +102,13 @@ CREATE TABLE silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
   exid INT,
+  all_funds_latest_donation_date DATETIME,
   has_recurred_donation TINYINT(1) NOT NULL DEFAULT 0,
   foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED,
   foundation_first_donation_date DATETIME,
+  foundation_last_donation_date DATETIME,
+  foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
@@ -123,7 +120,11 @@ CREATE TABLE silverpop_export_stat
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  INDEX stat_exid (exid)
+  endowment_highest_usd_amount  DECIMAL(20, 2),
+  INDEX stat_exid (exid),
+  INDEX(all_funds_latest_donation_date),
+  INDEX(endowment_last_donation_date),
+  INDEX(endowment_highest_usd_amount)
 ) COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE silverpop_export_address
@@ -166,10 +167,10 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 
 -- Lifetime contribution statistics
   has_recurred_donation TINYINT(1),
-  highest_usd_amount DECIMAL(20, 2),
+  foundation_highest_usd_amount DECIMAL(20, 2),
   highest_native_amount DECIMAL(20, 2),
   highest_native_currency VARCHAR(3),
-  highest_donation_date DATETIME,
+  foundation_highest_donation_date DATETIME,
   lifetime_usd_total DECIMAL(20, 2),
   donation_count INT,
 
@@ -186,12 +187,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics
   latest_currency VARCHAR(3),
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2),
-  latest_donation DATETIME,
+  foundation_last_donation_date DATETIME,
   foundation_first_donation_date DATETIME,
 
 -- Address information
