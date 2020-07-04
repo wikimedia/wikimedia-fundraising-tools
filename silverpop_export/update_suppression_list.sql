@@ -7,7 +7,8 @@
 # Default offset - we can maybe pass this in from python.
 # I think 2 (2 days) is probably the right value but a higher value for now
 #reduces the risk a script fails and we don't notice.
-SET @offSetInDays = 7;
+# temporarily set to 14 days to catch any missed since we updated.
+SET @offSetInDays = 14;
 
 -- There are basically 2 steps to this -
 -- 1) create/ augment the list of possible emails to suppress
@@ -71,12 +72,14 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 
 -- Remove all the known-good addresses from the suppression list.
 -- seconds to process.
+-- We use the summary table which has calculated values for the overall
+-- values for the email.
 DELETE silverpop_excluded
 FROM silverpop_excluded
-  LEFT JOIN silverpop_export_staging s
+  LEFT JOIN silverpop_email_map s
   ON s.email = silverpop_excluded.email
 WHERE s.opted_out = 0
-  AND (s.opted_in IS NULL OR s.opted_in = 1);
+  AND s.opted_in = 1;
 
 -- We don't want to suppress emails of Civi users.
 -- Conveniently, the account name is the email address in
