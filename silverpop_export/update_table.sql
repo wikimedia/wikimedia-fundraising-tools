@@ -220,7 +220,7 @@ SELECT
   MAX(extra.original_amount) as endowment_highest_native_amount
 FROM  silverpop_export_stat export
   LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
-  LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
+  LEFT JOIN civicrm.civicrm_contribution c FORCE INDEX(received_date) ON  c.contact_id = email.contact_id
   LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
 WHERE c.total_amount = export.endowment_highest_usd_amount
   AND export.endowment_highest_usd_amount > 0

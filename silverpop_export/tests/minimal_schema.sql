@@ -127,7 +127,8 @@ create table civicrm_contribution (
     total_amount decimal(20,2),
     trxn_id varchar(255) COLLATE utf8_unicode_ci,
     contribution_status_id int(10) unsigned,
-    financial_type_id int(10) unsigned
+    financial_type_id int(10) unsigned,
+    KEY `received_date` (`receive_date`)
 );
 
 drop table if exists civicrm_contribution_recur;
