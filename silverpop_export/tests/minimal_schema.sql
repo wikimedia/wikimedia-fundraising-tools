@@ -8,7 +8,7 @@ create table civicrm_email (
     is_primary tinyint(4) default '1',
     on_hold tinyint(4) default '0',
     key UI_email (email)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_contact;
 create table civicrm_contact (
@@ -30,7 +30,7 @@ create table civicrm_contact (
     birth_date datetime default NULL,
     modified_date datetime default NULL,
     employer_id int(10) unsigned DEFAULT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_currency;
 create table civicrm_currency (
@@ -38,7 +38,8 @@ create table civicrm_currency (
     name varchar(64) COLLATE utf8_unicode_ci,
     symbol varchar(8) COLLATE utf8_unicode_ci,
     key UI_name (name)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 insert into civicrm_currency (name, symbol)
 values
     ('USD', '$'),
@@ -108,7 +109,7 @@ CREATE TABLE `wmf_donor`
     `endowment_total_2020_2021`     decimal(20, 2)                       DEFAULT '0.00',
     `change_2020_2021`              double                               DEFAULT '0'
 
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_value_1_communication_4;
 create table civicrm_value_1_communication_4 (
@@ -116,7 +117,7 @@ create table civicrm_value_1_communication_4 (
     entity_id int(10) unsigned,
     do_not_solicit tinyint(4),
     opt_in tinyint(1)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_contribution;
 create table civicrm_contribution (
@@ -129,7 +130,7 @@ create table civicrm_contribution (
     contribution_status_id int(10) unsigned,
     financial_type_id int(10) unsigned,
     KEY `received_date` (`receive_date`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_contribution_recur;
 CREATE TABLE civicrm_contribution_recur
@@ -138,39 +139,40 @@ CREATE TABLE civicrm_contribution_recur
     contact_id int(10) unsigned NOT NULL COMMENT 'Foreign key to civicrm_contact.id.',
     amount decimal(20, 2)   NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
     contribution_status_id int(10) unsigned DEFAULT '1'
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 drop table if exists civicrm_address;
-create table civicrm_address (
-    id int(10) unsigned auto_increment primary key,
-    contact_id int(10) unsigned,
-    is_primary tinyint(4),
-    city varchar(64) COLLATE utf8_unicode_ci,
-    postal_code varchar(64) COLLATE utf8_unicode_ci,
-    country_id int(10) unsigned,
-    state_province_id int(10) unsigned,
-    timezone varchar(8) COLLATE utf8_unicode_ci
-);
+create table civicrm_address
+(
+  id INT(10) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  contact_id INT(10) UNSIGNED,
+  is_primary TINYINT(4),
+  city VARCHAR(64) COLLATE utf8_unicode_ci,
+  postal_code VARCHAR(64) COLLATE utf8_unicode_ci,
+  country_id INT(10) UNSIGNED,
+  state_province_id INT(10) UNSIGNED,
+  timezone VARCHAR(8) COLLATE utf8_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_country;
 create table civicrm_country (
     id int(10) unsigned,
     iso_code char(2) COLLATE utf8_unicode_ci
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_state_province;
 create table civicrm_state_province (
   id int(10) unsigned,
   name varchar(64) COLLATE utf8_unicode_ci
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists wmf_contribution_extra;
 create table wmf_contribution_extra (
     entity_id int(10) unsigned,
     original_amount decimal(20,2),
     original_currency varchar(255) COLLATE utf8_unicode_ci
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists contribution_tracking;
 create table contribution_tracking (
@@ -184,12 +186,12 @@ create table log_civicrm_email (
     contact_id int(10) unsigned,
     email varchar(254) COLLATE utf8_unicode_ci,
     log_date datetime default NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_uf_match;
 create table civicrm_uf_match (
     uf_name varchar(128) COLLATE utf8_unicode_ci
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 drop table if exists civicrm_value_1_prospect_5;
 create table civicrm_value_1_prospect_5
@@ -207,7 +209,7 @@ create table civicrm_value_1_prospect_5
     `net_worth_170`                   varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `family_composition_173`          varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `occupation_175`                  varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 DROP TABLE IF EXISTS civicrm_value_matching_gift;
 CREATE TABLE `civicrm_value_matching_gift` (
@@ -222,4 +224,4 @@ CREATE TABLE `civicrm_value_matching_gift` (
     `match_policy_last_updated` DATETIME DEFAULT NULL,
     `suppress_from_employer_field` TINYINT(4) DEFAULT '0',
     `subsidiaries` VARCHAR(5000) -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
-)  COLLATE = UTF8_UNICODE_CI;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
