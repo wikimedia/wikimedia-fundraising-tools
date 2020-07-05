@@ -297,7 +297,7 @@ FROM silverpop_export_staging ex
 -- currently it is the highest email_id. Ideally it will later to change to
 -- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
-LEFT JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
+INNER JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
 
 -- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
