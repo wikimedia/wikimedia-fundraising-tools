@@ -16,9 +16,9 @@ You can pass arguments to the underlying command with a double dash:
 
 ### Test database
 Silverpop tests require a test mysql database to exist. Add it with the following:
-1. create mysql dastabase ```test```
-2. create user ```CREATE USER 'test'@'localhost';```
-3. grant privileges ```GRANT ALL PRIVILEGES ON test.* TO 'test'@'localhost';```
+1. ```CREATE database test;```
+2. ```CREATE USER 'test'@'localhost';```
+3. ```GRANT ALL PRIVILEGES ON test.* TO 'test'@'localhost';```
 
 ### For Vagrant Users
 Unfortunately tox doesn't work with vagrant nfs mounts. If you use mediawiki-vagrant on linux then you will most likely be unable to run tox.

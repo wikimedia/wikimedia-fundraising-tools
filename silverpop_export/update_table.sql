@@ -86,7 +86,11 @@ INSERT INTO silverpop_email_map
     MAX(id) as master_email_id,
     MAX(address_id) as address_id,
     MAX(preferred_language) as preferred_language,
-    MAX(opted_out) as opted_out
+    MAX(opted_out) as opted_out,
+    # 0 if they have ever actually opted out, else 1
+    # we use this for filtering so don't need to preserve the nuance.
+    # This should be revisited per https://phabricator.wikimedia.org/T256522
+    MIN(IF (opted_in = 0, 0, 1)) as opted_in
   FROM silverpop_export_staging
     -- This index force seems to not change the speed much....
     FORCE INDEX (spex_email)
@@ -280,7 +284,7 @@ INSERT INTO silverpop_export (
 SELECT id,contact_id,contact_hash,first_name,last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email,opted_in, employer_id, employer_name,
+  ex.email,ex.opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,highest_usd_amount,highest_native_amount,
   highest_native_currency,highest_donation_date,
   COALESCE(foundation_lifetime_usd_total, 0) as foundation_lifetime_usd_total,
@@ -297,12 +301,12 @@ FROM silverpop_export_staging ex
 -- currently it is the highest email_id. Ideally it will later to change to
 -- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
-LEFT JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
+INNER JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
 
 -- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
 WHERE dedupe_table.opted_out=0
-AND (opted_in IS NULL OR opted_in = 1)
+AND (ex.opted_in IS NULL OR ex.opted_in = 1)
 
 ON DUPLICATE KEY UPDATE email = silverpop_export.email;
 

@@ -49,6 +49,7 @@ CREATE TABLE `silverpop_email_map`
   `address_id` INT(16) DEFAULT NULL,
   `preferred_language` VARCHAR(12) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
   `opted_out` TINYINT(1) DEFAULT NULL,
+  `opted_in` TINYINT(1) DEFAULT NULL,
   KEY `master_email_id` (`master_email_id`),
   KEY `address_id` (`address_id`),
   KEY `email` (`email`)
