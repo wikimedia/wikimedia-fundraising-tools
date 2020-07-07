@@ -19,11 +19,13 @@ def upload_most_recent():
     config = process.globals.get_config()
     updatesglob = os.path.join(config.working_path, "DatabaseUpdate-*.csv")
     unsubglob = os.path.join(config.working_path, "Unsubscribes-*.csv")
+    matchinggiftsglob = os.path.join(config.working_path, "MatchingGifts-*.csv")
     # Find most recently created export files.
     updatefile = max(glob.iglob(updatesglob), key=os.path.getctime)
     unsubfile = max(glob.iglob(unsubglob), key=os.path.getctime)
+    matchinggiftsfile = max(glob.iglob(matchinggiftsglob), key=os.path.getctime)
 
-    upload([updatefile, unsubfile])
+    upload([updatefile, unsubfile, matchinggiftsfile])
 
 
 def upload(files=None):
