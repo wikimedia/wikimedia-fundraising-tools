@@ -152,7 +152,7 @@ ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highe
 -- Populate the aggregate table from a full contribution table scan
 -- Query OK, 23198921 rows affected (42 min 32.54 sec)
 INSERT INTO silverpop_export_stat
-  (email, exid,
+  (email,
    all_funds_latest_donation_date,
    foundation_lifetime_usd_total,
    foundation_donation_count, foundation_first_donation_date,
@@ -165,7 +165,6 @@ INSERT INTO silverpop_export_stat
   )
   SELECT
     e.email,
-    MAX(ex.id),
     MAX(IF (donor.endowment_last_donation_date IS NULL OR last_donation_date > donor.endowment_last_donation_date , last_donation_date, donor.endowment_last_donation_date)) as all_funds_latest_donation_date,
     COALESCE(SUM(donor.lifetime_usd_total), 0) as foundation_lifetime_usd_total,
     COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
@@ -184,7 +183,6 @@ INSERT INTO silverpop_export_stat
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
   FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
-  JOIN silverpop_export_staging ex ON e.email=ex.email
   LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
   # We need to be careful with this group by. We want the sum by email but we don't want
   # any other left joins that could be 1 to many & inflate the aggregates.

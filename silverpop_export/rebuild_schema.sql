@@ -101,7 +101,6 @@ CREATE TABLE silverpop_export_highest
 CREATE TABLE silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
-  exid INT,
   all_funds_latest_donation_date DATETIME,
   foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED,
@@ -120,7 +119,6 @@ CREATE TABLE silverpop_export_stat
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
-  INDEX stat_exid (exid),
   INDEX(all_funds_latest_donation_date),
   INDEX(endowment_last_donation_date),
   INDEX(endowment_highest_usd_amount)
