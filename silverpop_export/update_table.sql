@@ -436,7 +436,7 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
     endowment_number_donations,
-    endowment_highest_donation_date,
+    IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') endowment_highest_donation_date,
     endowment_highest_native_amount,
     endowment_highest_native_currency,
     endowment_highest_usd_amount,
