@@ -49,7 +49,7 @@ GROUP BY c.contact_id;
 -- Query OK, 23986414 rows affected (23 min 34.44 sec)
 INSERT INTO silverpop_export_staging
   (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in,
-   employer_id, employer_name, address_id, city, postal_code, country, state)
+   employer_id, employer_name, address_id, city, postal_code, country, state, all_funds_latest_donation_date)
   SELECT
     e.id,
     c.modified_date,
@@ -63,7 +63,8 @@ INSERT INTO silverpop_export_staging
     a.city,
     a.postal_code,
     COALESCE(ctry.iso_code, s.country) as country,
-    st.name as state
+    st.name as state,
+    IF((donor.endowment_last_donation_date IS NULL OR donor.last_donation_date > donor.endowment_last_donation_date), donor.last_donation_date, donor.endowment_last_donation_date) as all_funds_latest_donation_date
   FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
@@ -74,6 +75,7 @@ INSERT INTO silverpop_export_staging
   LEFT JOIN civicrm.civicrm_state_province st
             ON a.state_province_id = st.id
   LEFT JOIN silverpop_countrylangs cl ON cl.country_unicode = ctry.iso_code
+  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
   WHERE
     e.email IS NOT NULL AND e.email != ''
     AND c.is_deleted = 0

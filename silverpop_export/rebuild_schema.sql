@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
   latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_donation_date DATETIME NULL,
+  all_funds_latest_donation_date DATETIME NULL,
 
 -- Address information
   address_id INT(16),
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX spex_opted_out (opted_out),
   INDEX spex_modified_date (modified_date),
   INDEX spex_id (id),
-  INDEX address_id (address_id)
+  INDEX address_id (address_id),
+  INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
 ) COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE `silverpop_email_map`
