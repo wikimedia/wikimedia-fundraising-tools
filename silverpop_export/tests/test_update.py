@@ -55,9 +55,9 @@ def test_duplicate():
         (1, 'person1@localhost', 1, 0),
         (2, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1),
-        (2);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """])
 
     cursor = conn.db_conn.cursor()
@@ -75,8 +75,8 @@ def test_no_donations():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """])
 
     cursor = conn.db_conn.cursor()
@@ -106,8 +106,8 @@ def test_refund_history():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 15.25, 'xyz123', 1, 1),
@@ -137,8 +137,8 @@ def test_first_donation():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 15.25, 'xyz123', 9, 1),
@@ -169,8 +169,8 @@ def test_native_amount():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 9.50, 'xyz123', 1, 1),
@@ -202,8 +202,8 @@ def test_currency_symbol():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 9.50, 'xyz123', 1,1),
@@ -235,8 +235,8 @@ def test_export_hash():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, hash) values
-        (1, 'abfe829234baa87s76d');
+    insert into civicrm_contact (id, hash, modified_date) values
+        (1, 'abfe829234baa87s76d', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """])
 
     cursor = conn.db_conn.cursor()
@@ -253,8 +253,8 @@ def test_bad_ct_country():
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id) values
-        (1);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 9.50, 'xyz123', 1, 1);
@@ -317,10 +317,10 @@ def test_optin_negative_exclusion():
         (2, 'optinone@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
         (3, 'optinzero@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
-    insert into civicrm_contact (id) values
-        (1),
-        (2),
-        (3);
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_value_1_communication_4 (entity_id, opt_in) values
         (2, 1),
