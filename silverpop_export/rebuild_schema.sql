@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
   latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
   highest_donation_date DATETIME NULL,
+  all_funds_latest_donation_date DATETIME NULL,
 
 -- Address information
   address_id INT(16),
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX spex_opted_out (opted_out),
   INDEX spex_modified_date (modified_date),
   INDEX spex_id (id),
-  INDEX address_id (address_id)
+  INDEX address_id (address_id),
+  INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
 ) COLLATE 'utf8_unicode_ci';
 
 CREATE TABLE `silverpop_email_map`
@@ -101,7 +103,6 @@ CREATE TABLE silverpop_export_highest
 CREATE TABLE silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
-  exid INT,
   all_funds_latest_donation_date DATETIME,
   foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED,
@@ -120,7 +121,6 @@ CREATE TABLE silverpop_export_stat
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
-  INDEX stat_exid (exid),
   INDEX(all_funds_latest_donation_date),
   INDEX(endowment_last_donation_date),
   INDEX(endowment_highest_usd_amount)
@@ -167,8 +167,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 -- Lifetime contribution statistics
   foundation_has_recurred_donation TINYINT(1),
   foundation_highest_usd_amount DECIMAL(20, 2),
-  highest_native_amount DECIMAL(20, 2),
-  highest_native_currency VARCHAR(3),
+  foundation_highest_native_amount DECIMAL(20, 2),
+  foundation_highest_native_currency VARCHAR(3),
   foundation_highest_donation_date DATETIME,
   lifetime_usd_total DECIMAL(20, 2),
   donation_count INT,
@@ -189,9 +189,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics
-  latest_currency VARCHAR(3),
-  latest_currency_symbol VARCHAR(8),
-  latest_native_amount DECIMAL(20, 2),
+  foundation_latest_currency VARCHAR(3),
+  foundation_latest_currency_symbol VARCHAR(8),
+  foundation_latest_native_amount DECIMAL(20, 2),
   foundation_last_donation_date DATETIME,
   foundation_first_donation_date DATETIME,
 
