@@ -55,6 +55,7 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
     w = csv.writer(output)
 
     gen = db.execute_paged(query=query, pageIndex=sort_by_index, pageSize=10000)
+    num_rows = 0
 
     # Make sure we've got the table headers
     try:
