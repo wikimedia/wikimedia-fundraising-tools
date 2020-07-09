@@ -62,6 +62,10 @@ def updateAll():
     log.info("Loading schema update set ")
     # Probably this should be in the rebuild but leaving for later to keep commits readable.
     language_queries = load_queries('silverpop_countrylangs.sql')
+
+    log.info("Loading update silverpop staging set")
+    staging_update_queries = load_queries('update_silverpop_staging.sql')
+
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
     log.info("Loading update query set")
@@ -73,6 +77,8 @@ def updateAll():
     run_queries(db, rebuild_queries)
     log.info("Rebuilding language table.")
     run_queries(db, language_queries)
+    log.info("Starting update main staging table")
+    run_queries(db, staging_update_queries)
     log.info("Starting update query run")
     run_queries(db, update_queries)
     log.info("Starting update query run")
