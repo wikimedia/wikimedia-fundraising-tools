@@ -14,17 +14,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   opted_in TINYINT(1),
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
-
--- Lifetime contribution statistics
-  highest_usd_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  highest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  highest_native_currency VARCHAR(3) NOT NULL DEFAULT '',
-
-  -- Latest contribution statistics
-  latest_currency VARCHAR(3) NOT NULL DEFAULT '',
-  latest_currency_symbol VARCHAR(8) NOT NULL DEFAULT '',
-  latest_native_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  highest_donation_date DATETIME NULL,
+-- This is not used in the final output, but it is used in determining if the row is the most recent
   all_funds_latest_donation_date DATETIME NULL,
 
 -- Address information
