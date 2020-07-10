@@ -243,6 +243,22 @@ INSERT INTO silverpop_has_recur
    AND contributions.total_amount > 0
  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1;
 
+-- Do an extra delete in case there was a timing issue
+-- in deployment we have seen cases where a contact is part way through a manual merge.
+-- the to-be-primary has been saved but the is_primary is not yet removed from the prior primary
+-- I think https://gerrit.wikimedia.org/r/c/wikimedia/fundraising/tools/+/609238 should
+-- make this obsolete. But, for ow....
+SET @offSetInDays = 1;
+DELETE s
+FROM silverpop_export_staging s
+       LEFT JOIN civicrm.log_civicrm_email l
+                 ON s.id = l.id
+       LEFT JOIN civicrm.civicrm_email e
+  -- use is_primary in case they are no longer primary
+                 ON s.id = e.id  AND e.is_primary = 1
+WHERE l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+  AND e.email IS NULL OR e.email = '';
+
 -- Move the data from the staging table into the persistent one
 -- Query OK, 19044058 rows affected, 152 warnings (26 min 37.42 sec)
 INSERT INTO silverpop_export (
