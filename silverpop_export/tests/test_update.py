@@ -377,6 +377,9 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
             rebuild_queries = silverpop_export.update.load_queries('rebuild_schema.sql')
             silverpop_export.update.run_queries(conn, rebuild_queries)
 
+            staging_update_queries = silverpop_export.update.load_queries('update_silverpop_staging.sql')
+            silverpop_export.update.run_queries(conn, staging_update_queries)
+
             update_queries = silverpop_export.update.load_queries('update_table.sql')
             silverpop_export.update.run_queries(conn, update_queries)
 
