@@ -31,19 +31,6 @@ FROM
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
 
--- Create a table of countries and languages for contacts with no country
--- pulling data from contribution tracking.
--- Query OK, 369156 rows affected (2 min 59.66 sec)
-INSERT INTO silverpop_missing_countries
--- The use of MAX for country really means 'any', for lang it should help avoid NULL.
-SELECT c.contact_id, MAX(ct.country), MAX(lang) FROM civicrm.civicrm_contribution c
-  LEFT JOIN drupal.contribution_tracking ct ON c.id = ct.contribution_id
-  LEFT JOIN silverpop_countrylangs langs ON langs.country = ct.country
-  LEFT JOIN civicrm.civicrm_address a ON a.contact_id = c.contact_id AND a.is_primary = 1
-WHERE ct.country IS NOT NULL
-  AND a.country_id IS NULL
-GROUP BY c.contact_id;
-
 -- Query OK, 23199001 rows affected (11 min 55.19 sec)
 INSERT INTO silverpop_email_map
   SELECT email,
