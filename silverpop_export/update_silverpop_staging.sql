@@ -14,11 +14,20 @@
 -- reduces the risk a script fails and we don't notice.
 SET @offSetInDays = 7;
 
+
+-- Drop and recreate the table tracking updated emails.
+-- if the rebuild fails for some reason this table will be empty
+-- an attempts to incrementally build other tables (like stats) will also fail.
+-- this is a good thing - we want to be able to rebuild more granularly but with internal integrity.
+DROP TABLE IF EXISTS silverpop_update_world;
+CREATE TABLE silverpop_update_world (
+  `email` varchar(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+  KEY `email` (`email`)
+) ENGINE=InnoDB;
 -- We use a transaction to keep this table consistently updated to the same point in time.
 -- The email suppression list uses MAX(id) from this table as it's upper bound so we want
 -- the table to be in a consistent state up to that point in time. If something fails
 -- the whole commit fails.
-BEGIN;
 
 -- Create a table of countries and languages for contacts with no country
 -- pulling data from contribution tracking.
@@ -158,5 +167,12 @@ DELETE s FROM silverpop_export_staging s
 WHERE l.id IS NULL;
 
 COMMIT;
+
+-- Create list of emails to update
+-- runs fast when not many to do - ie on staging with 7 days interval (it's must faster with just 2)
+-- Query OK, 804581 rows affected (33.15 sec)
+INSERT INTO silverpop_update_world SELECT DISTINCT email
+FROM silverpop_export_staging
+WHERE modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
 
 

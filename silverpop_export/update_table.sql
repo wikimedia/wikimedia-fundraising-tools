@@ -31,6 +31,60 @@ FROM
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
 
+-- Rebuild stats table routine
+-- this should go in it's own file but will create complexities around other
+-- unmerged commits so not at this stage.
+-- Note the whole thing is in a transaction so it always has integrity.
+BEGIN;
+  -- Delete stats for any rows in our change set (means we just need to insert
+  -- 804581 rows affected (1 min 6.35 sec)
+  DELETE stat FROM silverpop_update_world t INNER JOIN silverpop_export_stat stat ON t.email = stat.email;
+
+  -- INSERT new contact rows into export stats table
+  -- following timing on staging with 7 days - likely similar to peak volume with a shorter period.
+  -- 804581 rows affected (2 min 4.50 sec)
+  INSERT INTO silverpop_export_stat
+  (email,
+   all_funds_latest_donation_date,
+   foundation_lifetime_usd_total,
+   foundation_donation_count, foundation_first_donation_date,
+   foundation_last_donation_date,
+   foundation_highest_usd_amount,
+   endowment_highest_usd_amount,
+   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
+   foundation_total_2018, foundation_total_2019, foundation_total_2020,
+   endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
+  )
+  SELECT
+    e.email,
+    MAX(IF (donor.endowment_last_donation_date IS NULL OR last_donation_date > donor.endowment_last_donation_date , last_donation_date, donor.endowment_last_donation_date)) as all_funds_latest_donation_date,
+    COALESCE(SUM(donor.lifetime_usd_total), 0) as foundation_lifetime_usd_total,
+    COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
+    MIN(donor.first_donation_date) as foundation_first_donation_date,
+    MAX(donor.last_donation_date) as foundation_last_donation_date,
+    MAX(donor.largest_donation) as foundation_highest_usd_amount,
+    MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
+    COALESCE(SUM(donor.total_2014), 0) as foundation_total_2014,
+    COALESCE(SUM(donor.total_2015), 0) as foundation_total_2015,
+    COALESCE(SUM(donor.total_2016), 0) as foundation_total_2016,
+    COALESCE(SUM(donor.total_2017), 0) as foundation_total_2017,
+    COALESCE(SUM(donor.total_2018), 0) as foundation_total_2018,
+    COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
+    COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
+    MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
+    MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
+    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
+  FROM silverpop_update_world t
+    LEFT JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
+      AND e.is_primary = 1
+    LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+    # We need to be careful with this group by. We want the sum by email but we don't want
+    # any other left joins that could be 1 to many & inflate the aggregates.
+  GROUP BY e.email;
+
+COMMIT;
+
+
 -- Query OK, 23199001 rows affected (11 min 55.19 sec)
 INSERT INTO silverpop_email_map
   SELECT email,
@@ -98,46 +152,6 @@ INSERT INTO silverpop_export_highest
     ct.total_amount DESC,
     ct.receive_date DESC
 ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
-
-
--- Populate the aggregate table from a full contribution table scan
--- Query OK, 23198921 rows affected (42 min 32.54 sec)
-INSERT INTO silverpop_export_stat
-  (email,
-   all_funds_latest_donation_date,
-   foundation_lifetime_usd_total,
-   foundation_donation_count, foundation_first_donation_date,
-   foundation_last_donation_date,
-   foundation_highest_usd_amount,
-   endowment_highest_usd_amount,
-   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
-   foundation_total_2018, foundation_total_2019, foundation_total_2020,
-   endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
-  )
-  SELECT
-    e.email,
-    MAX(IF (donor.endowment_last_donation_date IS NULL OR last_donation_date > donor.endowment_last_donation_date , last_donation_date, donor.endowment_last_donation_date)) as all_funds_latest_donation_date,
-    COALESCE(SUM(donor.lifetime_usd_total), 0) as foundation_lifetime_usd_total,
-    COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
-    MIN(donor.first_donation_date) as foundation_first_donation_date,
-    MAX(donor.last_donation_date) as foundation_last_donation_date,
-    MAX(donor.largest_donation) as foundation_highest_usd_amount,
-    MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
-    COALESCE(SUM(donor.total_2014), 0) as foundation_total_2014,
-    COALESCE(SUM(donor.total_2015), 0) as foundation_total_2015,
-    COALESCE(SUM(donor.total_2016), 0) as foundation_total_2016,
-    COALESCE(SUM(donor.total_2017), 0) as foundation_total_2017,
-    COALESCE(SUM(donor.total_2018), 0) as foundation_total_2018,
-    COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
-    COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
-    MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
-    MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
-    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
-  FROM civicrm.civicrm_email e FORCE INDEX(UI_email)
-  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
-  # We need to be careful with this group by. We want the sum by email but we don't want
-  # any other left joins that could be 1 to many & inflate the aggregates.
-  GROUP BY e.email;
 
 -- Query OK, 869024 rows affected (56.89 sec)
 INSERT INTO silverpop_endowment_latest
