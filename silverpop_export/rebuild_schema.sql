@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded
 ) COLLATE 'utf8_unicode_ci'
   AUTO_INCREMENT = 1;
 
-CREATE TABLE silverpop_export_highest
+CREATE TABLE IF NOT EXISTS silverpop_export_highest
 (
   email VARCHAR(255) PRIMARY KEY,
   highest_native_currency VARCHAR(3),
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 
 -- contacts and countries where they are not present in the contact record but ARE present in the
 -- contribution tracking but not the Civi contact record (around 400k)
-CREATE TABLE `silverpop_missing_countries`
+CREATE TABLE IF NOT EXISTS `silverpop_missing_countries`
 (
   `contact_id` INT(10) UNSIGNED NOT NULL COMMENT 'FK to Contact ID',
   `country` VARCHAR(2) DEFAULT NULL,
@@ -197,7 +197,7 @@ CREATE TABLE `silverpop_missing_countries`
   KEY `country` (`country`)
 ) COLLATE 'utf8_unicode_ci';
 
-CREATE TABLE `silverpop_has_recur` (
+CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `email` VARCHAR(255) PRIMARY KEY,
  `foundation_has_recurred_donation` int(1) NOT NULL
 ) COLLATE 'utf8_unicode_ci';

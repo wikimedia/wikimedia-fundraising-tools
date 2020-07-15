@@ -37,12 +37,12 @@ FROM
 -- Note the whole thing is in a transaction so it always has integrity.
 BEGIN;
   -- Delete stats for any rows in our change set (means we just need to insert
-  -- 804581 rows affected (1 min 6.35 sec)
+  -- Query OK, 776384 rows affected (47.62 sec)
   DELETE stat FROM silverpop_update_world t INNER JOIN silverpop_export_stat stat ON t.email = stat.email;
 
   -- INSERT new contact rows into export stats table
   -- following timing on staging with 7 days - likely similar to peak volume with a shorter period.
-  -- 804581 rows affected (2 min 4.50 sec)
+  -- Query OK, 776383 rows affected (1 min 25.41 sec)
   INSERT INTO silverpop_export_stat
   (email,
    all_funds_latest_donation_date,
@@ -109,7 +109,12 @@ INSERT INTO silverpop_email_map
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
 -- the latter throws warnings.
--- Query OK, 19160114 rows affected, 11 warnings (10 min 15.50 sec)
+BEGIN;
+-- Delete recent rows from latest table (make way for updated version).
+-- Query OK, 679292 rows affected (4.12 sec)
+DELETE latest FROM silverpop_update_world t INNER JOIN silverpop_export_latest latest ON t.email = latest.email;
+-- Add recent rows to latest export table
+-- Query OK, 679292 rows affected (24.34 sec)
 INSERT INTO silverpop_export_latest
   SELECT
     e.email,
@@ -117,8 +122,8 @@ INSERT INTO silverpop_export_latest
     COALESCE(cur.symbol, d.last_donation_currency),
     d.last_donation_amount,
     d.last_donation_date
-  FROM
-    silverpop_export_staging e
+  FROM silverpop_update_world t
+    INNER JOIN silverpop_export_staging e ON e.email = t.email
     INNER JOIN civicrm.wmf_donor d ON d.entity_id = e.contact_id
     LEFT JOIN civicrm.civicrm_currency cur
       ON cur.name = d.last_donation_currency
@@ -127,9 +132,15 @@ INSERT INTO silverpop_export_latest
 -- @todo - speed test without the second desc.
   ORDER BY last_donation_date DESC, d.last_donation_usd DESC
 ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
+COMMIT;
 
 -- Populate table for highest donation amount and date
--- Query OK, 19160133 rows affected, 78 warnings (26 min 24.83 sec)
+BEGIN;
+-- Delete recent rows from highest table (make way for updated version).
+-- Query OK, 679293 rows affected (4.27 sec)
+DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_export_highest highest ON t.email = highest.email;
+-- Add recent rows to highest export table
+-- Query OK, 679293 rows affected, 12 warnings (1 min 15.22 sec)
 INSERT INTO silverpop_export_highest
   SELECT
     e.email,
@@ -137,8 +148,8 @@ INSERT INTO silverpop_export_highest
     ex.original_amount,
     ct.total_amount,
     ct.receive_date
-  FROM
-    silverpop_export_staging e,
+   FROM silverpop_update_world t
+     INNER JOIN silverpop_export_staging e ON t.email = e.email,
     civicrm.civicrm_contribution ct,
     civicrm.wmf_contribution_extra ex
   WHERE
@@ -152,8 +163,14 @@ INSERT INTO silverpop_export_highest
     ct.total_amount DESC,
     ct.receive_date DESC
 ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
+COMMIT;
 
--- Query OK, 869024 rows affected (56.89 sec)
+BEGIN;
+-- Delete recent rows from endowment_latest table (make way for updated version).
+-- Query OK, 73566 rows affected (0.72 sec)
+DELETE latest FROM silverpop_update_world t INNER JOIN silverpop_endowment_latest latest ON t.email = latest.email;
+-- Add recent rows to endowment_latest table
+-- Query OK, 73566 rows affected (50.44 sec)
 INSERT INTO silverpop_endowment_latest
 SELECT
   email.email,
@@ -163,7 +180,8 @@ SELECT
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_latest_currency,
   MAX(extra.original_amount) as endowment_latest_native_amount
-FROM  silverpop_export_stat export
+FROM silverpop_update_world t
+        INNER JOIN silverpop_export_stat export ON t.email = export.email
         LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
         LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
         LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
@@ -173,8 +191,14 @@ WHERE c.receive_date = export.endowment_last_donation_date
   AND c.contribution_status_id = 1
   AND c.total_amount > 0
 GROUP BY email.email;
+COMMIT;
 
--- Query OK, 869058 rows affected (2 min 52.56 sec)
+BEGIN;
+-- Delete recent rows from endowment_highest table (make way for updated version).
+-- Query OK, 73565 rows affected (0.51 sec)
+DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_endowment_highest highest ON t.email = highest.email;
+-- Add recent rows to endowment_highest table
+-- Query OK, 73565 rows affected (47.86 sec)
 INSERT INTO silverpop_endowment_highest
 SELECT
   email.email,
@@ -185,7 +209,8 @@ SELECT
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_highest_native_currency,
   MAX(extra.original_amount) as endowment_highest_native_amount
-FROM  silverpop_export_stat export
+FROM silverpop_update_world t
+  INNER JOIN silverpop_export_stat export ON t.email = export.email
   LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
   LEFT JOIN civicrm.civicrm_contribution c FORCE INDEX(received_date) ON  c.contact_id = email.contact_id
   LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
@@ -194,17 +219,26 @@ WHERE c.total_amount = export.endowment_highest_usd_amount
   AND c.financial_type_id = 26
   AND c.contribution_status_id = 1
 GROUP BY email.email;
+COMMIT;
 
--- Query OK, 492395 rows affected (24.78 sec)
+BEGIN;
+-- Delete recent rows from has_recur table (make way for updated version).
+-- Query OK, 94904 rows affected (0.61 sec)
+DELETE recur FROM silverpop_update_world t INNER JOIN silverpop_has_recur recur ON t.email = recur.email;
+-- Add recent rows to has_recur table
+-- Query OK, 94904 rows affected (10.15 sec)
 INSERT INTO silverpop_has_recur
- SELECT DISTINCT email, 1 as has_recurred_donation FROM
+ SELECT DISTINCT email.email, 1 as has_recurred_donation
+ FROM
    civicrm.civicrm_contribution_recur recur
  INNER JOIN civicrm.civicrm_contribution contributions
    ON recur.id = contributions.contribution_recur_id
    AND contributions.contribution_status_id = 1
    AND contributions.financial_type_id != 26
    AND contributions.total_amount > 0
- INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1;
+ INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1
+ INNER JOIN silverpop_update_world t ON t.email = email.email;
+COMMIT;
 
 -- Do an extra delete in case there was a timing issue
 -- in deployment we have seen cases where a contact is part way through a manual merge.
@@ -222,8 +256,12 @@ FROM silverpop_export_staging s
 WHERE l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
   AND e.email IS NULL OR e.email = '';
 
+BEGIN;
+-- Delete recent rows from export table (make way for updated version).
+-- Query OK, 653187 rows affected (10.02 sec)
+DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
 -- Move the data from the staging table into the persistent one
--- Query OK, 19044058 rows affected, 152 warnings (26 min 37.42 sec)
+-- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
   id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,
@@ -258,7 +296,9 @@ SELECT ex.id,ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount
-FROM silverpop_export_staging ex
+FROM silverpop_update_world t
+INNER JOIN silverpop_export_staging ex ON t.email = ex.email
+
 -- this inner join is restricting us to only one record per email.
 -- currently it is the highest email_id. Ideally it will later to change to
 -- email_id associated with the highest donation.
@@ -273,6 +313,7 @@ LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.addres
 WHERE dedupe_table.opted_out=0
 AND (ex.opted_in IS NULL OR ex.opted_in = 1);
 
+COMMIT;
 -- Query OK, 0 rows affected (0.00 sec)
 -- Create a nice view to export from
 CREATE OR REPLACE VIEW silverpop_export_view AS

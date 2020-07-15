@@ -307,6 +307,9 @@ def test_optin_negative_exclusion():
     '''
 
     run_update_with_fixtures(fixture_queries=["""
+    -- Get rid of any records from previous runs that would cause an id clash.
+    DELETE s FROM silverpop_export s LEFT JOIN civicrm_email e ON e.id = s.id WHERE e.id IS NULL;
+    """, """
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'optinnull@localhost', 1, 0),
         (2, 'optinone@localhost', 1, 0),
