@@ -116,15 +116,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   INDEX(endowment_highest_usd_amount)
 ) COLLATE 'utf8_unicode_ci';
 
-CREATE TABLE silverpop_export_address
-(
-  email VARCHAR(255) PRIMARY KEY,
-  city VARCHAR(128),
-  country VARCHAR(2),
-  state VARCHAR(64),
-  postal_code VARCHAR(128)
-) COLLATE 'utf8_unicode_ci';
-
 CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
 (
   `id` INT(10) UNSIGNED,
