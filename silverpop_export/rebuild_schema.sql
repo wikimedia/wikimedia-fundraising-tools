@@ -90,7 +90,7 @@ CREATE TABLE silverpop_export_highest
 ) COLLATE 'utf8_unicode_ci';
 
 
-CREATE TABLE silverpop_export_stat
+CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
   all_funds_latest_donation_date DATETIME,
