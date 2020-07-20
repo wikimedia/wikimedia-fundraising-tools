@@ -256,10 +256,19 @@ FROM silverpop_export_staging s
 WHERE l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
   AND e.email IS NULL OR e.email = '';
 
+-- Reset to original offset - this is all a bit clunky & should be a python param
+SET @offSetInDays = 7;
 BEGIN;
 -- Delete recent rows from export table (make way for updated version).
 -- Query OK, 653187 rows affected (10.02 sec)
 DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
+
+-- Delete rows where based on the id having a recently modified date.
+-- If the email changed from one email to another the email based delete will not pick it up.
+-- Query OK, 161272 rows affected (5.93 sec)
+DELETE export FROM silverpop_export_staging t INNER JOIN silverpop_export export ON t.id = export.id
+WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
+
 -- Move the data from the staging table into the persistent one
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
