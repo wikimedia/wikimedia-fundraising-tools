@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
 CREATE TABLE IF NOT EXISTS silverpop_export
 (
   id INT UNSIGNED PRIMARY KEY, -- This is actually civicrm_email.id
-
+  modified_date DATETIME NULL,
 -- General information about the contact
   contact_id INT UNSIGNED,
   contact_hash VARCHAR(32),
@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   state VARCHAR(64),
   postal_code VARCHAR(128),
 
+  INDEX spex_modified_date (modified_date),
   CONSTRAINT sp_email UNIQUE (email),
   CONSTRAINT sp_contact_id UNIQUE (contact_id)
 ) COLLATE 'utf8_unicode_ci';
