@@ -269,6 +269,13 @@ DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export O
 DELETE export FROM silverpop_export_staging t INNER JOIN silverpop_export export ON t.id = export.id
 WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
 
+-- Delete rows based on contact_id having a recently modified_date
+-- This addresses the situation where the primary email of the contact has changed
+-- and there may be a row associated with the old contact_id.
+-- Query OK, 2017 rows affected (1.32 sec)
+DELETE export FROM silverpop_export_staging t INNER JOIN silverpop_export export ON t.contact_id = export.contact_id
+WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
+
 -- Move the data from the staging table into the persistent one
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
