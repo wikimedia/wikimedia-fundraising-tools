@@ -228,7 +228,7 @@ def test_currency_symbol():
 
 def test_export_hash():
     '''
-    Test that we export one record for a duplicate contact.
+    Test that we export the contact_hash into silverpop_export.
     '''
 
     run_update_with_fixtures(fixture_queries=["""

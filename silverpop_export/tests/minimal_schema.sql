@@ -10,6 +10,11 @@ create table civicrm_email (
     key UI_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+drop table if exists civicrm_deleted_email;
+create table civicrm_deleted_email (
+    id int(10) unsigned primary key
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 drop table if exists civicrm_contact;
 create table civicrm_contact (
     id int(10) unsigned auto_increment primary key,
