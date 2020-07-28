@@ -307,9 +307,6 @@ def test_optin_negative_exclusion():
     '''
 
     run_update_with_fixtures(fixture_queries=["""
-    -- Get rid of any records from previous runs that would cause an id clash.
-    DELETE s FROM silverpop_export s LEFT JOIN civicrm_email e ON e.id = s.id WHERE e.id IS NULL;
-    """, """
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'optinnull@localhost', 1, 0),
         (2, 'optinone@localhost', 1, 0),
@@ -334,7 +331,7 @@ def test_optin_negative_exclusion():
     cursor.execute("select count(email) from silverpop_export")
     assert cursor.fetchone() == (2,)
     cursor.execute("select count(email) from silverpop_excluded")
-    assert cursor.fetchone() == (2,)
+    assert cursor.fetchone() == (1,)
     cursor.execute("select email from silverpop_excluded order by id desc")
     assert cursor.fetchone() == ('optinzero@localhost',)
 
@@ -376,6 +373,9 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
 
             drop_queries = silverpop_export.update.load_queries('drop_schema.sql')
             silverpop_export.update.run_queries(conn, drop_queries)
+
+            drop_incremental_queries = silverpop_export.update.load_queries('drop_incremental_schema.sql')
+            silverpop_export.update.run_queries(conn, drop_incremental_queries)
 
             rebuild_queries = silverpop_export.update.load_queries('rebuild_schema.sql')
             silverpop_export.update.run_queries(conn, rebuild_queries)
