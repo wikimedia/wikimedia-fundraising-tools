@@ -27,6 +27,10 @@ FROM
 -- silverpop_endowment_highest - data about contact's highest endowment donation
 -- silverpop_export - collation of data from above tables
 -- silverpop_export_view - collation of data from above tables + formatting.
+-- silverpop_update_world - table of emails updated in our update timeframe. Only emails from this table
+--    need to be changed in our incremental update.
+-- silverpop_countrylangs - look up of our best guess of the language associated with the donor's country if we
+--   don't know their language
 
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
