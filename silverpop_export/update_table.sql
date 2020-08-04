@@ -92,9 +92,13 @@ COMMIT;
 -- Query OK, 23199001 rows affected (11 min 55.19 sec)
 INSERT INTO silverpop_email_map
   SELECT email,
+    # MAX here is attempt to get the most recent, although it would be better to accurately calculate most recent donor.
     MAX(id) as master_email_id,
+    # We definitely prefer 'an' address over no address so use MAX - but ideally we would prefer most recent donor.
     MAX(address_id) as address_id,
+    # Use MAX to prefer non-blank
     MAX(preferred_language) as preferred_language,
+    # Use MAX as any opted out IS opted out.
     MAX(opted_out) as opted_out,
     # 0 if they have ever actually opted out, else 1
     # we use this for filtering so don't need to preserve the nuance.
