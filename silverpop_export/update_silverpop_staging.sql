@@ -1,4 +1,4 @@
--- This file manages the incremental updates to the main contact list in the silverpop_staging file.
+-- This file manages the incremental updates to the main contact list in the silverpop_staging table.
 -- It only takes a few minutes run at on off-peak time of year. It's not known how long
 -- it will take when more updates are happening. Most of the time take is in the
 -- last statement which removes any emails not found in civicrm_email.
