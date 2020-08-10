@@ -27,6 +27,10 @@ FROM
 -- silverpop_endowment_highest - data about contact's highest endowment donation
 -- silverpop_export - collation of data from above tables
 -- silverpop_export_view - collation of data from above tables + formatting.
+-- silverpop_update_world - table of emails updated in our update timeframe. Only emails from this table
+--    need to be changed in our incremental update.
+-- silverpop_countrylangs - look up of our best guess of the language associated with the donor's country if we
+--   don't know their language
 
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
@@ -279,7 +283,7 @@ WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
 -- Move the data from the staging table into the persistent one
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
-  id,contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
+  id,modified_date, contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
   foundation_has_recurred_donation,
   foundation_highest_usd_amount,foundation_highest_native_amount,
   foundation_highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
@@ -291,7 +295,7 @@ INSERT INTO silverpop_export (
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
-SELECT ex.id,ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
+SELECT ex.id,ex.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
   ex.email,ex.opted_in, ex.employer_id, ex.employer_name,
@@ -330,9 +334,25 @@ WHERE dedupe_table.opted_out=0
 AND (ex.opted_in IS NULL OR ex.opted_in = 1);
 
 COMMIT;
--- Query OK, 0 rows affected (0.00 sec)
 -- Create a nice view to export from
-CREATE OR REPLACE VIEW silverpop_export_view AS
+-- There are two possibilities for limiting this view to only include newly modified contacts
+-- add a where statement or join on an already-limited table.
+--
+-- For the former I worry there could be timing integrity issues - this is true to the silverpop_export
+-- table at the time it was last updated. But if the next silverpop started the
+-- data in the silverpop_update_world table could be out of sync - ie if it had been
+-- recreated for the following day.
+--
+-- So I want to add a where statement to the view and the where statement has to depend on a variable.
+-- But since SQL doesn't let you create a view using a variable,
+-- I have to do an 'eval'-style trick to create the view, concatting the create view statement
+-- together with the value of the variable baked into it, then executing that statement.
+--
+-- In order to include the parameter this method is being used
+-- https://stackoverflow.com/questions/11580134/prepare-statemnt-using-concat-in-mysql-giving-error
+
+-- Query OK, 0 rows affected (0.00 sec)
+SET @sql =  CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
   SELECT
     contact_id ContactID,
     e.contact_hash,
@@ -487,4 +507,9 @@ CREATE OR REPLACE VIEW silverpop_export_view AS
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
-;
+  WHERE e.modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)
+;");
+prepare stmnt1 from @sql;
+execute stmnt1;
+deallocate prepare stmnt1;
+

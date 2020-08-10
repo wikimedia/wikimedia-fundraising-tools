@@ -1,4 +1,4 @@
--- This file manages the incremental updates to the main contact list in the silverpop_staging file.
+-- This file manages the incremental updates to the main contact list in the silverpop_staging table.
 -- It only takes a few minutes run at on off-peak time of year. It's not known how long
 -- it will take when more updates are happening. Most of the time take is in the
 -- last statement which removes any emails not found in civicrm_email.
@@ -154,17 +154,10 @@ FROM silverpop_export_staging s
 WHERE c.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
   AND c.is_deleted = 1;
 
-
--- Remove any privacy deletes by getting rid of emails no longer in the email table.
--- This is a relatively long time to lock this table. It takes 1-2 minutes longer
--- if we use the log_civicrm_email table and I'm not sure it's any less bad to lock
--- that instead. A better way would be to temporarily record the emails to delete.
--- Query OK, 243 rows affected (1 min 0.45 sec)
--- https://phabricator.wikimedia.org/T257001
-DELETE s FROM silverpop_export_staging s
-  LEFT JOIN civicrm.civicrm_email l
-  ON s.id = l.id
-WHERE l.id IS NULL;
+-- Delete any emails that have been recorded in the deleted emails table
+-- Query OK, 3 rows affected (1 min 31.44 sec)
+DELETE FROM silverpop_export_staging
+WHERE id IN (SELECT id from civicrm.civicrm_deleted_email);
 
 COMMIT;
 
