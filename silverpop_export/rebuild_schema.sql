@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
   `email` varchar(255)  PRIMARY KEY,
   `endowment_latest_currency` VARCHAR(8),
+  `endowment_latest_currency_symbol` VARCHAR(8),
   `endowment_latest_native_amount` DECIMAL(20, 2),
   KEY `email` (`email`)
 ) COLLATE 'utf8_unicode_ci';
