@@ -154,8 +154,6 @@ class TrrFile(object):
                 queue_name = 'recurring'
                 out['txn_type'] = 'subscr_payment'
                 out['subscr_id'] = row['PayPal Reference ID']
-                if not out['subscr_id']:
-                    raise Exception('Missing field subscr_id')
             elif row['Transaction Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
                 log.info("-Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date']))
@@ -187,6 +185,12 @@ class TrrFile(object):
         if not self.should_send(out, queue_name, row, event_type):
             return
 
+        # raise an exception if subscr_id is missing for recurring txns AFTER the should_send check.
+        # this should quiet down failmail until paypal fix this bug their side.
+        if queue_name == 'recurring' and not out['subscr_id']:
+            log.info("recurring txn missing subscr_id\t{id}\t{date}".format(id=out['gateway_txn_id'], date=out['date']))
+            raise Exception('Missing field subscr_id')
+
         if 'last_name' not in out and queue_name != 'refund':
             out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
 
@@ -209,7 +213,7 @@ class TrrFile(object):
 
         # Skating further onto thin ice, we identify recurring version by
         # the first character of the subscr_id
-        if queue_name == 'recurring' and row['PayPal Reference ID'][0] == 'I':
+        if queue_name == 'recurring' and row['PayPal Reference ID'] and row['PayPal Reference ID'][0] == 'I':
             return 'paypal_ec'
 
         return 'paypal'
