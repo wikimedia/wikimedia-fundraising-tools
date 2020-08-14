@@ -92,9 +92,13 @@ COMMIT;
 -- Query OK, 23199001 rows affected (11 min 55.19 sec)
 INSERT INTO silverpop_email_map
   SELECT email,
+    # MAX here is attempt to get the most recent, although it would be better to accurately calculate most recent donor.
     MAX(id) as master_email_id,
+    # We definitely prefer 'an' address over no address so use MAX - but ideally we would prefer most recent donor.
     MAX(address_id) as address_id,
+    # Use MAX to prefer non-blank
     MAX(preferred_language) as preferred_language,
+    # Use MAX as any opted out IS opted out.
     MAX(opted_out) as opted_out,
     # 0 if they have ever actually opted out, else 1
     # we use this for filtering so don't need to preserve the nuance.
@@ -183,12 +187,14 @@ SELECT
   -- with different currencies are neglible
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_latest_currency,
+  MAX(cur.symbol) as endowment_latest_currency_symbol,
   MAX(extra.original_amount) as endowment_latest_native_amount
 FROM silverpop_update_world t
         INNER JOIN silverpop_export_stat export ON t.email = export.email
         LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
         LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
         LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+        LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
 WHERE c.receive_date = export.endowment_last_donation_date
   AND export.endowment_last_donation_date IS NOT NULL
   AND c.financial_type_id = 26
@@ -500,7 +506,11 @@ SET @sql =  CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
     foundation_total_2017 as foundation_total_2017,
     foundation_total_2018 as foundation_total_2018,
     foundation_total_2019 as foundation_total_2019,
-    foundation_total_2020 as foundation_total_2020
+    foundation_total_2020 as foundation_total_2020,
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
+     as all_funds_latest_currency,
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
+     as all_funds_latest_currency_symbol
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
