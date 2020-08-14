@@ -187,12 +187,14 @@ SELECT
   -- with different currencies are neglible
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_latest_currency,
+  MAX(cur.symbol) as endowment_latest_currency_symbol,
   MAX(extra.original_amount) as endowment_latest_native_amount
 FROM silverpop_update_world t
         INNER JOIN silverpop_export_stat export ON t.email = export.email
         LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
         LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
         LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+        LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
 WHERE c.receive_date = export.endowment_last_donation_date
   AND export.endowment_last_donation_date IS NOT NULL
   AND c.financial_type_id = 26
@@ -504,7 +506,11 @@ SET @sql =  CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
     foundation_total_2017 as foundation_total_2017,
     foundation_total_2018 as foundation_total_2018,
     foundation_total_2019 as foundation_total_2019,
-    foundation_total_2020 as foundation_total_2020
+    foundation_total_2020 as foundation_total_2020,
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
+     as all_funds_latest_currency,
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
+     as all_funds_latest_currency_symbol
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
