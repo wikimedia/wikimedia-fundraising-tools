@@ -124,23 +124,27 @@ DELETE latest FROM silverpop_update_world t INNER JOIN silverpop_export_latest l
 -- Add recent rows to latest export table
 -- Query OK, 679292 rows affected (24.34 sec)
 INSERT INTO silverpop_export_latest
+  -- temporarily specify the fields here as we no longer use latest_donation from this table
+  -- and it may not be dropped on the target db yet.
+  (email, latest_currency, latest_currency_symbol, latest_native_amount)
   SELECT
-    e.email,
-    d.last_donation_currency,
-    COALESCE(cur.symbol, d.last_donation_currency),
-    d.last_donation_amount,
-    d.last_donation_date
+    t.email,
+    MAX(extra.original_currency) as latest_currency,
+    MAX(cur.symbol) as latest_currency_symbol,
+    MAX(extra.original_amount) as latest_native_amount
   FROM silverpop_update_world t
-    INNER JOIN silverpop_export_staging e ON e.email = t.email
-    INNER JOIN civicrm.wmf_donor d ON d.entity_id = e.contact_id
-    LEFT JOIN civicrm.civicrm_currency cur
-      ON cur.name = d.last_donation_currency
-  WHERE
-    d.last_donation_date IS NOT NULL
--- @todo - speed test without the second desc.
-  ORDER BY last_donation_date DESC, d.last_donation_usd DESC
-ON DUPLICATE KEY UPDATE latest_currency = silverpop_export_latest.latest_currency;
+    INNER JOIN silverpop_export_stat export ON t.email = export.email
+    LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
+    LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
+    LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+    LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
+    WHERE c.receive_date = export.foundation_last_donation_date
+    AND c.financial_type_id <> 26
+    AND c.contribution_status_id = 1
+    AND c.total_amount > 0
+    GROUP BY t.email;
 COMMIT;
+
 
 -- Populate table for highest donation amount and date
 BEGIN;
