@@ -188,7 +188,7 @@ SELECT
   email.email,
   -- really we want the currency/amount associated with the highest amount on
   -- the highest date but the chances of 2 concurrent donations
-  -- with different currencies are neglible
+  -- with different currencies are negligible
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_latest_currency,
   MAX(cur.symbol) as endowment_latest_currency_symbol,
@@ -362,20 +362,20 @@ COMMIT;
 -- https://stackoverflow.com/questions/11580134/prepare-statemnt-using-concat-in-mysql-giving-error
 
 -- Query OK, 0 rows affected (0.00 sec)
-SET @sql =  CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
+CREATE OR REPLACE VIEW silverpop_export_view_full AS
   SELECT
     contact_id ContactID,
     e.contact_hash,
     e.email,
-    IFNULL(e.first_name, '')                                               firstname,
-    IFNULL(e.last_name, '')                                                lastname,
+    IFNULL(e.first_name, '') firstname,
+    IFNULL(e.last_name, '') lastname,
     CASE
       WHEN gender_id =1 THEN 'Female'
       WHEN gender_id =2 THEN 'Male'
       WHEN gender_id =3 THEN 'Transgender'
       ELSE ''
     END as gender,
-    IFNULL(country, 'XX')                                                  country,
+    IFNULL(country, 'XX') country,
     state,
     postal_code,
     e.employer_name,
@@ -514,16 +514,19 @@ SET @sql =  CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
      as all_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
-     as all_funds_latest_currency_symbol
+     as all_funds_latest_currency_symbol,
+    e.modified_date
 
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
-  WHERE e.modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)
-;");
+;
+
+SET @sql =CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
+SELECT * FROM silverpop_export_view_full
+WHERE modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)");
 prepare stmnt1 from @sql;
 execute stmnt1;
 deallocate prepare stmnt1;
-
