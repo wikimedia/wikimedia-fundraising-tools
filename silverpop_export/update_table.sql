@@ -9,7 +9,7 @@ SELECT
     online_form_url,
     minimum_gift_matched_usd,
     match_policy_last_updated,
-    subsidiaries
+    '' AS subsidiaries
 FROM
     civicrm.civicrm_value_matching_gift;
 
