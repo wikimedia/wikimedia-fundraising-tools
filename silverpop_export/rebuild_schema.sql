@@ -118,15 +118,14 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
 
 CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
 (
-  `id` INT(10) UNSIGNED,
-  `name` VARCHAR(255),
+  `employer_id` INT(10) UNSIGNED,
+  `employer_name` VARCHAR(255),
   `matching_gifts_provider_info_url` VARCHAR(255),
   `guide_url` VARCHAR(255),
   `online_form_url` VARCHAR(255),
   `minimum_gift_matched_usd` DECIMAL(20, 2),
   `match_policy_last_updated` DATETIME,
-  `subsidiaries` VARCHAR(5000), -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
-  INDEX company_id (`id`)
+  INDEX mg_employer_id (`employer_id`)
 ) DEFAULT CHARSET = utf8
   COLLATE = utf8_unicode_ci;
 
