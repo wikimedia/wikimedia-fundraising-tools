@@ -103,7 +103,8 @@ INSERT INTO silverpop_email_map
     # 0 if they have ever actually opted out, else 1
     # we use this for filtering so don't need to preserve the nuance.
     # This should be revisited per https://phabricator.wikimedia.org/T256522
-    MIN(IF (opted_in = 0, 0, 1)) as opted_in
+    MIN(IF (opted_in = 0, 0, 1)) as opted_in,
+    MAX(modified_date) as modified_date
   FROM silverpop_export_staging
     -- This index force seems to not change the speed much....
     FORCE INDEX (spex_email)
@@ -305,7 +306,7 @@ INSERT INTO silverpop_export (
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
-SELECT ex.id,ex.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
+SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
   ex.email,ex.opted_in, ex.employer_id, ex.employer_name,
