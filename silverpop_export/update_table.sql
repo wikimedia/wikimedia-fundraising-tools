@@ -1,6 +1,6 @@
 SET autocommit = 1;
 INSERT INTO silverpop_export_matching_gift
-(id, name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated, subsidiaries)
+(employer_id, employer_name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated)
 SELECT
     id,
     name_from_matching_gift_db,
@@ -8,8 +8,7 @@ SELECT
     guide_url,
     online_form_url,
     minimum_gift_matched_usd,
-    match_policy_last_updated,
-    '' AS subsidiaries
+    match_policy_last_updated
 FROM
     civicrm.civicrm_value_matching_gift;
 
