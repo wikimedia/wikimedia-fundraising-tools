@@ -1,6 +1,6 @@
 SET autocommit = 1;
 INSERT INTO silverpop_export_matching_gift
-(id, name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated, subsidiaries)
+(employer_id, employer_name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated)
 SELECT
     id,
     name_from_matching_gift_db,
@@ -8,8 +8,7 @@ SELECT
     guide_url,
     online_form_url,
     minimum_gift_matched_usd,
-    match_policy_last_updated,
-    '' AS subsidiaries
+    match_policy_last_updated
 FROM
     civicrm.civicrm_value_matching_gift;
 
@@ -255,24 +254,6 @@ INSERT INTO silverpop_has_recur
  INNER JOIN silverpop_update_world t ON t.email = email.email;
 COMMIT;
 
--- Do an extra delete in case there was a timing issue
--- in deployment we have seen cases where a contact is part way through a manual merge.
--- the to-be-primary has been saved but the is_primary is not yet removed from the prior primary
--- I think https://gerrit.wikimedia.org/r/c/wikimedia/fundraising/tools/+/609238 should
--- make this obsolete. But, for ow....
-SET @offSetInDays = 1;
-DELETE s
-FROM silverpop_export_staging s
-       LEFT JOIN civicrm.log_civicrm_email l
-                 ON s.id = l.id
-       LEFT JOIN civicrm.civicrm_email e
-  -- use is_primary in case they are no longer primary
-                 ON s.id = e.id  AND e.is_primary = 1
-WHERE l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
-  AND e.email IS NULL OR e.email = '';
-
--- Reset to original offset - this is all a bit clunky & should be a python param
-SET @offSetInDays = 7;
 BEGIN;
 -- Delete recent rows from export table (make way for updated version).
 -- Query OK, 653187 rows affected (10.02 sec)
