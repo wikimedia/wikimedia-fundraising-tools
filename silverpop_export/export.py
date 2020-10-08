@@ -127,7 +127,7 @@ def export_matching_gifts(output_path=None):
         db=db,
         query=exportq,
         output=output_path,
-        sort_by_index="id"
+        sort_by_index="employer_id"
     )
 
 
