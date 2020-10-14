@@ -32,6 +32,10 @@ def export_all():
         config.working_path,
         'Unsubscribes-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
     )
+    optoutfile = os.path.join(
+        config.working_path,
+        'Optout-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
+    )
     matchingiftsfile = os.path.join(
         config.working_path,
         'MatchingGifts-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
@@ -39,6 +43,7 @@ def export_all():
 
     export_data(output_path=updatefile)
     export_unsubscribes(output_path=unsubfile)
+    export_unsubscribes(output_path=optoutfile)
     export_matching_gifts(output_path=matchingiftsfile)
     rotate_files()
 
