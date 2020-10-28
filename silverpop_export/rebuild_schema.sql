@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   email VARCHAR(255) PRIMARY KEY,
   all_funds_latest_donation_date DATETIME,
   foundation_lifetime_usd_total DECIMAL(20, 2),
-  foundation_donation_count INT UNSIGNED,
+  foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
   foundation_last_donation_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
-  endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
   INDEX(all_funds_latest_donation_date),
   INDEX(endowment_last_donation_date),
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_highest_native_currency VARCHAR(3),
   foundation_highest_donation_date DATETIME,
   lifetime_usd_total DECIMAL(20, 2),
-  donation_count INT,
+  donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
 -- Aggregate contribution statistics
   foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
-  endowment_number_donations DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics

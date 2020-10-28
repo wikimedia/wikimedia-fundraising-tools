@@ -2,7 +2,7 @@ SET autocommit = 1;
 INSERT INTO silverpop_export_matching_gift
 (employer_id, employer_name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated)
 SELECT
-    id,
+    entity_id,
     name_from_matching_gift_db,
     matching_gifts_provider_info_url,
     guide_url,
