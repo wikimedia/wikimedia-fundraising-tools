@@ -78,7 +78,7 @@ BEGIN;
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
   FROM silverpop_update_world t
-    LEFT JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
+    INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
     # We need to be careful with this group by. We want the sum by email but we don't want
