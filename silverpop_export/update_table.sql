@@ -323,7 +323,8 @@ LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.addres
 
 -- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
 WHERE dedupe_table.opted_out=0
-AND (ex.opted_in IS NULL OR ex.opted_in = 1);
+AND (ex.opted_in IS NULL OR ex.opted_in = 1)
+ON DUPLICATE KEY UPDATE silverpop_export.id=ex.id;
 
 COMMIT;
 -- Create a nice view to export from
