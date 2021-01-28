@@ -500,8 +500,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
      as all_funds_latest_currency_symbol,
     e.modified_date,
     IFNULL(gift.matching_gifts_provider_info_url, '') matching_gifts_provider_info_url,
-    IFNULL(gift.guide_url, '') guide_url,
-    IFNULL(gift.online_form_url, '') online_form_url
+    IFNULL(gift.guide_url, '') matching_gifts_guide_url,
+    IFNULL(gift.online_form_url, '') matching_gifts_online_form_url
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
@@ -527,8 +527,8 @@ email,
 employer_id,
 employer_name,
 matching_gifts_provider_info_url,
-guide_url,
-online_form_url,
+matching_gifts_guide_url,
+matching_gifts_online_form_url,
 endowment_first_donation_date,
 endowment_highest_donation_date,
 endowment_highest_native_amount,
