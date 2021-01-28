@@ -145,6 +145,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
 
+-- Matching gift employer data
+  matching_gifts_provider_info_url VARCHAR(255),
+  guide_url VARCHAR(255),
+  online_form_url VARCHAR(255),
+
 -- Lifetime contribution statistics
   foundation_has_recurred_donation TINYINT(1),
   foundation_highest_usd_amount DECIMAL(20, 2),
