@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
   `endowment_latest_currency_symbol` VARCHAR(8),
   `endowment_latest_native_amount` DECIMAL(20, 2),
   KEY `email` (`email`)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 
 INSERT INTO silverpop_endowment_latest

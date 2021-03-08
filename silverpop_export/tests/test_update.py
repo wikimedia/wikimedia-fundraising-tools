@@ -27,7 +27,7 @@ def setup():
         db_name = "test"
         db_user = "test"
 
-    db_params = {"user": db_user, "host": db_host, "charset": "utf8"}
+    db_params = {"user": db_user, "host": db_host, "charset": "utf8mb4"}
     if db_pass:
         db_params['passwd'] = db_pass
 

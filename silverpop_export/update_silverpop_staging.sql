@@ -21,7 +21,7 @@ SET @offSetInDays = 7;
 -- this is a good thing - we want to be able to rebuild more granularly but with internal integrity.
 DROP TABLE IF EXISTS silverpop_update_world;
 CREATE TABLE silverpop_update_world (
-  `email` varchar(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   KEY `email` (`email`)
 ) ENGINE=InnoDB;
 -- We use a transaction to keep this table consistently updated to the same point in time.

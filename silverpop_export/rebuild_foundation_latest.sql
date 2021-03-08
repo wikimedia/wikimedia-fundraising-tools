@@ -6,7 +6,7 @@ CREATE TABLE silverpop_export_latest
   latest_currency VARCHAR(3),
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 INSERT INTO silverpop_export_latest
   -- temporarily specify the fields here as we no longer use latest_donation from this table
