@@ -2,14 +2,14 @@ DROP TABLE IF EXISTS silverpop_countrylangs;
  CREATE TABLE `silverpop_countrylangs` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   -- For joining to drupal table.
-  `country` VARCHAR(2) COLLATE utf8_general_ci DEFAULT NULL,
+  `country` VARCHAR(2) COLLATE utf8mb4_general_ci DEFAULT NULL,
   -- For joining to civi table.
-  `country_unicode` VARCHAR(4) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `lang` VARCHAR(20) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `country_unicode` VARCHAR(4) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `lang` VARCHAR(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `spcl_country` (`country`),
   KEY (country_unicode)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO silverpop_countrylangs (country, lang) VALUES
   ('AF', 'prs'),

@@ -32,21 +32,21 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX spex_id (id),
   INDEX address_id (address_id),
   INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE `silverpop_email_map`
 (
-  `email` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+  `email` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `master_email_id` INT(16) NOT NULL,
   `address_id` INT(16) DEFAULT NULL,
-  `preferred_language` VARCHAR(12) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+  `preferred_language` VARCHAR(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `opted_out` TINYINT(1) DEFAULT NULL,
   `opted_in` TINYINT(1) DEFAULT NULL,
   `modified_date` DATETIME NULL,
   KEY `master_email_id` (`master_email_id`),
   KEY `address_id` (`address_id`),
   KEY `email` (`email`)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_latest
 (
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   latest_currency VARCHAR(3),
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
   `email` varchar(255)  PRIMARY KEY,
@@ -62,14 +62,14 @@ CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
   `endowment_latest_currency_symbol` VARCHAR(8),
   `endowment_latest_native_amount` DECIMAL(20, 2),
   KEY `email` (`email`)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
  `email` varchar(255) PRIMARY KEY,
  `endowment_highest_donation_date` DATETIME,
  `endowment_highest_native_currency` VARCHAR(8),
  `endowment_highest_native_amount` DECIMAL(20, 2)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_excluded
 (
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS silverpop_excluded
 
   INDEX sx_email (email),
   CONSTRAINT sx_email_u UNIQUE (email)
-) COLLATE 'utf8_unicode_ci'
+) COLLATE 'utf8mb4_unicode_ci'
   AUTO_INCREMENT = 1;
 
 CREATE TABLE IF NOT EXISTS silverpop_export_highest
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_highest
   highest_native_amount DECIMAL(20, 2),
   highest_usd_amount DECIMAL(20, 2),
   highest_donation_date DATETIME
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   INDEX(all_funds_latest_donation_date),
   INDEX(endowment_last_donation_date),
   INDEX(endowment_highest_usd_amount)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
 (
@@ -127,8 +127,8 @@ CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
   `minimum_gift_matched_usd` DECIMAL(20, 2),
   `match_policy_last_updated` DATETIME,
   INDEX mg_employer_id (`employer_id`)
-) DEFAULT CHARSET = utf8
-  COLLATE = utf8_unicode_ci;
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS silverpop_export
 (
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   INDEX spex_modified_date (modified_date),
   CONSTRAINT sp_email UNIQUE (email),
   CONSTRAINT sp_contact_id UNIQUE (contact_id)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 -- contacts and countries where they are not present in the contact record but ARE present in the
 -- contribution tracking but not the Civi contact record (around 400k)
@@ -201,9 +201,9 @@ CREATE TABLE IF NOT EXISTS `silverpop_missing_countries`
   `preferred_language` VARCHAR(32) DEFAULT NULL,
   KEY `contact_id` (`contact_id`),
   KEY `country` (`country`)
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `email` VARCHAR(255) PRIMARY KEY,
  `foundation_has_recurred_donation` int(1) NOT NULL
-) COLLATE 'utf8_unicode_ci';
+) COLLATE 'utf8mb4_unicode_ci';
