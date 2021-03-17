@@ -183,7 +183,7 @@ drop table if exists contribution_tracking;
 create table contribution_tracking (
     contribution_id int(10) unsigned,
     country varchar(2)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists log_civicrm_email;
 create table log_civicrm_email (
