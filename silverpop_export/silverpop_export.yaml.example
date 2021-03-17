@@ -18,13 +18,13 @@ sftp:
     compression: true
 
 civicrm_db:
-    db: dev_civicrm
+    db: civicrm
 
 log_civicrm_db:
-    db: dev_log_civicrm
+    db: civicrm
 
 drupal_db:
-    db: dev_drupal
+    db: drupal
 
 silverpop_db:
     host: localhost
