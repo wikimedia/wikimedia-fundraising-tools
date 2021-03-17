@@ -109,7 +109,7 @@ def export_unsubscribes(output_path=None):
 
     log.info("Starting unsubscribe data export")
     exportq = DbQuery()
-    exportq.tables.append('silverpop_excluded')
+    exportq.tables.append('silverpop_excluded_utf8')
     exportq.columns.append('*')
     run_export_query(
         db=db,

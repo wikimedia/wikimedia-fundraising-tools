@@ -88,3 +88,6 @@ DELETE silverpop_excluded
 FROM silverpop_excluded
   JOIN civicrm.civicrm_uf_match m
   ON m.uf_name = silverpop_excluded.email;
+
+CREATE OR REPLACE VIEW silverpop_excluded_utf8 as
+  SELECT CONVERT(email USING utf8) FROM silverpop_excluded;
