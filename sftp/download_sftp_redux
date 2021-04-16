@@ -1,0 +1,12 @@
+#!/bin/bash
+# usage: download_sftp_redux <incomingdir> <completeddir> <connectstring> <passwordfile> <remotedir>
+# A version of the nightly downloader for remote hosts that use password auth and don't allow ls via shell
+for file in $( \
+  diff \
+    <(find ${1} ${2} -type f -printf "%f\n"|sort|uniq) \
+    <(echo "ls ${5}" | sshpass -f ${4} sftp ${3}|tail -n +2|sed -e 's/.*\///' -e 's/\s\+$//'|sort) \
+  |sed -n 's/^> \(.*\)/\1/p'
+); do
+  echo "fetching ${file}"
+  sshpass -f ${4} scp ${3}:/${5}/${file} ${1}
+done
