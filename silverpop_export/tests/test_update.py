@@ -89,7 +89,7 @@ def test_no_donations():
         from silverpop_export_view
     """)
     actual = cursor.fetchone()
-    expected = ('NO', Decimal('0.00'),
+    expected = ('No', Decimal('0.00'),
                 Decimal('0.00'), '',
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
