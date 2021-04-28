@@ -40,6 +40,7 @@ SELECT
   st.name as state,
   IF((donor.endowment_last_donation_date IS NULL OR donor.last_donation_date > donor.endowment_last_donation_date), donor.last_donation_date, donor.endowment_last_donation_date) as all_funds_latest_donation_date
 FROM civicrm.civicrm_email e
+--  LEFT JOIN silverpop_export_staging staging ON staging.id = e.id
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   LEFT JOIN civicrm.civicrm_address a ON a.contact_id = e.contact_id AND a.is_primary = 1
@@ -54,4 +55,6 @@ WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
   AND e.is_primary = 1
+  #AND c.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+  #AND staging.id IS NULL
 ;
