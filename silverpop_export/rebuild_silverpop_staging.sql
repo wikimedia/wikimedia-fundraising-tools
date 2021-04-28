@@ -36,14 +36,14 @@ SELECT
   a.id as address_id,
   a.city,
   a.postal_code,
-  COALESCE(ctry.iso_code, s.country) as country,
+  COALESCE(ctry.iso_code, mc.country) as country,
   st.name as state,
   IF((donor.endowment_last_donation_date IS NULL OR donor.last_donation_date > donor.endowment_last_donation_date), donor.last_donation_date, donor.endowment_last_donation_date) as all_funds_latest_donation_date
 FROM civicrm.civicrm_email e
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
   LEFT JOIN civicrm.civicrm_address a ON a.contact_id = e.contact_id AND a.is_primary = 1
-  LEFT JOIN silverpop_missing_countries s ON s.contact_id = e.contact_id
+  LEFT JOIN silverpop_missing_countries mc ON mc.contact_id = e.contact_id
   LEFT JOIN civicrm.civicrm_country ctry
    ON a.country_id = ctry.id
   LEFT JOIN civicrm.civicrm_state_province st
