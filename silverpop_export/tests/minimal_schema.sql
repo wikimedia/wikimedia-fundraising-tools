@@ -160,7 +160,8 @@ CREATE TABLE civicrm_contribution_recur
     amount decimal(20, 2)   NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
     contribution_status_id int(10) unsigned DEFAULT '1',
     end_date datetime,
-    start_date datetime
+    start_date datetime,
+    cancel_date datetime
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
