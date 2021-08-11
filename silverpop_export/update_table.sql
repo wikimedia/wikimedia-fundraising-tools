@@ -56,6 +56,7 @@ BEGIN;
    endowment_highest_usd_amount,
    foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
    foundation_total_2018, foundation_total_2019, foundation_total_2020,
+   foundation_total_2021, foundation_total_2022, foundation_total_2023,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
   )
   SELECT
@@ -74,6 +75,10 @@ BEGIN;
     COALESCE(SUM(donor.total_2018), 0) as foundation_total_2018,
     COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
     COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
+    COALESCE(SUM(donor.total_2021), 0) as foundation_total_2021,
+    -- these 2 fields are currently placeholders
+    0 as foundation_total_2022,
+    0 as foundation_total_2023,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
@@ -284,6 +289,7 @@ INSERT INTO silverpop_export (
   city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  foundation_total_2021, foundation_total_2022, foundation_total_2023,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
@@ -305,6 +311,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   addr.city,addr.country,addr.state,addr.postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  foundation_total_2021, foundation_total_2022, foundation_total_2023,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount
@@ -494,6 +501,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     foundation_total_2018 as foundation_total_2018,
     foundation_total_2019 as foundation_total_2019,
     foundation_total_2020 as foundation_total_2020,
+    foundation_total_2021 as AF_usd_total_2021,
+    foundation_total_2022 as AF_usd_total_2022,
+    foundation_total_2023 as AF_usd_total_2023,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
      as all_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
