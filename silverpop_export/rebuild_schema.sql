@@ -108,6 +108,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
@@ -167,6 +170,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
 
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
