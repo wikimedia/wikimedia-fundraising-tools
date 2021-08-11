@@ -77,6 +77,9 @@ CREATE TABLE `wmf_donor`
     `total_2018_2019`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2019_2020`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2020_2021`               decimal(20, 2)                       DEFAULT '0.00',
+    `total_2021_2022`               decimal(20, 2)                       DEFAULT '0.00',
+    `total_2022_2023`               decimal(20, 2)                       DEFAULT '0.00',
+    `total_2023_2024`               decimal(20, 2)                       DEFAULT '0.00',
     `endowment_last_donation_date`  datetime                             DEFAULT NULL,
     `first_donation_date`           datetime                             DEFAULT NULL,
     `endowment_first_donation_date` datetime                             DEFAULT NULL,
@@ -112,7 +115,19 @@ CREATE TABLE `wmf_donor`
     `total_2020`                    decimal(20, 2)                       DEFAULT '0.00',
     `endowment_total_2020`          decimal(20, 2)                       DEFAULT '0.00',
     `endowment_total_2020_2021`     decimal(20, 2)                       DEFAULT '0.00',
-    `change_2020_2021`              double                               DEFAULT '0'
+    `change_2020_2021`              double                               DEFAULT '0',
+    `total_2021`                    decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2021`          decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2021_2022`     decimal(20, 2)                       DEFAULT '0.00',
+    `change_2021_2022`              double                               DEFAULT '0',
+    `total_2022`                    decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2022`          decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2022_2023`     decimal(20, 2)                       DEFAULT '0.00',
+    `change_2022_2023`              double                               DEFAULT '0',
+    `total_2023`                    decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2023`          decimal(20, 2)                       DEFAULT '0.00',
+    `endowment_total_2023_2022`     decimal(20, 2)                       DEFAULT '0.00',
+    `change_2023_2024`              double                               DEFAULT '0'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -143,7 +158,9 @@ CREATE TABLE civicrm_contribution_recur
     id int(10) unsigned,
     contact_id int(10) unsigned NOT NULL COMMENT 'Foreign key to civicrm_contact.id.',
     amount decimal(20, 2)   NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
-    contribution_status_id int(10) unsigned DEFAULT '1'
+    contribution_status_id int(10) unsigned DEFAULT '1',
+    end_date datetime,
+    start_date datetime
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
