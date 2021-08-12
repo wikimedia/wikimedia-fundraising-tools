@@ -479,17 +479,17 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       ELSE ''
     END as TS_voter_party,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
-    (donation_count + endowment_number_donations) as all_funds_donation_count,
+    (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
-      as all_funds_first_donation_date,
+      as both_funds_first_donation_date,
     IFNULL(DATE_FORMAT(IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_donation_date, foundation_highest_donation_date), '%m/%d/%Y'), '')
-      as all_funds_highest_donation_date,
+      as both_funds_highest_donation_date,
     IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_usd_amount, foundation_highest_usd_amount)
-      as all_funds_highest_usd_amount,
+      as both_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_last_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
-      as all_funds_latest_donation_date,
+      as both_funds_latest_donation_date,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_native_amount, endowment_latest_native_amount)
-     as all_funds_latest_native_amount,
+     as both_funds_latest_native_amount,
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
     endowment_number_donations,
@@ -525,9 +525,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     foundation_total_2022 as AF_usd_total_2022,
     foundation_total_2023 as AF_usd_total_2023,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
-     as all_funds_latest_currency,
+     as both_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
-     as all_funds_latest_currency_symbol,
+     as both_funds_latest_currency_symbol,
     e.modified_date,
     IFNULL(gift.matching_gifts_provider_info_url, '') matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
@@ -556,14 +556,14 @@ AF_usd_total_2020,
 AF_usd_total_2021,
 AF_usd_total_2022,
 AF_usd_total_2023,
-all_funds_donation_count,
-all_funds_first_donation_date,
-all_funds_highest_donation_date,
-all_funds_highest_usd_amount,
-all_funds_latest_currency,
-all_funds_latest_currency_symbol,
-all_funds_latest_donation_date,
-all_funds_latest_native_amount,
+both_funds_donation_count,
+both_funds_first_donation_date,
+both_funds_highest_donation_date,
+both_funds_highest_usd_amount,
+both_funds_latest_currency,
+both_funds_latest_currency_symbol,
+both_funds_latest_donation_date,
+both_funds_latest_native_amount,
 contact_hash,
 country,
 email,
