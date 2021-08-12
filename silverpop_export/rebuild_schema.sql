@@ -108,6 +108,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
@@ -150,8 +153,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   guide_url VARCHAR(255),
   online_form_url VARCHAR(255),
 
--- Lifetime contribution statistics
+-- recurring statistics
   foundation_has_recurred_donation TINYINT(1),
+  foundation_has_active_recurring_donation TINYINT(1),
+  foundation_recurring_first_donation_date DATETIME,
+  foundation_recurring_latest_donation_date DATETIME,
+
+-- Lifetime contribution statistics
   foundation_highest_usd_amount DECIMAL(20, 2),
   foundation_highest_native_amount DECIMAL(20, 2),
   foundation_highest_native_currency VARCHAR(3),
@@ -167,6 +175,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
 
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
@@ -205,5 +216,8 @@ CREATE TABLE IF NOT EXISTS `silverpop_missing_countries`
 
 CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `email` VARCHAR(255) PRIMARY KEY,
- `foundation_has_recurred_donation` int(1) NOT NULL
+ `foundation_has_recurred_donation` int(1) NOT NULL,
+ `foundation_has_active_recurring_donation` TINYINT(1),
+ `foundation_recurring_latest_donation_date` DATETIME,
+ `foundation_recurring_first_donation_date` DATETIME
 ) COLLATE 'utf8mb4_unicode_ci';

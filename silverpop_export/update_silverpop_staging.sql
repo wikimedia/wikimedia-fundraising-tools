@@ -68,17 +68,17 @@ SELECT
   st.name as state,
   IF((donor.endowment_last_donation_date IS NULL OR donor.last_donation_date > donor.endowment_last_donation_date), donor.last_donation_date, donor.endowment_last_donation_date) as all_funds_latest_donation_date
 FROM civicrm.civicrm_email e
-   LEFT JOIN silverpop_export_staging staging ON staging.id = e.id
-   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
-   LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
-   LEFT JOIN civicrm.civicrm_address a ON a.contact_id = e.contact_id AND a.is_primary = 1
-   LEFT JOIN silverpop_missing_countries mc ON mc.contact_id = e.contact_id
-   LEFT JOIN civicrm.civicrm_country ctry
-             ON a.country_id = ctry.id
-   LEFT JOIN civicrm.civicrm_state_province st
-             ON a.state_province_id = st.id
-   LEFT JOIN silverpop_countrylangs cl ON cl.country_unicode = ctry.iso_code
-   LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+  LEFT JOIN silverpop_export_staging staging ON staging.id = e.id
+  LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
+  LEFT JOIN civicrm.civicrm_value_1_communication_4 v ON v.entity_id = c.id
+  LEFT JOIN civicrm.civicrm_address a ON a.contact_id = e.contact_id AND a.is_primary = 1
+  LEFT JOIN silverpop_missing_countries mc ON mc.contact_id = e.contact_id
+  LEFT JOIN civicrm.civicrm_country ctry
+    ON a.country_id = ctry.id
+  LEFT JOIN civicrm.civicrm_state_province st
+    ON a.state_province_id = st.id
+  LEFT JOIN silverpop_countrylangs cl ON cl.country_unicode = ctry.iso_code
+  LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
 WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0

@@ -56,6 +56,7 @@ BEGIN;
    endowment_highest_usd_amount,
    foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
    foundation_total_2018, foundation_total_2019, foundation_total_2020,
+   foundation_total_2021, foundation_total_2022, foundation_total_2023,
    endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
   )
   SELECT
@@ -74,6 +75,10 @@ BEGIN;
     COALESCE(SUM(donor.total_2018), 0) as foundation_total_2018,
     COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
     COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
+    COALESCE(SUM(donor.total_2021), 0) as foundation_total_2021,
+    -- these 2 fields are currently placeholders
+    0 as foundation_total_2022,
+    0 as foundation_total_2023,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
@@ -240,9 +245,18 @@ BEGIN;
 -- Query OK, 94904 rows affected (0.61 sec)
 DELETE recur FROM silverpop_update_world t INNER JOIN silverpop_has_recur recur ON t.email = recur.email;
 -- Add recent rows to has_recur table
--- Query OK, 94904 rows affected (10.15 sec)
+-- Query OK, 134000 rows affected (38.378 sec)
 INSERT INTO silverpop_has_recur
- SELECT DISTINCT email.email, 1 as has_recurred_donation
+ SELECT DISTINCT email.email,
+ 1 as has_recurred_donation,
+ MAX(IF(
+   (end_date IS NULL OR end_date > NOW()
+   AND recur.contribution_status_id NOT IN(3,4)
+   AND recur.cancel_date IS NULL
+   ), 1, 0)
+ ) as foundation_has_active_recurring_donation,
+ MIN(receive_date) as `foundation_recurring_first_donation_date`,
+ MAX(receive_date) as `foundation_recurring_latest_donation_date`
  FROM
    civicrm.civicrm_contribution_recur recur
  INNER JOIN civicrm.civicrm_contribution contributions
@@ -251,7 +265,8 @@ INSERT INTO silverpop_has_recur
    AND contributions.financial_type_id != 26
    AND contributions.total_amount > 0
  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1
- INNER JOIN silverpop_update_world t ON t.email = email.email;
+ INNER JOIN silverpop_update_world t ON t.email = email.email
+ GROUP BY email;
 COMMIT;
 
 BEGIN;
@@ -276,7 +291,11 @@ WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
   id,modified_date, contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
+  -- has recurred isn't really used now - I'm just a bit reluctant to remove it in case they want it back.
   foundation_has_recurred_donation,
+  foundation_has_active_recurring_donation,
+  foundation_recurring_first_donation_date,
+  foundation_recurring_latest_donation_date,
   foundation_highest_usd_amount,foundation_highest_native_amount,
   foundation_highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
   foundation_latest_currency,foundation_latest_currency_symbol,foundation_latest_native_amount,
@@ -284,6 +303,7 @@ INSERT INTO silverpop_export (
   city,country,state,postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  foundation_total_2021, foundation_total_2022, foundation_total_2023,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount
 )
@@ -292,6 +312,9 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
   ex.email,ex.opted_in, ex.employer_id, ex.employer_name,
   foundation_has_recurred_donation,
+  foundation_has_active_recurring_donation,
+  foundation_recurring_first_donation_date,
+  foundation_recurring_latest_donation_date,
   COALESCE(hg.highest_usd_amount, 0) as foundation_highest_usd_amount,
   COALESCE(hg.highest_native_amount, 0) as foundation_highest_native_amount,
   COALESCE(hg.highest_native_currency, '') as foundation_highest_native_currency,
@@ -305,6 +328,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   addr.city,addr.country,addr.state,addr.postal_code,
   foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
   foundation_total_2018, foundation_total_2019, foundation_total_2020,
+  foundation_total_2021, foundation_total_2022, foundation_total_2023,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount
@@ -487,6 +511,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(foundation_latest_currency, '') as foundation_latest_currency,
     COALESCE(foundation_latest_currency_symbol, '') as foundation_latest_currency_symbol,
     IF(foundation_has_recurred_donation, 'Yes', 'No') as foundation_has_recurred_donation,
+    IF(foundation_has_active_recurring_donation, 'Yes', 'No') as AF_has_active_recurring_donation,
+    IFNULL(DATE_FORMAT(foundation_recurring_first_donation_date, '%m/%d/%Y'), '') as AF_recurring_first_donation_date,
+    IFNULL(DATE_FORMAT(foundation_recurring_latest_donation_date, '%m/%d/%Y'), '') as AF_recurring_latest_donation_date,
     foundation_total_2014 as foundation_total_2014,
     foundation_total_2015 as foundation_total_2015,
     foundation_total_2016 as foundation_total_2016,
@@ -494,6 +521,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     foundation_total_2018 as foundation_total_2018,
     foundation_total_2019 as foundation_total_2019,
     foundation_total_2020 as foundation_total_2020,
+    foundation_total_2021 as AF_usd_total_2021,
+    foundation_total_2022 as AF_usd_total_2022,
+    foundation_total_2023 as AF_usd_total_2023,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
      as all_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
