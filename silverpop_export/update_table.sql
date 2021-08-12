@@ -389,9 +389,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
-    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') prospect_birth_date,
-    COALESCE(charitable_contributions_decile, '') as prospect_charitable_contributions_decile,
-    COALESCE(disc_income_decile, '') as prospect_disc_income_decile,
+    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') TS_birth_date,
+    COALESCE(charitable_contributions_decile, '') as TS_charitable_contributions_decile,
+    COALESCE(disc_income_decile, '') as TS_disc_income_decile,
     CASE
       WHEN estimated_net_worth_144 = '1' THEN'$20 Million +'
       WHEN estimated_net_worth_144 = '2' THEN '$10 Million - $19.99 Million'
@@ -418,7 +418,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN estimated_net_worth_144 = 'M' THEN '$5,000,000 - $9,999,999'
       WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
       ELSE ''
-    END as prospect_estimated_net_worth,
+    END as TS_estimated_net_worth,
     CASE
       WHEN family_composition_173 = '1' THEN 'Single'
       WHEN family_composition_173 = '2' THEN 'Single with Children'
@@ -428,7 +428,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN family_composition_173 = '6' THEN 'Multiple Surnames (3+)'
       WHEN family_composition_173 = '7' THEN 'Other'
       ELSE ''
-    END as prospect_family_composition,
+    END as TS_family_composition,
     CASE
       WHEN income_range = 'a' THEN 'Below $30,000'
       WHEN income_range = 'b' THEN '$30,000 - $39,999'
@@ -444,7 +444,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN income_range = 'l' THEN '$300,000 - $499,999'
       WHEN income_range = 'm' THEN 'Above $500,000'
       ELSE ''
-    END as prospect_income_range,
+    END as TS_income_range,
     CASE
       WHEN occupation_175 = '1' THEN 'Professional/Technical'
       WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
@@ -462,7 +462,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '14' THEN 'Legal Services'
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
-    END as prospect_occupation,
+    END as TS_occupation,
 
     CASE
       WHEN voter_party = 'democrat' THEN 'Democrat'
@@ -597,15 +597,15 @@ gender,
 lastname,
 latest_optin_response,
 postal_code,
-prospect_birth_date,
-prospect_charitable_contributions_decile,
-prospect_disc_income_decile,
-prospect_estimated_net_worth,
-prospect_family_composition,
-prospect_income_range,
-prospect_occupation,
-TS_voter_party,
-state
+state,
+TS_birth_date,
+TS_charitable_contributions_decile,
+TS_disc_income_decile,
+TS_estimated_net_worth,
+TS_family_composition,
+TS_income_range,
+TS_occupation,
+TS_voter_party
 FROM silverpop_export_view_full
 WHERE modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)");
 prepare stmnt1 from @sql;
