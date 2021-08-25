@@ -389,9 +389,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
-    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') prospect_birth_date,
-    COALESCE(charitable_contributions_decile, '') as prospect_charitable_contributions_decile,
-    COALESCE(disc_income_decile, '') as prospect_disc_income_decile,
+    IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') TS_birth_date,
+    COALESCE(charitable_contributions_decile, '') as TS_charitable_contributions_decile,
+    COALESCE(disc_income_decile, '') as TS_disc_income_decile,
     CASE
       WHEN estimated_net_worth_144 = '1' THEN'$20 Million +'
       WHEN estimated_net_worth_144 = '2' THEN '$10 Million - $19.99 Million'
@@ -418,7 +418,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN estimated_net_worth_144 = 'M' THEN '$5,000,000 - $9,999,999'
       WHEN estimated_net_worth_144 = 'N' THEN 'Above $10,000,000'
       ELSE ''
-    END as prospect_estimated_net_worth,
+    END as TS_estimated_net_worth,
     CASE
       WHEN family_composition_173 = '1' THEN 'Single'
       WHEN family_composition_173 = '2' THEN 'Single with Children'
@@ -428,7 +428,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN family_composition_173 = '6' THEN 'Multiple Surnames (3+)'
       WHEN family_composition_173 = '7' THEN 'Other'
       ELSE ''
-    END as prospect_family_composition,
+    END as TS_family_composition,
     CASE
       WHEN income_range = 'a' THEN 'Below $30,000'
       WHEN income_range = 'b' THEN '$30,000 - $39,999'
@@ -444,7 +444,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN income_range = 'l' THEN '$300,000 - $499,999'
       WHEN income_range = 'm' THEN 'Above $500,000'
       ELSE ''
-    END as prospect_income_range,
+    END as TS_income_range,
     CASE
       WHEN occupation_175 = '1' THEN 'Professional/Technical'
       WHEN occupation_175 = '2' THEN 'Upper Management/Executive'
@@ -462,7 +462,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '14' THEN 'Legal Services'
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
-    END as prospect_occupation,
+    END as TS_occupation,
 
     CASE
       WHEN voter_party = 'democrat' THEN 'Democrat'
@@ -477,59 +477,59 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN voter_party = 'working_fam' THEN 'Working Fam'
       WHEN voter_party = 'conservative' THEN 'Conservative'
       ELSE ''
-    END as prospect_party,
+    END as TS_voter_party,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
-    (donation_count + endowment_number_donations) as all_funds_donation_count,
+    (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
-      as all_funds_first_donation_date,
+      as both_funds_first_donation_date,
     IFNULL(DATE_FORMAT(IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_donation_date, foundation_highest_donation_date), '%m/%d/%Y'), '')
-      as all_funds_highest_donation_date,
+      as both_funds_highest_donation_date,
     IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_usd_amount, foundation_highest_usd_amount)
-      as all_funds_highest_usd_amount,
+      as both_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_last_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
-      as all_funds_latest_donation_date,
+      as both_funds_latest_donation_date,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_native_amount, endowment_latest_native_amount)
-     as all_funds_latest_native_amount,
+     as both_funds_latest_native_amount,
     IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
-    endowment_number_donations,
+    endowment_number_donations as endowment_donation_count,
     IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') endowment_highest_donation_date,
     endowment_highest_native_amount,
     endowment_highest_native_currency,
     endowment_highest_usd_amount,
     endowment_latest_currency,
     endowment_latest_native_amount,
-    donation_count as foundation_donation_count,
-    IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') foundation_first_donation_date,
-    IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') foundation_highest_donation_date,
-    foundation_highest_usd_amount as foundation_highest_usd_amount,
-    IFNULL(DATE_FORMAT(foundation_last_donation_date, '%m/%d/%Y'), '') foundation_latest_donation_date,
-    COALESCE(foundation_latest_native_amount, 0) as foundation_latest_native_amount,
-    foundation_highest_native_amount,
-    foundation_highest_native_currency,
-    lifetime_usd_total as foundation_lifetime_usd_total,
-    COALESCE(foundation_latest_currency, '') as foundation_latest_currency,
-    COALESCE(foundation_latest_currency_symbol, '') as foundation_latest_currency_symbol,
-    IF(foundation_has_recurred_donation, 'Yes', 'No') as foundation_has_recurred_donation,
+    donation_count as AF_donation_count,
+    IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') AF_first_donation_date,
+    IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') AF_highest_donation_date,
+    foundation_highest_usd_amount as AF_highest_usd_amount,
+    IFNULL(DATE_FORMAT(foundation_last_donation_date, '%m/%d/%Y'), '') AF_latest_donation_date,
+    COALESCE(foundation_latest_native_amount, 0) as AF_latest_native_amount,
+    foundation_highest_native_amount as AF_highest_native_amount,
+    foundation_highest_native_currency as AF_highest_native_currency,
+    lifetime_usd_total as AF_lifetime_usd_total,
+    COALESCE(foundation_latest_currency, '') as AF_latest_currency,
+    COALESCE(foundation_latest_currency_symbol, '') as AF_latest_currency_symbol,
+    IF(foundation_has_recurred_donation, 'Yes', 'No') as AF_has_recurred_donation,
     IF(foundation_has_active_recurring_donation, 'Yes', 'No') as AF_has_active_recurring_donation,
     IFNULL(DATE_FORMAT(foundation_recurring_first_donation_date, '%m/%d/%Y'), '') as AF_recurring_first_donation_date,
     IFNULL(DATE_FORMAT(foundation_recurring_latest_donation_date, '%m/%d/%Y'), '') as AF_recurring_latest_donation_date,
-    foundation_total_2014 as foundation_total_2014,
-    foundation_total_2015 as foundation_total_2015,
-    foundation_total_2016 as foundation_total_2016,
-    foundation_total_2017 as foundation_total_2017,
-    foundation_total_2018 as foundation_total_2018,
-    foundation_total_2019 as foundation_total_2019,
-    foundation_total_2020 as foundation_total_2020,
+    foundation_total_2014 as AF_usd_total_2014,
+    foundation_total_2015 as AF_usd_total_2015,
+    foundation_total_2016 as AF_usd_total_2016,
+    foundation_total_2017 as AF_usd_total_2017,
+    foundation_total_2018 as AF_usd_total_2018,
+    foundation_total_2019 as AF_usd_total_2019,
+    foundation_total_2020 as AF_usd_total_2020,
     foundation_total_2021 as AF_usd_total_2021,
     foundation_total_2022 as AF_usd_total_2022,
     foundation_total_2023 as AF_usd_total_2023,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
-     as all_funds_latest_currency,
+     as both_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
-     as all_funds_latest_currency_symbol,
+     as both_funds_latest_currency_symbol,
     e.modified_date,
-    IFNULL(gift.matching_gifts_provider_info_url, '') matching_gifts_provider_info_url,
+    IFNULL(gift.matching_gifts_provider_info_url, '') as matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url
   FROM silverpop_export e
@@ -543,14 +543,39 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
 SET @sql =CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
 SELECT ContactID,
 IsoLang,
-all_funds_donation_count,
-all_funds_first_donation_date,
-all_funds_highest_donation_date,
-all_funds_highest_usd_amount,
-all_funds_latest_currency,
-all_funds_latest_currency_symbol,
-all_funds_latest_donation_date,
-all_funds_latest_native_amount,
+
+AF_donation_count,
+AF_first_donation_date,
+AF_has_active_recurring_donation,
+AF_highest_donation_date,
+AF_highest_native_amount,
+AF_highest_native_currency,
+AF_highest_usd_amount,
+AF_latest_currency,
+AF_latest_currency_symbol,
+AF_latest_donation_date,
+AF_latest_native_amount,
+AF_lifetime_usd_total,
+AF_recurring_first_donation_date,
+AF_recurring_latest_donation_date,
+AF_usd_total_2014,
+AF_usd_total_2015,
+AF_usd_total_2016,
+AF_usd_total_2017,
+AF_usd_total_2018,
+AF_usd_total_2019,
+AF_usd_total_2020,
+AF_usd_total_2021,
+AF_usd_total_2022,
+AF_usd_total_2023,
+both_funds_donation_count,
+both_funds_first_donation_date,
+both_funds_highest_donation_date,
+both_funds_highest_usd_amount,
+both_funds_latest_currency,
+both_funds_latest_currency_symbol,
+both_funds_latest_donation_date,
+both_funds_latest_native_amount,
 contact_hash,
 country,
 email,
@@ -559,6 +584,7 @@ employer_name,
 matching_gifts_provider_info_url,
 matching_gifts_guide_url,
 matching_gifts_online_form_url,
+endowment_donation_count,
 endowment_first_donation_date,
 endowment_highest_donation_date,
 endowment_highest_native_amount,
@@ -567,40 +593,20 @@ endowment_highest_usd_amount,
 endowment_last_donation_date,
 endowment_latest_currency,
 endowment_latest_native_amount,
-endowment_number_donations,
 firstname,
-foundation_donation_count,
-foundation_first_donation_date,
-foundation_has_recurred_donation,
-foundation_highest_donation_date,
-foundation_highest_native_amount,
-foundation_highest_native_currency,
-foundation_highest_usd_amount,
-foundation_latest_currency,
-foundation_latest_currency_symbol,
-foundation_latest_donation_date,
-foundation_latest_native_amount,
-foundation_lifetime_usd_total,
-foundation_total_2014,
-foundation_total_2015,
-foundation_total_2016,
-foundation_total_2017,
-foundation_total_2018,
-foundation_total_2019,
-foundation_total_2020,
 gender,
 lastname,
 latest_optin_response,
 postal_code,
-prospect_birth_date,
-prospect_charitable_contributions_decile,
-prospect_disc_income_decile,
-prospect_estimated_net_worth,
-prospect_family_composition,
-prospect_income_range,
-prospect_occupation,
-prospect_party,
-state
+state,
+TS_birth_date,
+TS_charitable_contributions_decile,
+TS_disc_income_decile,
+TS_estimated_net_worth,
+TS_family_composition,
+TS_income_range,
+TS_occupation,
+TS_voter_party
 FROM silverpop_export_view_full
 WHERE modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)");
 prepare stmnt1 from @sql;
