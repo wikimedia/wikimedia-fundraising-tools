@@ -250,7 +250,7 @@ INSERT INTO silverpop_has_recur
  SELECT DISTINCT email.email,
  1 as has_recurred_donation,
  MAX(IF(
-   (end_date IS NULL OR end_date > NOW()
+   ((end_date IS NULL OR end_date > NOW())
    AND recur.contribution_status_id NOT IN(3,4)
    AND recur.cancel_date IS NULL
    ), 1, 0)
