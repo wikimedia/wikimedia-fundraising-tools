@@ -137,8 +137,12 @@ FROM silverpop_export_staging s
   LEFT JOIN civicrm.civicrm_email e
     -- use is_primary in case they are no longer primary
     ON s.id = e.id  AND e.is_primary = 1
-WHERE l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
-  AND e.email IS NULL OR e.email = '';
+WHERE
+  -- delete if there is no email and
+  -- it has been recently updated OR there are no update records.
+  -- the latter would be consistent with a forget me.
+  (l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY) OR l.log_date IS NULL)
+  AND (e.email IS NULL OR e.email = '');
 
 -- Delete any emails associated with contacts that have been deleted.....
 -- if the email has been deleted it should be picked up above and
