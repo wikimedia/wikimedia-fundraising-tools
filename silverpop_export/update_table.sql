@@ -274,6 +274,13 @@ BEGIN;
 -- Query OK, 653187 rows affected (10.02 sec)
 DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
 
+-- Delete any rows that have been removed from the silverpop_export_staging table.
+-- rows would only ever have been added to this table based on them being in
+-- the staging export table so clearing them out, when gone, makes sense.
+DELETE export FROM silverpop_export export
+  LEFT JOIN silverpop_export_staging s ON s.id = export.id WHERE s.id IS NULL;
+;
+
 -- Delete rows where based on the id having a recently modified date.
 -- If the email changed from one email to another the email based delete will not pick it up.
 -- Query OK, 161272 rows affected (5.93 sec)
