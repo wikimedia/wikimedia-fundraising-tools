@@ -338,6 +338,49 @@ def test_optin_negative_exclusion():
     assert cursor.fetchone() == ('optinzero@localhost',)
 
 
+def test_employer_id_filter():
+    '''
+    Test that we only export employer ID and name when provided_by_donor is true
+    '''
+    run_update_with_fixtures(fixture_queries=["""
+        insert into civicrm_relationship_type (id, name_a_b) values
+            (4, 'Sibling of'),
+            (5, 'Employee of');
+        """, """
+        insert into civicrm_contact (id, contact_type) values
+            (1, 'Organization');
+        """, """
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (2, 'nocustomfield@localhost', 1, 0),
+            (3, 'customfieldone@localhost', 1, 0),
+            (4, 'customfieldzero@localhost', 1, 0),
+            (5, 'wrongrelationshiptype@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, employer_id, organization_name, modified_date) values
+            (2, 1, 'Blah de Blah', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (3, 1, 'Blah de Blah', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (4, 1, 'Blah de Blah', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (5, 1, 'Blah de Blah', DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """, """
+        insert into civicrm_relationship (id, contact_id_a, contact_id_b, relationship_type_id, is_active) values
+            (1, 2, 1, 5, 1),
+            (2, 3, 1, 5, 1),
+            (3, 4, 1, 5, 1),
+            (4, 5, 1, 4, 1);
+        """, """
+        insert into civicrm_value_relationship_metadata (entity_id, provided_by_donor) values
+            (2, 1),
+            (3, 0),
+            (4, 1);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select count(employer_id) from silverpop_export")
+    assert cursor.fetchone() == (1,)
+    cursor.execute("select employer_id, employer_name from silverpop_export where email='customfieldone@localhost'")
+    assert cursor.fetchone() == (1, 'Blah de Blah',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 

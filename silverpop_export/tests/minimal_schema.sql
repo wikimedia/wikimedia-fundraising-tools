@@ -18,6 +18,7 @@ create table civicrm_deleted_email (
 drop table if exists civicrm_contact;
 create table civicrm_contact (
     id int(10) unsigned auto_increment primary key,
+    contact_type varchar(64) default 'Individual',
     do_not_email tinyint(4) default '0',
     do_not_phone tinyint(4) default '0',
     do_not_mail tinyint(4) default '0',
@@ -248,3 +249,51 @@ CREATE TABLE `civicrm_value_matching_gift` (
     `suppress_from_employer_field` TINYINT(4) DEFAULT '0',
     `subsidiaries` VARCHAR(5000) -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_relationship;
+CREATE TABLE `civicrm_relationship` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `contact_id_a` int(10) unsigned NOT NULL,
+  `contact_id_b` int(10) unsigned NOT NULL,
+  `relationship_type_id` int(10) unsigned NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `is_active` tinyint(4) DEFAULT 1,
+  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_permission_a_b` tinyint(4) DEFAULT 0,
+  `is_permission_b_a` tinyint(4) DEFAULT 0,
+  `case_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_civicrm_relationship_contact_id_a` (`contact_id_a`),
+  KEY `FK_civicrm_relationship_contact_id_b` (`contact_id_b`),
+  KEY `FK_civicrm_relationship_relationship_type_id` (`relationship_type_id`),
+  KEY `FK_civicrm_relationship_case_id` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `civicrm_relationship_type`;
+CREATE TABLE `civicrm_relationship_type` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name_a_b` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `label_a_b` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name_b_a` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `label_b_a` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_type_a` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_type_b` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_sub_type_a` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_sub_type_b` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_reserved` tinyint(4) DEFAULT NULL,
+  `is_active` tinyint(4) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UI_name_a_b` (`name_a_b`),
+  UNIQUE KEY `UI_name_b_a` (`name_b_a`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_value_relationship_metadata;
+CREATE TABLE `civicrm_value_relationship_metadata` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `entity_id` int(10) unsigned NOT NULL,
+  `provided_by_donor` tinyint(4) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_entity_id` (`entity_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

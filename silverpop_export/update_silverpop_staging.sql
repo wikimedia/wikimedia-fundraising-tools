@@ -59,8 +59,9 @@ SELECT
   REPLACE(COALESCE(c.preferred_language, cl.lang, 'en'), '_', '-') as preferred_language,
   (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)) as opted_out,
   v.opt_in as opted_in,
-  c.employer_id,
-  IF(c.employer_id, c.organization_name, '') as employer_name,
+  -- Only export employer data when provided by donor
+  IF(rm.provided_by_donor, c.employer_id, NULL) as employer_id,
+  IF(c.employer_id AND rm.provided_by_donor, c.organization_name, '') as employer_name,
   a.id as address_id,
   a.city,
   a.postal_code,
@@ -79,6 +80,11 @@ FROM civicrm.civicrm_email e
     ON a.state_province_id = st.id
   LEFT JOIN silverpop_countrylangs cl ON cl.country_unicode = ctry.iso_code
   LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+  LEFT JOIN civicrm.civicrm_relationship er
+      ON er.contact_id_a = c.id AND er.contact_id_b = c.employer_id AND er.is_active=1 AND er.relationship_type_id=(
+          SELECT id from civicrm.civicrm_relationship_type WHERE name_a_b = 'Employee of'
+      )
+  LEFT JOIN civicrm.civicrm_value_relationship_metadata rm on rm.entity_id=er.id
 WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
@@ -101,6 +107,11 @@ UPDATE silverpop_export_staging s
   LEFT JOIN civicrm.civicrm_state_province st
     ON a.state_province_id = st.id
   LEFT JOIN silverpop_countrylangs cl ON cl.country_unicode = ctry.iso_code
+  LEFT JOIN civicrm.civicrm_relationship er
+      ON er.contact_id_a = c.id AND er.contact_id_b = c.employer_id AND er.is_active=1 AND er.relationship_type_id=(
+          SELECT id from civicrm.civicrm_relationship_type WHERE name_a_b = 'Employee of'
+      )
+  LEFT JOIN civicrm.civicrm_value_relationship_metadata rm on rm.entity_id=er.id
 SET
     s.id = e.id,
     s.modified_date = c.modified_date,
@@ -112,8 +123,9 @@ SET
     s.preferred_language = REPLACE(COALESCE(c.preferred_language, cl.lang, 'en'), '_', '-') ,
     s.opted_out = (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)),
     s.opted_in = v.opt_in,
-    s.employer_id = c.employer_id,
-    s.employer_name = IF(c.employer_id, c.organization_name, ''),
+    -- Only export employer data when provided by donor
+    s.employer_id = IF(rm.provided_by_donor, c.employer_id, NULL),
+    s.employer_name = IF(c.employer_id and rm.provided_by_donor, c.organization_name, ''),
     s.address_id = a.id,
     s.city = a.city,
     s.postal_code = a.postal_code,
