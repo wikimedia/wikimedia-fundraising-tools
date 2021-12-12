@@ -1,4 +1,7 @@
 #! /bin/sh
+# Calculates the IP ranges that sns.us-east-1.amazonaws.com may resolve to
+# by looking up the full AWS ip range list then limiting it to only the
+# us-east-1 ranges used for Amazon services.
 IPFILE=`mktemp`
 INCLUDEFILE=`mktemp`
 EXCLUDEFILE=`mktemp`
