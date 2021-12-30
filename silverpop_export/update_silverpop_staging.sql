@@ -28,7 +28,7 @@ CREATE TABLE silverpop_update_world (
 -- The email suppression list uses MAX(id) from this table as it's upper bound so we want
 -- the table to be in a consistent state up to that point in time. If something fails
 -- the whole commit fails.
-
+BEGIN;
 -- Create a table of countries and languages for contacts with no country
 -- pulling data from contribution tracking.
 -- low volume of 'new catches'
