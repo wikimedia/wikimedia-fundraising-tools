@@ -76,9 +76,8 @@ BEGIN;
     COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
     COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
     COALESCE(SUM(donor.total_2021), 0) as foundation_total_2021,
-    -- these 2 fields are currently placeholders
-    0 as foundation_total_2022,
-    0 as foundation_total_2023,
+    COALESCE(SUM(donor.total_2022), 0) as foundation_total_2022,
+    COALESCE(SUM(donor.total_2023), 0) as foundation_total_2023,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
