@@ -225,7 +225,6 @@ create table civicrm_value_1_prospect_5
     `income_range`                    varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `charitable_contributions_decile` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `disc_income_decile`              varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `voter_party`                     varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `subject_area_interest`           varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `university_affiliation`          varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `estimated_net_worth_144`         varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
