@@ -179,7 +179,7 @@ COMMIT;
 
 -- Create list of emails to update
 -- runs fast when not many to do - ie on staging with 7 days interval (it's must faster with just 2)
--- Query OK, 804581 rows affected (33.15 sec)
+-- Query OK, 804581 rows affect ed (33.15 sec)
 INSERT INTO silverpop_update_world SELECT DISTINCT email
 FROM silverpop_export_staging
 WHERE modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);

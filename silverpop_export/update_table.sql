@@ -76,9 +76,8 @@ BEGIN;
     COALESCE(SUM(donor.total_2019), 0) as foundation_total_2019,
     COALESCE(SUM(donor.total_2020), 0) as foundation_total_2020,
     COALESCE(SUM(donor.total_2021), 0) as foundation_total_2021,
-    -- these 2 fields are currently placeholders
-    0 as foundation_total_2022,
-    0 as foundation_total_2023,
+    COALESCE(SUM(donor.total_2022), 0) as foundation_total_2022,
+    COALESCE(SUM(donor.total_2023), 0) as foundation_total_2023,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
@@ -470,21 +469,6 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
     END as TS_occupation,
-
-    CASE
-      WHEN voter_party = 'democrat' THEN 'Democrat'
-      WHEN voter_party = 'republican' THEN 'Republican'
-      WHEN voter_party = 'green' THEN 'Green'
-      WHEN voter_party = 'independent' THEN 'Independent'
-      WHEN voter_party = 'libertarian' THEN 'Libertarian'
-      WHEN voter_party = 'no_party' THEN 'No Party'
-      WHEN voter_party = 'other' THEN 'Other'
-      WHEN voter_party = 'unaffiliated' THEN 'Unaffiliated'
-      WHEN voter_party =  'unregistered' THEN 'Unregistered'
-      WHEN voter_party = 'working_fam' THEN 'Working Fam'
-      WHEN voter_party = 'conservative' THEN 'Conservative'
-      ELSE ''
-    END as TS_voter_party,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
@@ -612,8 +596,7 @@ TS_disc_income_decile,
 TS_estimated_net_worth,
 TS_family_composition,
 TS_income_range,
-TS_occupation,
-TS_voter_party
+TS_occupation
 FROM silverpop_export_view_full
 WHERE modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)");
 prepare stmnt1 from @sql;
