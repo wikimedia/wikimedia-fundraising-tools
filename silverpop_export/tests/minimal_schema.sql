@@ -35,7 +35,8 @@ create table civicrm_contact (
     gender_id tinyint(4),
     birth_date datetime default NULL,
     modified_date datetime default NULL,
-    employer_id int(10) unsigned DEFAULT NULL
+    employer_id int(10) unsigned DEFAULT NULL,
+    email_greeting_display varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_currency;

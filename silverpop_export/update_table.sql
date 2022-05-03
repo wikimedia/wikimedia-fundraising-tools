@@ -378,6 +378,7 @@ COMMIT;
 CREATE OR REPLACE VIEW silverpop_export_view_full AS
   SELECT
     contact_id ContactID,
+    c.email_greeting_display as email_greeting,
     e.contact_hash,
     e.email,
     IFNULL(e.first_name, '') firstname,
@@ -570,6 +571,7 @@ both_funds_latest_native_amount,
 contact_hash,
 country,
 email,
+email_greeting,
 employer_id,
 employer_name,
 matching_gifts_provider_info_url,
