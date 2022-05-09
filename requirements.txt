@@ -1,6 +1,5 @@
 export
 git+https://github.com/dvska/gdata-python3#egg=gdata
-python-Levenshtein
 pymysql
 netaddr
 paramiko>=1.16.0
