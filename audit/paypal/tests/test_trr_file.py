@@ -173,6 +173,14 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
 
+    # We should look up donations under both gateway codes in case we guessed wrong
+    nose.tools.assert_equals(2, MockCivicrm().transaction_exists.call_count)
+
+    # The first lookup should use the more likely gateway code. The second lookup
+    # (which is the one stored in call_args) should use the other gateway code.
+    exist_args = MockCivicrm().transaction_exists.call_args
+    nose.tools.assert_equals({'gateway_txn_id': '1V551844CE5526421', 'gateway': 'paypal'}, exist_args.kwargs)
+
 
 @patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")

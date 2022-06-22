@@ -229,8 +229,6 @@ class TrrFile(object):
                 return False
             # Sometimes we get the gateway wrong, e.g. when the subscr ID is missing we can wrongly code recurring EC as
             # non-EC. Check for the other one
-
-        if queue_name == 'recurring':
             # Some legacy recurring payments have been re-coded with I- subscription IDs, making them look like
             # EC donations. Check for the txn ID in legacy as well, to make sure we don't duplicate.
             # We also can get paypal_ec donations wrongly coded as paypal when the subscr_id is missing. In that case
