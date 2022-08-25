@@ -154,6 +154,11 @@ class TrrFile(object):
                 queue_name = 'recurring'
                 out['txn_type'] = 'subscr_payment'
                 out['subscr_id'] = row['PayPal Reference ID']
+            elif row['Transaction Event Code'] == 'T0003':
+                # https://developer.paypal.com/docs/reports/reference/tcodes/ T0003 is PreApproved Payment Bill User Payment, while paypal express should be T0006
+                log.info("Opt out braintree txn from paypal audit \t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=row['Transaction Event Code']))
+                # Braintree txn, no need to audit
+                return
             elif row['Transaction Debit or Credit'] == 'DR':
                 # sic: double-space is coming from the upstream
                 log.info("-Debit\t{id}\t{date}\tPayment to".format(id=out['gateway_txn_id'], date=out['date']))
@@ -238,6 +243,9 @@ class TrrFile(object):
                 log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
                 return False
 
+        if queue_name == 'refund' and not self.crm.transaction_exists(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
+            log.info("-No parent donation found to issue refund\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
+            return False
         if queue_name == 'refund' and self.crm.transaction_refunded(gateway_txn_id=out['gateway_parent_id'], gateway=out['gateway']):
             log.info("-Duplicate\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
             return False
