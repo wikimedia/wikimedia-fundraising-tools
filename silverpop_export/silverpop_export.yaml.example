@@ -7,6 +7,9 @@ working_path: /tmp/
 # For archival purposes, how many days of old runs should we keep? 0 means forever.
 days_to_keep_files: 1
 
+# Number of days worth of data to export (based on civicrm_contact.modified_date)
+offset_in_days: 7
+
 # Login credentials for the silverpop transfer server
 sftp:
     host: 123.123.123.123

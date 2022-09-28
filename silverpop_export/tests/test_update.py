@@ -393,6 +393,7 @@ def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
             MockConfig().drupal_db.db = db_name
             MockConfig().silverpop_db.db = db_name
             MockConfig().log_civicrm_db.db = db_name
+            MockConfig().offset_in_days = 7
 
             # Silence predictable warnings about "if not exists" table stuff.
             warnings.filterwarnings('ignore', category=pymysql.Warning)
