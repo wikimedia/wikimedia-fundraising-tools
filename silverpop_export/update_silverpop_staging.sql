@@ -12,7 +12,7 @@
 -- Default offset - we can maybe pass this in from python.
 -- I think 2 (2 days) is probably the right value but a higher value for now
 -- reduces the risk a script fails and we don't notice.
-SET @offSetInDays = 7;
+SET @offSetInDays = __OFFSET_IN_DAYS__;
 
 
 -- Drop and recreate the table tracking updated emails.

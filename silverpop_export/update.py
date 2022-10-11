@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import argparse
 import logging
-import re
 import os
+import re
 
 import process.globals
 
@@ -11,6 +12,8 @@ from silverpop_export import export
 import process.lock as lock
 
 log = logging.getLogger(__name__)
+# default, can be overridden in config.offset_in_days or with a --days command-line parameter
+offset_in_days = 7
 
 
 def load_queries(file):
@@ -33,6 +36,7 @@ def load_queries(file):
                 query = re.sub(r"\scivicrm\.", " %s." % config.civicrm_db.db, query)
                 query = re.sub(r"\sdrupal\.", " %s." % config.drupal_db.db, query)
                 query = re.sub(r"\slog_civicrm\.", " %s." % config.log_civicrm_db.db, query)
+                query = query.replace("__OFFSET_IN_DAYS__", str(offset_in_days))
                 queries.append(query)
 
                 qbuf = [prefix]
@@ -88,6 +92,15 @@ def updateAll():
 
 if __name__ == '__main__':
     config = process.globals.load_config('silverpop_export')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--days")
+    args = parser.parse_args()
+
+    if args.days is not None:
+        offset_in_days = args.days
+    elif "offset_in_days" in config:
+        offset_in_days = config.offset_in_days
 
     log.info("Begin Silverpop Update")
     lock.begin()
