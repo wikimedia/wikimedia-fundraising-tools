@@ -185,6 +185,26 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
 @patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
+def test_ec_donation_denied_not_sent(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that denied express checkout donations are not sent to the queue
+    '''
+    row = get_csv_row("express_checkout_donation_denied")
+
+    MockCivicrm().transaction_exists.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    nose.tools.assert_equals(None, args)
+
+
+@patch("frqueue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
 def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
     '''
     Test that express checkout recurring donations are marked as such

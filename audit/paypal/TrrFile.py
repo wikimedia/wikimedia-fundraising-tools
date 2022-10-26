@@ -1,6 +1,6 @@
 '''Parser for Transaction Detail Report files
 
-See https://www.paypalobjects.com/webstatic/en_US/developer/docs/pdf/PP_LRD_Gen_TransactionDetailReport.pdf
+See https://developer.paypal.com/docs/reports/sftp-reports/transaction-detail/
 '''
 
 import logging
@@ -94,6 +94,10 @@ class TrrFile(object):
         ppreport.read(self.path, self.VERSION, self.parse_line, self.column_headers, self.FILE_ENCODING)
 
     def parse_line(self, row):
+        # Drop all rows in non-successful status
+        if row['Transactional Status'] != 'S':
+            return
+
         if row['Billing Address Line1']:
             addr_prefix = 'Billing Address '
         else:
