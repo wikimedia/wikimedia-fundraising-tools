@@ -159,7 +159,8 @@ CREATE TABLE civicrm_contribution_recur
 (
     id int(10) unsigned,
     contact_id int(10) unsigned NOT NULL COMMENT 'Foreign key to civicrm_contact.id.',
-    amount decimal(20, 2)   NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
+    amount decimal(20, 2) NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
+    currency varchar(3) NOT NULL DEFAULT 'USD',
     contribution_status_id int(10) unsigned DEFAULT '1',
     end_date datetime,
     start_date datetime,

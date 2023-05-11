@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_has_active_recurring_donation TINYINT(1),
   foundation_recurring_first_donation_date DATETIME,
   foundation_recurring_latest_donation_date DATETIME,
+  foundation_recurring_active_count TINYINT UNSIGNED, -- First donor with 256 active recurrings wins a prize
+  foundation_recurring_latest_contribution_recur_id INT(10),
 
 -- Lifetime contribution statistics
   foundation_highest_usd_amount DECIMAL(20, 2),
@@ -219,5 +221,7 @@ CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `foundation_has_recurred_donation` int(1) NOT NULL,
  `foundation_has_active_recurring_donation` TINYINT(1),
  `foundation_recurring_latest_donation_date` DATETIME,
- `foundation_recurring_first_donation_date` DATETIME
+ `foundation_recurring_first_donation_date` DATETIME,
+ `foundation_recurring_active_count` TINYINT UNSIGNED,
+ `foundation_recurring_latest_contribution_recur_id` INT(10)
 ) COLLATE 'utf8mb4_unicode_ci';

@@ -255,7 +255,18 @@ INSERT INTO silverpop_has_recur
    ), 1, 0)
  ) as foundation_has_active_recurring_donation,
  MIN(receive_date) as `foundation_recurring_first_donation_date`,
- MAX(receive_date) as `foundation_recurring_latest_donation_date`
+ MAX(receive_date) as `foundation_recurring_latest_donation_date`,
+ COUNT(DISTINCT CASE WHEN
+  ((end_date IS NULL OR end_date > NOW())
+   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
+   AND recur.cancel_date IS NULL
+   ) THEN recur.id ELSE NULL END) as foundation_recurring_active_count,
+ MAX(IF(
+   ((end_date IS NULL OR end_date > NOW())
+   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
+   AND recur.cancel_date IS NULL
+   ), recur.id, 0)
+ ) as foundation_recurring_latest_contribution_recur_id
  FROM
    civicrm.civicrm_contribution_recur recur
  INNER JOIN civicrm.civicrm_contribution contributions
@@ -302,6 +313,8 @@ INSERT INTO silverpop_export (
   foundation_has_active_recurring_donation,
   foundation_recurring_first_donation_date,
   foundation_recurring_latest_donation_date,
+  foundation_recurring_active_count,
+  foundation_recurring_latest_contribution_recur_id,
   foundation_highest_usd_amount,foundation_highest_native_amount,
   foundation_highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
   foundation_latest_currency,foundation_latest_currency_symbol,foundation_latest_native_amount,
@@ -321,6 +334,8 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   foundation_has_active_recurring_donation,
   foundation_recurring_first_donation_date,
   foundation_recurring_latest_donation_date,
+  foundation_recurring_active_count,
+  foundation_recurring_latest_contribution_recur_id,
   COALESCE(hg.highest_usd_amount, 0) as foundation_highest_usd_amount,
   COALESCE(hg.highest_native_amount, 0) as foundation_highest_native_amount,
   COALESCE(hg.highest_native_currency, '') as foundation_highest_native_currency,
@@ -377,7 +392,7 @@ COMMIT;
 -- Query OK, 0 rows affected (0.00 sec)
 CREATE OR REPLACE VIEW silverpop_export_view_full AS
   SELECT
-    contact_id ContactID,
+    e.contact_id ContactID,
     c.email_greeting_display as email_greeting,
     e.contact_hash,
     e.email,
@@ -506,6 +521,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IF(foundation_has_active_recurring_donation, 'Yes', 'No') as AF_has_active_recurring_donation,
     IFNULL(DATE_FORMAT(foundation_recurring_first_donation_date, '%m/%d/%Y'), '') as AF_recurring_first_donation_date,
     IFNULL(DATE_FORMAT(foundation_recurring_latest_donation_date, '%m/%d/%Y'), '') as AF_recurring_latest_donation_date,
+    COALESCE(cr.amount, 0) as AF_recurring_latest_native_amount,
+    COALESCE(cr.currency, '') as AF_recurring_latest_currency,
     foundation_total_2014 as AF_usd_total_2014,
     foundation_total_2015 as AF_usd_total_2015,
     foundation_total_2016 as AF_usd_total_2016,
@@ -530,7 +547,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
-;
+  LEFT JOIN civicrm.civicrm_contribution_recur cr ON e.foundation_recurring_latest_contribution_recur_id = cr.id;
 
 SET @sql =CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
 SELECT ContactID,
@@ -550,6 +567,8 @@ AF_latest_native_amount,
 AF_lifetime_usd_total,
 AF_recurring_first_donation_date,
 AF_recurring_latest_donation_date,
+AF_recurring_latest_native_amount,
+AF_recurring_latest_currency,
 AF_usd_total_2014,
 AF_usd_total_2015,
 AF_usd_total_2016,
