@@ -225,3 +225,9 @@ CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `foundation_recurring_active_count` TINYINT UNSIGNED,
  `foundation_recurring_latest_contribution_recur_id` INT(10)
 ) COLLATE 'utf8mb4_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS `silverpop_export_checksum_email`
+(
+ `email` VARCHAR(255) PRIMARY KEY,
+ `checksum` VARCHAR(255)
+) COLLATE 'utf8mb4_unicode_ci';

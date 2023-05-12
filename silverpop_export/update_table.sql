@@ -371,6 +371,18 @@ WHERE dedupe_table.opted_out=0
 AND (ex.opted_in IS NULL OR ex.opted_in = 1)
 ON DUPLICATE KEY UPDATE silverpop_export.id=ex.id;
 
+-- Delete rows then recreate so we don't include people we're deleting from the main table.
+DELETE FROM silverpop_export_checksum_email;
+
+-- Move the data from the staging table into the persistent one
+-- Query OK, 28373047 rows in set (31.883 sec)
+INSERT INTO silverpop_export_checksum_email
+(`email`, `checksum` )
+SELECT
+    email,
+    CONCAT(MD5(CONCAT(contact_hash, '_', contact_id, '_', UNIX_TIMESTAMP(), '_', '720')),"_",UNIX_TIMESTAMP(),"_","720")
+FROM
+    silverpop_export
 COMMIT;
 -- Create a nice view to export from
 -- There are two possibilities for limiting this view to only include newly modified contacts
