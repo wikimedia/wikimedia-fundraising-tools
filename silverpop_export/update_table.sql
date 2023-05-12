@@ -266,7 +266,13 @@ INSERT INTO silverpop_has_recur
    AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
    AND recur.cancel_date IS NULL
    ), recur.id, 0)
- ) as foundation_recurring_latest_contribution_recur_id
+ ) as foundation_recurring_latest_contribution_recur_id,
+ ( -- Hat tip to Eileen
+   SELECT count(*) > 0
+   FROM civicrm.civicrm_activity_contact ac
+     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id AND a.activity_type_id IN (165, 166)
+   WHERE ac.contact_id = recur.contact_id
+ ) as recurring_has_upgrade_activity
  FROM
    civicrm.civicrm_contribution_recur recur
  INNER JOIN civicrm.civicrm_contribution contributions
