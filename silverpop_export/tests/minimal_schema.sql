@@ -162,6 +162,7 @@ CREATE TABLE civicrm_contribution_recur
     amount decimal(20, 2) NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
     currency varchar(3) NOT NULL DEFAULT 'USD',
     contribution_status_id int(10) unsigned DEFAULT '1',
+    payment_processor_id int(10) NULL,
     end_date datetime,
     start_date datetime,
     cancel_date datetime
@@ -309,4 +310,10 @@ DROP TABLE IF EXISTS civicrm_activity_contact;
 CREATE TABLE `civicrm_activity_contact` (
     `contact_id` int(10) unsigned NOT NULL,
     `activity_id` int(10) unsigned NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_payment_processor;
+CREATE TABLE `civicrm_payment_processor` (
+    `id` int(10) unsigned NOT NULL,
+    `name` varchar(64)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

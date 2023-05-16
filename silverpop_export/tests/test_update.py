@@ -411,6 +411,58 @@ def test_multiple_recurring():
     assert cursor.fetchone() == (2, 3,)
 
 
+def test_recurring_upgrade_eligibility():
+    """
+    Test that we correctly calculate who is eligible for a recurring upgrade solicitation.
+    PayPal donors are not, nor are donors with multiple recurrings or any upgrade activities.
+    """
+
+    run_update_with_fixtures(fixture_queries=["""
+        insert into civicrm_payment_processor (id, name) values
+            (1, 'adyen'),
+            (2, 'paypal');
+        """, """
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'paypaldonor@localhost', 1, 0),
+            (2, 'adyendonor@localhost', 1, 0),
+            (3, 'multipledonor@localhost', 1, 0),
+            (4, 'alreadyupgraded@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, payment_processor_id ) values
+            (1, 1, 1.01, 'USD', 5, 2),
+            (2, 2, 2.02, 'EUR', 5, 1),
+            (3, 3, 3.03, 'GBP', 5, 1),
+            (4, 3, 4.04, 'PLN', 5, 1),
+            (5, 4, 5.05, 'COP', 5, 1);
+        """, """
+        insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+            (1, 1, 1, '2015-01-03', 1.01, 'xyz123', 1, 1),
+            (2, 2, 2, '2016-05-05', 2.02, 'abc456', 1, 1),
+            (3, 3, 3, '2017-05-05', 3.03, 'def789', 1, 1),
+            (4, 3, 4, '2017-05-05', 4.04, 'ghi012', 1, 1),
+            (5, 4, 5, '2017-05-05', 5.05, 'jkl345', 1, 1);
+        """, """
+        insert into civicrm_activity (id, activity_type_id) values
+            (1, 165);
+        """, """
+        insert into civicrm_activity_contact (activity_id, contact_id) values
+            (1, 4);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select ContactID, recurring_eligible_for_upgrade from silverpop_export_view order by ContactID")
+    assert cursor.fetchone() == (1, 'No',)
+    assert cursor.fetchone() == (2, 'Yes',)
+    assert cursor.fetchone() == (3, 'No',)
+    assert cursor.fetchone() == (4, 'No',)
+
+
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
     with mock.patch("database.db.Connection") as MockConnection:
 
