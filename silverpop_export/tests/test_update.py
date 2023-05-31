@@ -456,7 +456,11 @@ def test_recurring_upgrade_eligibility():
         """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select ContactID, recurring_eligible_for_upgrade from silverpop_export_view order by ContactID")
+    cursor.execute("select foundation_recurring_active_count, recurring_has_upgrade_activity from silverpop_export where contact_id=2")
+    actual = cursor.fetchone()
+    assert actual[0] == 1
+    assert actual[1] == 0
+    cursor.execute("select ContactID, AF_recurring_eligible_for_upgrade from silverpop_export_view order by ContactID")
     assert cursor.fetchone() == (1, 'No',)
     assert cursor.fetchone() == (2, 'Yes',)
     assert cursor.fetchone() == (3, 'No',)

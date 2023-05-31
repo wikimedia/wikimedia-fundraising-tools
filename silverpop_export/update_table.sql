@@ -320,6 +320,7 @@ INSERT INTO silverpop_export (
   foundation_recurring_first_donation_date,
   foundation_recurring_latest_donation_date,
   foundation_recurring_active_count,
+  recurring_has_upgrade_activity,
   foundation_recurring_latest_contribution_recur_id,
   foundation_highest_usd_amount,foundation_highest_native_amount,
   foundation_highest_native_currency,foundation_highest_donation_date,lifetime_usd_total,donation_count,
@@ -341,6 +342,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   foundation_recurring_first_donation_date,
   foundation_recurring_latest_donation_date,
   foundation_recurring_active_count,
+  recurring_has_upgrade_activity,
   foundation_recurring_latest_contribution_recur_id,
   COALESCE(hg.highest_usd_amount, 0) as foundation_highest_usd_amount,
   COALESCE(hg.highest_native_amount, 0) as foundation_highest_native_amount,
@@ -541,8 +543,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(DATE_FORMAT(foundation_recurring_latest_donation_date, '%m/%d/%Y'), '') as AF_recurring_latest_donation_date,
     COALESCE(cr.amount, 0) as AF_recurring_latest_native_amount,
     COALESCE(cr.currency, '') as AF_recurring_latest_currency,
-    IF (pp.name IN ('adyen', 'ingenico') AND cr.foundation_recurring_active_count = 1 AND cr.recurring_has_upgrade_activity = 0, 'Yes', 'No')
-        as recurring_eligible_for_upgrade,
+    IF (pp.name IN ('adyen', 'ingenico') AND foundation_recurring_active_count = 1 AND recurring_has_upgrade_activity = 0, 'Yes', 'No')
+        as AF_recurring_eligible_for_upgrade,
     foundation_total_2014 as AF_usd_total_2014,
     foundation_total_2015 as AF_usd_total_2015,
     foundation_total_2016 as AF_usd_total_2016,
@@ -568,7 +570,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
   LEFT JOIN civicrm.civicrm_contribution_recur cr ON e.foundation_recurring_latest_contribution_recur_id = cr.id
-  LEFT JOIN civicrm.civicrm_payment_processor pp ON cr.payment_processor_id = cr.id;
+  LEFT JOIN civicrm.civicrm_payment_processor pp ON cr.payment_processor_id = pp.id;
 
 SET @sql =CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
 SELECT ContactID,
@@ -590,7 +592,7 @@ AF_recurring_first_donation_date,
 AF_recurring_latest_donation_date,
 AF_recurring_latest_native_amount,
 AF_recurring_latest_currency,
-recurring_eligible_for_upgrade,
+AF_recurring_eligible_for_upgrade,
 AF_usd_total_2014,
 AF_usd_total_2015,
 AF_usd_total_2016,
