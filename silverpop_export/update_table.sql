@@ -295,7 +295,6 @@ DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export O
 -- the staging export table so clearing them out, when gone, makes sense.
 DELETE export FROM silverpop_export export
   LEFT JOIN silverpop_export_staging s ON s.id = export.id WHERE s.id IS NULL;
-;
 
 -- Delete rows where based on the id having a recently modified date.
 -- If the email changed from one email to another the email based delete will not pick it up.
