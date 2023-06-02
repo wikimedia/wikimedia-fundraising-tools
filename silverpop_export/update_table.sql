@@ -1,6 +1,13 @@
 SET autocommit = 1;
-INSERT INTO silverpop_export_matching_gift
-(employer_id, employer_name, matching_gifts_provider_info_url, guide_url, online_form_url, minimum_gift_matched_usd, match_policy_last_updated)
+INSERT INTO silverpop_export_matching_gift (
+  employer_id,
+  employer_name,
+  matching_gifts_provider_info_url,
+  guide_url,
+  online_form_url,
+  minimum_gift_matched_usd,
+  match_policy_last_updated
+)
 SELECT
     entity_id,
     name_from_matching_gift_db,
@@ -46,18 +53,21 @@ BEGIN;
   -- INSERT new contact rows into export stats table
   -- following timing on staging with 7 days - likely similar to peak volume with a shorter period.
   -- Query OK, 776383 rows affected (1 min 25.41 sec)
-  INSERT INTO silverpop_export_stat
-  (email,
+  INSERT INTO silverpop_export_stat (
+   email,
    all_funds_latest_donation_date,
    foundation_lifetime_usd_total,
-   foundation_donation_count, foundation_first_donation_date,
+   foundation_donation_count,
+   foundation_first_donation_date,
    foundation_last_donation_date,
    foundation_highest_usd_amount,
    endowment_highest_usd_amount,
    foundation_total_2014, foundation_total_2015, foundation_total_2016, foundation_total_2017,
    foundation_total_2018, foundation_total_2019, foundation_total_2020,
    foundation_total_2021, foundation_total_2022, foundation_total_2023,
-   endowment_last_donation_date, endowment_first_donation_date, endowment_number_donations
+   endowment_last_donation_date,
+   endowment_first_donation_date,
+   endowment_number_donations
   )
   SELECT
     e.email,
@@ -93,7 +103,15 @@ COMMIT;
 
 
 -- Query OK, 23199001 rows affected (11 min 55.19 sec)
-INSERT INTO silverpop_email_map
+INSERT INTO silverpop_email_map (
+  email,
+  master_email_id,
+  address_id,
+  preferred_language,
+  opted_out,
+  opted_in,
+  modified_date
+)
   SELECT email,
     # MAX here is attempt to get the most recent, although it would be better to accurately calculate most recent donor.
     MAX(id) as master_email_id,
@@ -127,10 +145,12 @@ BEGIN;
 DELETE latest FROM silverpop_update_world t INNER JOIN silverpop_export_latest latest ON t.email = latest.email;
 -- Add recent rows to latest export table
 -- Query OK, 679292 rows affected (24.34 sec)
-INSERT INTO silverpop_export_latest
-  -- temporarily specify the fields here as we no longer use latest_donation from this table
-  -- and it may not be dropped on the target db yet.
-  (email, latest_currency, latest_currency_symbol, latest_native_amount)
+INSERT INTO silverpop_export_latest (
+   email,
+   latest_currency,
+   latest_currency_symbol,
+   latest_native_amount
+)
   SELECT
     t.email,
     MAX(extra.original_currency) as latest_currency,
@@ -157,7 +177,13 @@ BEGIN;
 DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_export_highest highest ON t.email = highest.email;
 -- Add recent rows to highest export table
 -- Query OK, 679293 rows affected, 12 warnings (1 min 15.22 sec)
-INSERT INTO silverpop_export_highest
+INSERT INTO silverpop_export_highest (
+  email,
+  highest_native_currency,
+  highest_native_amount,
+  highest_usd_amount,
+  highest_donation_date
+)
   SELECT
     e.email,
     ex.original_currency,
@@ -187,7 +213,12 @@ BEGIN;
 DELETE latest FROM silverpop_update_world t INNER JOIN silverpop_endowment_latest latest ON t.email = latest.email;
 -- Add recent rows to endowment_latest table
 -- Query OK, 73566 rows affected (50.44 sec)
-INSERT INTO silverpop_endowment_latest
+INSERT INTO silverpop_endowment_latest (
+  email,
+  endowment_latest_currency,
+  endowment_latest_currency_symbol,
+  endowment_latest_native_amount
+)
 SELECT
   email.email,
   -- really we want the currency/amount associated with the highest amount on
@@ -217,7 +248,12 @@ BEGIN;
 DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_endowment_highest highest ON t.email = highest.email;
 -- Add recent rows to endowment_highest table
 -- Query OK, 73565 rows affected (47.86 sec)
-INSERT INTO silverpop_endowment_highest
+INSERT INTO silverpop_endowment_highest (
+  email,
+  endowment_highest_donation_date,
+  endowment_highest_native_currency,
+  endowment_highest_native_amount
+)
 SELECT
   email.email,
   MAX(c.receive_date) as endowment_highest_donation_date,
@@ -245,9 +281,18 @@ BEGIN;
 DELETE recur FROM silverpop_update_world t INNER JOIN silverpop_has_recur recur ON t.email = recur.email;
 -- Add recent rows to has_recur table
 -- Query OK, 134000 rows affected (38.378 sec)
-INSERT INTO silverpop_has_recur
+INSERT INTO silverpop_has_recur (
+  email,
+  foundation_has_recurred_donation,
+  foundation_has_active_recurring_donation,
+  foundation_recurring_first_donation_date,
+  foundation_recurring_latest_donation_date,
+  foundation_recurring_active_count,
+  foundation_recurring_latest_contribution_recur_id,
+  recurring_has_upgrade_activity
+)
  SELECT DISTINCT email.email,
- 1 as has_recurred_donation,
+ 1 as foundation_has_recurred_donation,
  MAX(IF(
    ((end_date IS NULL OR end_date > NOW())
    AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
@@ -295,7 +340,6 @@ DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export O
 -- the staging export table so clearing them out, when gone, makes sense.
 DELETE export FROM silverpop_export export
   LEFT JOIN silverpop_export_staging s ON s.id = export.id WHERE s.id IS NULL;
-;
 
 -- Delete rows where based on the id having a recently modified date.
 -- If the email changed from one email to another the email based delete will not pick it up.
@@ -384,8 +428,10 @@ DELETE FROM silverpop_export_checksum_email;
 
 -- Move the data from the staging table into the persistent one
 -- Query OK, 28373047 rows in set (31.883 sec)
-INSERT INTO silverpop_export_checksum_email
-(`email`, `checksum` )
+INSERT INTO silverpop_export_checksum_email (
+  email,
+  checksum
+)
 SELECT
     email,
     CONCAT(MD5(CONCAT(contact_hash, '_', contact_id, '_', UNIX_TIMESTAMP(), '_', '720')),"_",UNIX_TIMESTAMP(),"_","720")
