@@ -37,7 +37,7 @@ INSERT INTO silverpop_missing_countries
 -- The use of MAX for country really means 'any', for lang it should help avoid NULL.
 SELECT c.contact_id, MAX(ct.country), MAX(lang)
 FROM civicrm.civicrm_contribution c
-   LEFT JOIN drupal.contribution_tracking ct ON c.id = ct.contribution_id
+   LEFT JOIN civicrm.civicrm_contribution_tracking ct ON c.id = ct.contribution_id
    LEFT JOIN silverpop_countrylangs langs ON langs.country = ct.country
    LEFT JOIN civicrm.civicrm_address a ON a.contact_id = c.contact_id AND a.is_primary = 1
    LEFT JOIN civicrm.civicrm_contact contact ON contact.id = c.contact_id

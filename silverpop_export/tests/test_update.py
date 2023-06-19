@@ -248,7 +248,7 @@ def test_export_hash():
 
 def test_bad_ct_country():
     '''
-    Test that we use the Civi address in place of XX contribution_tracking
+    Test that we use the Civi address in place of XX civicrm_contribution_tracking
     '''
 
     run_update_with_fixtures(fixture_queries=["""
@@ -264,7 +264,7 @@ def test_bad_ct_country():
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 1000, 'JPY');
     """, """
-    insert into contribution_tracking (contribution_id, country) values
+    insert into civicrm_contribution_tracking (contribution_id, country) values
         (1, 'XX');
     """, """
     insert into civicrm_country (id, iso_code) values
