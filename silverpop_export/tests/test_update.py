@@ -17,15 +17,16 @@ def setup():
     global conn
     global db_name
     # FIXME: parameterize test configuration better
-    db_host = "127.0.0.1"
     db_pass = None
     if 'EXECUTOR_NUMBER' in os.environ:
         # We're running under Jenkins.  Assume things.
         db_name = "test"
         db_user = "root"
+        db_host = "127.0.0.1"
     else:
         db_name = "test"
         db_user = "test"
+        db_host = "database"
 
     db_params = {"user": db_user, "host": db_host, "charset": "utf8mb4"}
     if db_pass:

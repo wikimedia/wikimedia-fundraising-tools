@@ -31,8 +31,8 @@ drupal_db:
 
 silverpop_db:
     host: localhost
-    user: civi
-    passwd: "barl!"
+    user: root
+    passwd: ""
     db: silverpop
     debug: false
 

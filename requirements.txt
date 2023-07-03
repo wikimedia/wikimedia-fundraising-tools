@@ -2,7 +2,6 @@ export
 git+https://github.com/dvska/gdata-python3#egg=gdata
 pymysql
 netaddr
-paramiko>=1.16.0
 python-dateutil
 PyYAML>=3.11
 redis
