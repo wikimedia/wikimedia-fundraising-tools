@@ -59,6 +59,8 @@ CREATE TABLE `wmf_donor`
 (
     `id`                            int(10) unsigned,
     `entity_id`                     int(10) unsigned,
+    `donor_segment_id`              int(11)                              DEFAULT 1000,
+    `donor_status_id`               int(11)                              DEFAULT NULL,
     `last_donation_date`            datetime                             DEFAULT NULL,
     `last_donation_currency`        varchar(255)                         DEFAULT NULL,
     `last_donation_amount`          decimal(20, 2)                       DEFAULT '0.00',
@@ -91,9 +93,29 @@ CREATE TABLE `wmf_donor`
     `endowment_total_2023`          decimal(20, 2)                       DEFAULT '0.00',
     `endowment_total_2023_2022`     decimal(20, 2)                       DEFAULT '0.00',
     `change_2023_2024`              double                               DEFAULT '0',
-    `donor_segment_id`              int(11)                              DEFAULT '0',
-    `donor_status_id`               int(11)                              DEFAULT '0'
-
+    `endowment_total_2023_2024`     decimal(20, 2)                       DEFAULT '0.00',
+    `total_2024_2025`               decimal(20,2)                        DEFAULT 0.00,
+    `total_2024`                    decimal(20,2)                        DEFAULT 0.00,
+    `endowment_total_2024_2025`     decimal(20,2)                        DEFAULT 0.00,
+    `endowment_total_2024`          decimal(20,2)                        DEFAULT 0.00,
+    `endowment_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
+    `change_2024_2025`              decimal(20,2)                        DEFAULT 0.00,
+    `total_2025_2026`               decimal(20,2)                        DEFAULT 0.00,
+    `total_2025`                    decimal(20,2)                        DEFAULT 0.00,
+    `endowment_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00,
+    `endowment_total_2025`          decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
+    `endowment_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
+    `change_2025_2026`              decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2018_2019`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2019_2020`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2020_2021`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2021_2022`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2022_2023`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2023_2024`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2024_2025`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_value_1_communication_4;

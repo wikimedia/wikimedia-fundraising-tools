@@ -64,7 +64,17 @@ BEGIN;
    endowment_highest_usd_amount,
    endowment_last_donation_date,
    endowment_first_donation_date,
-   endowment_number_donations
+   endowment_number_donations,
+   donor_segment_id,
+   donor_status_id,
+   all_funds_total_2018_2019,
+   all_funds_total_2019_2020,
+   all_funds_total_2020_2021,
+   all_funds_total_2021_2022,
+   all_funds_total_2022_2023,
+   all_funds_total_2023_2024,
+   all_funds_total_2024_2025,
+   all_funds_total_2025_2026
   )
   SELECT
     e.email,
@@ -77,7 +87,23 @@ BEGIN;
     MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
     MAX(donor.endowment_last_donation_date) as endowment_last_donation_date,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
-    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations
+    COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations,
+    -- we use MIN because the higher priority values are lower - ie Major Donor is 100 and
+    -- mid-tier is 200. If combining 2 merge-like donors we want to treat them as Major Donor
+    -- if choosing between 100 & 200. We need to be careful with field types here. At this stage
+    -- the code is pushing up the value (ie the 100) but it is likely we will be asked to
+    -- push up the field name (Major Donor) - hence the type is varchar. But, we need to do
+    -- any comparisons directly on the wmf_donor table, where it is an int.
+    MIN(donor.donor_segment_id) as donor_segment,
+    MIN(donor.donor_status_id) as donor_status,
+    COALESCE(SUM(donor.all_funds_total_2018_2019), 0) as all_funds_total_2018_2019,
+    COALESCE(SUM(donor.all_funds_total_2019_2020), 0) as all_funds_total_2019_2020,
+    COALESCE(SUM(donor.all_funds_total_2020_2021), 0) as all_funds_total_2020_2021,
+    COALESCE(SUM(donor.all_funds_total_2021_2022), 0) as all_funds_total_2021_2022,
+    COALESCE(SUM(donor.all_funds_total_2022_2023), 0) as all_funds_total_2022_2023,
+    COALESCE(SUM(donor.all_funds_total_2023_2024), 0) as all_funds_total_2023_2024,
+    COALESCE(SUM(donor.all_funds_total_2024_2025), 0) as all_funds_total_2024_2025,
+    COALESCE(SUM(donor.all_funds_total_2025_2026), 0) as all_funds_total_2025_2026
   FROM silverpop_update_world t
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
@@ -361,8 +387,17 @@ INSERT INTO silverpop_export (
   foundation_latest_currency,foundation_latest_currency_symbol,foundation_latest_native_amount,
   foundation_last_donation_date, foundation_first_donation_date,
   city,country,state,postal_code,
+  donor_segment_id, donor_status_id,
   endowment_last_donation_date, endowment_first_donation_date,
-  endowment_number_donations, endowment_highest_usd_amount
+  endowment_number_donations, endowment_highest_usd_amount,
+  all_funds_total_2018_2019,
+  all_funds_total_2019_2020,
+  all_funds_total_2020_2021,
+  all_funds_total_2021_2022,
+  all_funds_total_2022_2023,
+  all_funds_total_2023_2024,
+  all_funds_total_2024_2025,
+  all_funds_total_2025_2026
 )
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
@@ -386,9 +421,18 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(lt.latest_native_amount, 0) as foundation_latest_native_amount,
   foundation_last_donation_date,foundation_first_donation_date,
   addr.city,addr.country,addr.state,addr.postal_code,
+  stats.donor_status_id, stats.donor_segment_id,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
-  COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount
+  COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
+   stats.all_funds_total_2018_2019,
+   stats.all_funds_total_2019_2020,
+   stats.all_funds_total_2020_2021,
+   stats.all_funds_total_2021_2022,
+   stats.all_funds_total_2022_2023,
+   stats.all_funds_total_2023_2024,
+   stats.all_funds_total_2024_2025,
+   stats.all_funds_total_2025_2026
 FROM silverpop_update_world t
 INNER JOIN silverpop_export_staging ex ON t.email = ex.email
 
@@ -460,6 +504,33 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.employer_name,
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
+    donor_segment_id,
+    CASE
+        WHEN donor_segment_id = 100 THEN 'Major Donor'
+        WHEN donor_segment_id = 200 THEN 'Mid Tier'
+        WHEN donor_segment_id = 400 THEN 'Recurring donor'
+        WHEN donor_segment_id = 500 THEN 'Grassroots Plus Donor'
+        WHEN donor_segment_id = 600 THEN 'Grassroots Donor'
+        WHEN donor_segment_id = 900 THEN 'All other Donors'
+        WHEN donor_segment_id = 1000 THEN 'Non Donors'
+        ELSE ''
+        END as donor_segment,
+    donor_status_id,
+    CASE
+        WHEN donor_status_id = 10 THEN 'New'
+        WHEN donor_status_id = 20 THEN 'Consecutive'
+        WHEN donor_status_id = 30 THEN 'Active'
+        WHEN donor_status_id = 35 THEN 'Lybunt'
+        WHEN donor_status_id = 50 THEN 'Lapsed'
+        WHEN donor_status_id = 60 THEN 'Deep Lapsed'
+        WHEN donor_status_id = 60 THEN 'Ultra lapsed'
+        WHEN donor_status_id = 80 THEN 'Active Recurring'
+        WHEN donor_status_id = 85 THEN 'Delinquent Recurring'
+        WHEN donor_status_id = 90 THEN 'Recent lapsed Recurring'
+        WHEN donor_status_id = 95 THEN 'Deep lapsed Recurring'
+        WHEN donor_status_id = 100 THEN 'Non donor'
+        ELSE ''
+        END as donor_status,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
     IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') TS_birth_date,
     COALESCE(charitable_contributions_decile, '') as TS_charitable_contributions_decile,
@@ -547,20 +618,20 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       as both_funds_latest_donation_date,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_native_amount, endowment_latest_native_amount)
      as both_funds_latest_native_amount,
-    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') endowment_last_donation_date,
-    IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') endowment_first_donation_date,
+    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') as endowment_last_donation_date,
+    IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') as endowment_first_donation_date,
     endowment_number_donations as endowment_donation_count,
-    IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') endowment_highest_donation_date,
+    IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') as endowment_highest_donation_date,
     endowment_highest_native_amount,
     endowment_highest_native_currency,
     endowment_highest_usd_amount,
     endowment_latest_currency,
     endowment_latest_native_amount,
     donation_count as AF_donation_count,
-    IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') AF_first_donation_date,
-    IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') AF_highest_donation_date,
+    IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') as AF_first_donation_date,
+    IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') as AF_highest_donation_date,
     foundation_highest_usd_amount as AF_highest_usd_amount,
-    IFNULL(DATE_FORMAT(foundation_last_donation_date, '%m/%d/%Y'), '') AF_latest_donation_date,
+    IFNULL(DATE_FORMAT(foundation_last_donation_date, '%m/%d/%Y'), '') as AF_latest_donation_date,
     COALESCE(foundation_latest_native_amount, 0) as AF_latest_native_amount,
     foundation_highest_native_amount as AF_highest_native_amount,
     foundation_highest_native_currency as AF_highest_native_currency,
@@ -575,21 +646,19 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(cr.currency, '') as AF_recurring_latest_currency,
     IF (pp.name IN ('adyen', 'ingenico') AND foundation_recurring_active_count = 1 AND recurring_has_upgrade_activity = 0, 'Yes', 'No')
         as AF_recurring_eligible_for_upgrade,
-    0 as AF_usd_total_2014,
-    0 as AF_usd_total_2015,
-    0 as AF_usd_total_2016,
-    0 as AF_usd_total_2017,
-    0 as AF_usd_total_2018,
-    0 as AF_usd_total_2019,
-    0 as AF_usd_total_2020,
-    0 as AF_usd_total_2021,
-    0 as AF_usd_total_2022,
-    0 as AF_usd_total_2023,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
      as both_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
      as both_funds_latest_currency_symbol,
     e.modified_date,
+    all_funds_total_2018_2019 as both_funds_usd_total_fy1819,
+    all_funds_total_2019_2020 as both_funds_usd_total_fy1920,
+    all_funds_total_2020_2021 as both_funds_usd_total_fy2021,
+    all_funds_total_2021_2022 as both_funds_usd_total_fy2122,
+    all_funds_total_2022_2023 as both_funds_usd_total_fy2223,
+    all_funds_total_2023_2024 as both_funds_usd_total_fy2324,
+    all_funds_total_2024_2025 as both_funds_usd_total_fy2425,
+    all_funds_total_2025_2026 as both_funds_usd_total_fy2526,
     IFNULL(gift.matching_gifts_provider_info_url, '') as matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url
@@ -623,16 +692,6 @@ AF_recurring_latest_donation_date,
 AF_recurring_latest_native_amount,
 AF_recurring_latest_currency,
 AF_recurring_eligible_for_upgrade,
-AF_usd_total_2014,
-AF_usd_total_2015,
-AF_usd_total_2016,
-AF_usd_total_2017,
-AF_usd_total_2018,
-AF_usd_total_2019,
-AF_usd_total_2020,
-AF_usd_total_2021,
-AF_usd_total_2022,
-AF_usd_total_2023,
 both_funds_donation_count,
 both_funds_first_donation_date,
 both_funds_highest_donation_date,
@@ -641,8 +700,20 @@ both_funds_latest_currency,
 both_funds_latest_currency_symbol,
 both_funds_latest_donation_date,
 both_funds_latest_native_amount,
+both_funds_usd_total_fy1819,
+both_funds_usd_total_fy1920,
+both_funds_usd_total_fy2021,
+both_funds_usd_total_fy2122,
+both_funds_usd_total_fy2223,
+both_funds_usd_total_fy2324,
+both_funds_usd_total_fy2425,
+both_funds_usd_total_fy2526,
 contact_hash,
 country,
+donor_segment,
+donor_segment_id,
+donor_status,
+donor_status_id,
 email,
 email_greeting,
 employer_id,
