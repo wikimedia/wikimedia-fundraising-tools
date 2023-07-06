@@ -80,7 +80,7 @@ def getPerYearData(host, port, username, password, database):
           SUM(IF(con.total_amount < 0, 1, 0)) as refund_count,
           AVG(IF(con.total_amount >= 0, total_amount, 0)) as `avg`,
           MAX(con.total_amount)
-        FROM civicrm_contribution con, drupal.contribution_tracking ct
+        FROM civicrm_contribution con, civicrm_contribution_tracking ct
         WHERE
           con.id=ct.contribution_id AND
           receive_date >= '2006-01-01'
@@ -145,7 +145,7 @@ def getPerCampaignData(host, port, username, password, database):
           avg(c.total_amount),
           std(c.total_amount),
           max(c.total_amount)
-        FROM drupal.contribution_tracking ct, civicrm.civicrm_contribution c
+        FROM civicrm_contribution_tracking ct, civicrm.civicrm_contribution c
         WHERE
           ct.contribution_id=c.id AND
           c.total_amount >= 0

@@ -1,10 +1,129 @@
 #!/bin/bash
-# usage: download_nightly_redux <incomingdir> <completeddir> <connectstring> <privkeypath> <remotedir>
+
+# Functions
+function help {
+    echo "
+This script will compare a list of files on current host in (up to) 2
+directories with one directory on a remote host. If there are files that exist
+on the remote host that are not present locally, it will use sftp to copy it
+to the local host.
+"
+    usage
+
+}
+
+function usage {
+    echo "Usage: $0 [--help] -i incoming [-c completed] -h host [-u user] [-k ssh_key] [-d remote_dir]"
+    exit 1
+}
+
+### Getopt land
+# Note that we use "$@" to let each command-line parameter expand to a
+# separate word. The quotes around "$@" are essential!
+# We need ARGS as the 'eval set --' would nuke the return value of getopt.
+ARGS=$(getopt -o 'i:c:h:u:k:d:' --long 'help,incoming:,completed:,host:,user:,ssh_key:,remote_dir:' -n "$0" -- "$@")
+
+# Note the quotes around "$ARGS": they are essential!
+eval set -- "${ARGS}"
+unset ARGS
+
+while true; do
+    # If these have a required argument. As such the argument will be in $2
+    case "$1" in
+        '-i'|'--incoming')
+            INCOMING=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '-c'|'--completed')
+            COMPLETED=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '-h'|'--host')
+            SSH_HOST=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '-u'|'--user')
+            SSH_USER=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '-k'|'--ssh_key')
+            PRIV_KEY=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '-d'|'--remote_dir')
+            REMOTE_DIR=$2
+            shift 2 # pop the opt plus arg off
+            continue
+        ;;
+        '--help')
+            help
+            break
+        ;;
+        '--')
+            shift
+            break
+        ;;
+        *)
+            echo 'Internal error!' >&2
+            exit 1
+        ;;
+    esac
+done
+
+if [[ ${INCOMING} == "" ]]; then
+    echo "No local incoming dir specified"
+    usage
+fi
+
+if [[ ${SSH_HOST} == "" ]]; then
+    echo "No host specified"
+    usage
+fi
+
+if [[ ${SSH_USER} == "" ]]; then
+    SSH_CONNECT=${SSH_HOST}
+else
+    SSH_CONNECT="${SSH_USER}@${SSH_HOST}"
+fi
+
+# Make it so that we can add the identity flags only if we have a priv key
+if [[ ${PRIV_KEY} == "" ]]; then
+    IDENTITY=""
+else
+    IDENTITY="-i ${PRIV_KEY}"
+fi
+
+# If there is a remote dir, append a / so the paths are cleaner and more
+# flexible in the sftp line
+if [[ ${REMOTE_DIR} ]]; then
+    REMOTE_DIR="${REMOTE_DIR}/"
+fi
+
+# We can't use ssh any more with globalcollect so we use a batch mode of
+# commands to move to the out dir and pull the file listing
+batch() {
+    echo cd ${REMOTE_DIR}
+    echo ls
+}
+
+# Pull the local and remote files into variables to make the code a litte
+# cleaner
+LOCAL_FILES=`find ${INCOMING} ${COMPLETED} -type f -printf "%f\n" | sort | uniq`
+# We need to trim trailing spaces on the sftp file listing
+REMOTE_FILES=`sftp -b <(batch) -q ${IDENTITY} ${SSH_CONNECT} | sed 's/ \+$//g' | sort | grep -v "^sftp> "`
+
 for file in $( \
-  diff \
-    <(find ${1} ${2} -type f -printf "%f\n"|sort|uniq) \
-    <(ssh -q -i ${4} ${3} ls ${5}|sort) \
-  |sed -n 's/^> \(.*\)/\1/p'
+    # Using diff to find files that are common or only local.
+    diff  \
+        <(echo ${LOCAL_FILES} | tr " " "\n") \
+        <(echo ${REMOTE_FILES}| tr " " "\n") \
+    | sed -n 's/^> \(.*\)/\1/p'
 ); do
-  scp -i ${4} ${3}:/${5}/${file} ${1}
+    # Copy files that are remote only to the local incoming dir
+    scp -i ${PRIV_KEY} ${SSH_CONNECT}:${REMOTE_DIR}/${file} ${INCOMING}
 done

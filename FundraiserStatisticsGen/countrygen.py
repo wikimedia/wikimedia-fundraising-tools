@@ -45,7 +45,7 @@ def getAvgs(host, port, username, password, database):
           cy.iso_code,
           AVG(IF(c.total_amount>=0, c.total_amount, 0))
         FROM civicrm_contribution c
-        INNER JOIN drupal.contribution_tracking ct ON c.id=ct.contribution_id
+        INNER JOIN civicrm_contribution_tracking ct ON c.id=ct.contribution_id
         LEFT JOIN civicrm_address a ON c.contact_id=a.contact_id
         LEFT JOIN civicrm_country cy ON a.country_id=cy.id
         WHERE
@@ -79,7 +79,7 @@ def getData(host, port, username, password, database, avgs):
           AVG(IF(c.total_amount >= 0, c.total_amount, 0)) as `avg`,
           MAX(c.total_amount) as `max`
         FROM civicrm_contribution c
-        INNER JOIN drupal.contribution_tracking ct ON c.id=ct.contribution_id
+        INNER JOIN civicrm_contribution_tracking ct ON c.id=ct.contribution_id
         LEFT JOIN civicrm_address a ON c.contact_id=a.contact_id
         LEFT JOIN civicrm_country cy ON a.country_id=cy.id
         WHERE

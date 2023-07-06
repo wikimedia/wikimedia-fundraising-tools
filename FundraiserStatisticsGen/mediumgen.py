@@ -54,7 +54,7 @@ def getData(host, port, username, password, database):
           SUM(c.total_amount) as usd_credit_total,
           AVG(c.total_amount) as usd_credit_avg,
           MAX(c.total_amount) as usd_credit_max
-        FROM civicrm_contribution c, drupal.contribution_tracking ct
+        FROM civicrm_contribution c, civicrm_contribution_tracking ct
         WHERE
           c.receive_date >= '2012-07-01' AND c.receive_date < '2013-07-01' AND
           c.id = ct.contribution_id
