@@ -412,6 +412,36 @@ def test_multiple_recurring():
     assert cursor.fetchone() == (2, 3,)
 
 
+def test_multiple_only_inactive_recurring():
+    """
+    Test that we correctly calculate the number of inactive recurrings and the latest ID
+    """
+
+    run_update_with_fixtures(fixture_queries=["""
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'person1@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
+            (1, 1, 1.01, 'USD', 5, '2023-05-11'),
+            (3, 1, 2.02, 'EUR', 5, '2023-05-11'),
+            (5, 1, 3.03, 'GBP', 3, '2023-05-11');
+        """, """
+        insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+            (1, 1, 1, '2015-01-03', 1.01, 'xyz123', 1, 1),
+            (2, 1, 3, '2016-05-05', 2.02, 'abc456', 1, 1),
+            (3, 1, 3, '2017-05-05', 2.02, 'def789', 1, 1),
+            (4, 1, 5, '2017-05-05', 3.03, 'ghi012', 1, 1),
+            (5, 1, 5, '2017-05-05', 3.03, 'jkl345', 9, 1);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
+    assert cursor.fetchone() == (0, 5,)
+
+
 def test_recurring_upgrade_eligibility():
     """
     Test that we correctly calculate who is eligible for a recurring upgrade solicitation.

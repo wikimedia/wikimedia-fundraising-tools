@@ -306,12 +306,15 @@ INSERT INTO silverpop_has_recur (
    AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
    AND recur.cancel_date IS NULL
    ) THEN recur.id ELSE NULL END) as foundation_recurring_active_count,
- MAX(IF(
-   ((end_date IS NULL OR end_date > NOW())
-   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
-   AND recur.cancel_date IS NULL
-   ), recur.id, 0)
- ) as foundation_recurring_latest_contribution_recur_id,
+ (-- latest active recur id if any or latest inactive recur id
+ CASE WHEN ((end_date IS NULL OR end_date > NOW())
+ AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
+ AND recur.cancel_date IS NULL)
+ THEN MAX(IF(((end_date IS NULL OR end_date > NOW())
+  AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
+  AND recur.cancel_date IS NULL
+  ), recur.id, 0)) ELSE MAX(recur.id)
+  END) as foundation_recurring_latest_contribution_recur_id,
  ( -- Hat tip to Eileen
    SELECT count(*) > 0
    FROM civicrm.civicrm_activity_contact ac
