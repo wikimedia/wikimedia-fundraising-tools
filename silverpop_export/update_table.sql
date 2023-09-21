@@ -323,7 +323,7 @@ INSERT INTO silverpop_has_recur (
  ) as recurring_has_upgrade_activity
  FROM
    civicrm.civicrm_contribution_recur recur
- INNER JOIN civicrm.civicrm_contribution contributions
+ LEFT JOIN civicrm.civicrm_contribution contributions
    ON recur.id = contributions.contribution_recur_id
    AND contributions.contribution_status_id = 1
    AND contributions.financial_type_id != 26
