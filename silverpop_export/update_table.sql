@@ -159,7 +159,7 @@ INSERT INTO silverpop_export_latest (
   FROM silverpop_update_world t
     INNER JOIN silverpop_export_stat export ON t.email = export.email
     LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
-    LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
+    LEFT JOIN civicrm.civicrm_contribution c ON c.contact_id = email.contact_id
     LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
     LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
     WHERE c.receive_date = export.foundation_last_donation_date
@@ -266,7 +266,7 @@ SELECT
 FROM silverpop_update_world t
   INNER JOIN silverpop_export_stat export ON t.email = export.email
   LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
-  LEFT JOIN civicrm.civicrm_contribution c FORCE INDEX(received_date) ON  c.contact_id = email.contact_id
+  LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
   LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
 WHERE c.total_amount = export.endowment_highest_usd_amount
   AND export.endowment_highest_usd_amount > 0
