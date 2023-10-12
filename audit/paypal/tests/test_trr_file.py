@@ -184,6 +184,30 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
 
 @patch("frqueue.redis_wrap.Redis")
 @patch("civicrm.civicrm.Civicrm")
+@patch("process.globals.get_config")
+def test_skip_givelively(MockConfig, MockCivicrm, MockRedis):
+    '''
+    Test that we skip GiveLively donations
+    '''
+    row = get_csv_row("give_lively")
+
+    MockConfig.return_value.drop_give_lively = 1
+
+    MockCivicrm().transaction_exists.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    nose.tools.assert_equals(0, MockRedis().send.call_count)
+
+    # Drop before looking up
+    nose.tools.assert_equals(0, MockCivicrm().transaction_exists.call_count)
+
+
+@patch("frqueue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
 @patch("process.globals")
 def test_ec_donation_denied_not_sent(MockGlobals, MockCivicrm, MockRedis):
     '''
