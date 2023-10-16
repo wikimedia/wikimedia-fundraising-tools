@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   state VARCHAR(64),
   postal_code VARCHAR(128),
 
+  donor_segment_id INT(11),
+  donor_status_id INT(11),
+
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
   INDEX spex_country (country),
@@ -101,16 +104,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_last_donation_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
-  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
@@ -170,18 +163,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   lifetime_usd_total DECIMAL(20, 2),
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
--- Aggregate contribution statistics
-  foundation_total_2014 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2015 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2016 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2017 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2018 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2019 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2020 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2021 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2022 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-  foundation_total_2023 DECIMAL(20, 2) NOT NULL DEFAULT 0,
-
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
@@ -200,6 +181,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   country VARCHAR(2),
   state VARCHAR(64),
   postal_code VARCHAR(128),
+
+  donor_segment_id INT(11),
+  donor_status_id INT(11),
 
   INDEX spex_modified_date (modified_date),
   CONSTRAINT sp_email UNIQUE (email),
