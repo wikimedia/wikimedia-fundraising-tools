@@ -266,7 +266,7 @@ class TrrFile(object):
         self.redis.send(queue_name, msg)
 
     def drop_give_lively(self, row):
-        if self.config.drop_give_lively and row["Invoice ID"] == "" and row["Transaction Event Code"] == "T0013" and row["Custom Field"] == "":
+        if hasattr(self.config, 'drop_give_lively') and self.config.drop_give_lively and row["Invoice ID"] == "" and row["Transaction Event Code"] == "T0013" and row["Custom Field"] == "":
             log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
             return True
         return False
