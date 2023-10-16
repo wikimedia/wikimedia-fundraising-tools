@@ -98,6 +98,9 @@ class TrrFile(object):
         if row['Transactional Status'] != 'S':
             return
 
+        if self.drop_give_lively(row):
+            return
+
         if row['Billing Address Line1']:
             addr_prefix = 'Billing Address '
         else:
@@ -261,3 +264,9 @@ class TrrFile(object):
             self.redis = frqueue.redis_wrap.Redis()
 
         self.redis.send(queue_name, msg)
+
+    def drop_give_lively(self, row):
+        if self.config.drop_give_lively and row["Invoice ID"] == "" and row["Transaction Event Code"] == "T0013" and row["Custom Field"] == "":
+            log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
+            return True
+        return False

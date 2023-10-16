@@ -52,6 +52,9 @@ no_effect: 0
 # Suppress sending thank-you emails if set to 1.
 no_thankyou: 0
 
+# See https://phabricator.wikimedia.org/T295726
+drop_give_lively: 1
+
 logging:
     disable_existing_loggers: false
     version: 1
