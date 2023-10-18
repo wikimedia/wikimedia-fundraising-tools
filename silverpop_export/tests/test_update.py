@@ -2,6 +2,7 @@
 import datetime
 from decimal import Decimal
 import mock
+from nose.tools import assert_equal
 import pymysql
 import os
 import warnings
@@ -63,7 +64,7 @@ def test_duplicate():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(*) from silverpop_export")
-    assert cursor.fetchone() == (1,)
+    assert_equal(cursor.fetchone(), (1,))
 
 
 def test_no_donations():
@@ -97,7 +98,7 @@ def test_no_donations():
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
                 '')
-    assert actual == expected
+    assert_equal(actual, expected)
 
 
 def test_refund_history():
@@ -127,7 +128,7 @@ def test_refund_history():
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_highest_usd_amount, lifetime_usd_total, donation_count, foundation_latest_currency, foundation_latest_native_amount, foundation_last_donation_date  from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
-    assert cursor.fetchone() == expected
+    assert_equal(cursor.fetchone(), expected)
 
 
 def test_first_donation():
@@ -160,7 +161,7 @@ def test_first_donation():
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_first_donation_date from silverpop_export")
     expected = (datetime.datetime(2016, 5, 5),)
-    assert cursor.fetchone() == expected
+    assert_equal(cursor.fetchone(), expected)
 
 
 def test_native_amount():
@@ -193,7 +194,7 @@ def test_native_amount():
     cursor.execute("select foundation_highest_usd_amount, foundation_highest_native_amount, foundation_highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
     actual = cursor.fetchone()
-    assert actual == expected
+    assert_equal(actual, expected)
 
 
 def test_currency_symbol():
@@ -226,7 +227,7 @@ def test_currency_symbol():
     cursor.execute("select foundation_latest_currency, foundation_latest_currency_symbol from silverpop_export")
     expected = ('GBP', u'£')
     actual = cursor.fetchone()
-    assert actual == expected
+    assert_equal(actual, expected)
 
 
 def test_export_hash():
@@ -244,7 +245,7 @@ def test_export_hash():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select contact_hash from silverpop_export")
-    assert cursor.fetchone() == ('abfe829234baa87s76d',)
+    assert_equal(cursor.fetchone(), ('abfe829234baa87s76d',))
 
 
 def test_bad_ct_country():
@@ -277,7 +278,7 @@ def test_bad_ct_country():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select country from silverpop_export")
-    assert cursor.fetchone() == ('PE',)
+    assert_equal(cursor.fetchone(), ('PE',))
 
 
 def test_exclusion():
@@ -299,9 +300,9 @@ def test_exclusion():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select email from silverpop_export")
-    assert cursor.fetchone() == ('person1@localhost',)
+    assert_equal(cursor.fetchone(), ('person1@localhost',))
     cursor.execute("select email from silverpop_excluded")
-    assert cursor.fetchone() == ('formerperson1@localhost',)
+    assert_equal(cursor.fetchone(), ('formerperson1@localhost',))
 
 
 def test_optin_negative_exclusion():
@@ -332,11 +333,11 @@ def test_optin_negative_exclusion():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(email) from silverpop_export")
-    assert cursor.fetchone() == (2,)
+    assert_equal(cursor.fetchone(), (2,))
     cursor.execute("select count(email) from silverpop_excluded")
-    assert cursor.fetchone() == (1,)
+    assert_equal(cursor.fetchone(), (1,))
     cursor.execute("select email from silverpop_excluded order by id desc")
-    assert cursor.fetchone() == ('optinzero@localhost',)
+    assert_equal(cursor.fetchone(), ('optinzero@localhost',))
 
 
 def test_employer_id_filter():
@@ -377,9 +378,9 @@ def test_employer_id_filter():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(employer_id) from silverpop_export")
-    assert cursor.fetchone() == (1,)
+    assert_equal(cursor.fetchone(), (1,))
     cursor.execute("select employer_id, employer_name from silverpop_export where email='customfieldone@localhost'")
-    assert cursor.fetchone() == (1, 'Blah de Blah',)
+    assert_equal(cursor.fetchone(), (1, 'Blah de Blah',))
 
 
 def test_multiple_recurring():
@@ -409,7 +410,7 @@ def test_multiple_recurring():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
-    assert cursor.fetchone() == (2, 3,)
+    assert_equal(cursor.fetchone(), (2, 3,))
 
 
 def test_multiple_only_inactive_recurring():
@@ -439,7 +440,7 @@ def test_multiple_only_inactive_recurring():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
-    assert cursor.fetchone() == (0, 5,)
+    assert_equal(cursor.fetchone(), (0, 5,))
 
 
 def test_recurring_upgrade_eligibility():
@@ -488,14 +489,12 @@ def test_recurring_upgrade_eligibility():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, recurring_has_upgrade_activity from silverpop_export where contact_id=2")
-    actual = cursor.fetchone()
-    assert actual[0] == 1
-    assert actual[1] == 0
+    assert_equal(cursor.fetchone(), (1, 0,))
     cursor.execute("select ContactID, AF_recurring_eligible_for_upgrade from silverpop_export_view order by ContactID")
-    assert cursor.fetchone() == (1, 'No',)
-    assert cursor.fetchone() == (2, 'Yes',)
-    assert cursor.fetchone() == (3, 'No',)
-    assert cursor.fetchone() == (4, 'No',)
+    assert_equal(cursor.fetchone(), (1, 'No',))
+    assert_equal(cursor.fetchone(), (2, 'Yes',))
+    assert_equal(cursor.fetchone(), (3, 'No',))
+    assert_equal(cursor.fetchone(), (4, 'No',))
 
 
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
