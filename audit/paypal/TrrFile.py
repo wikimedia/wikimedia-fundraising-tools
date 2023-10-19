@@ -98,9 +98,6 @@ class TrrFile(object):
         if row['Transactional Status'] != 'S':
             return
 
-        if self.drop_give_lively(row):
-            return
-
         if row['Billing Address Line1']:
             addr_prefix = 'Billing Address '
         else:
@@ -137,6 +134,9 @@ class TrrFile(object):
         if 'Last Name' in row:
             out['last_name'] = row['Last Name']
 
+        # FIXME: This sends stuff like 'Express Checkout' or 'Others' in
+        # the payment_method field, which is discarded and replaced with
+        # 'paypal' at the queue consumer
         if 'Payment Source' in row:
             out['payment_method'] = row['Payment Source']
 
@@ -203,9 +203,13 @@ class TrrFile(object):
             log.info("recurring txn missing subscr_id\t{id}\t{date}".format(id=out['gateway_txn_id'], date=out['date']))
             raise Exception('Missing field subscr_id')
 
+        if queue_name == 'donations' or queue_name == 'recurring':
+            self.add_fields_when_givelively(row, out)
+
         if 'last_name' not in out and queue_name != 'refund':
             out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
 
+        # FIXME: should set no_thank_you, shouldn't it?
         if self.config.no_thankyou:
             out['thankyou_date'] = 0
 
@@ -265,8 +269,11 @@ class TrrFile(object):
 
         self.redis.send(queue_name, msg)
 
-    def drop_give_lively(self, row):
-        if hasattr(self.config, 'drop_give_lively') and self.config.drop_give_lively and row["Invoice ID"] == "" and row["Transaction Event Code"] == "T0013" and row["Custom Field"] == "":
+    def add_fields_when_givelively(self, row, out):
+        if not hasattr(self.config, 'givelively_appeal') or not self.config.givelively_appeal:
+            return
+        # GiveLively codes their transactions as donations and sets no Invoice ID or Custom Field
+        if row["Transaction Event Code"] == "T0013" and not row["Invoice ID"] and not row["Custom Field"]:
             log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
-            return True
-        return False
+            out['no_thank_you'] = 'GiveLively'
+            out['direct_mail_appeal'] = self.config.givelively_appeal

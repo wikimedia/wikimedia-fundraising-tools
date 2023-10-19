@@ -187,11 +187,11 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
 @patch("process.globals.get_config")
 def test_skip_givelively(MockConfig, MockCivicrm, MockRedis):
     '''
-    Test that we skip GiveLively donations
+    Test that we tag GiveLively donations
     '''
     row = get_csv_row("give_lively")
 
-    MockConfig.return_value.drop_give_lively = 1
+    MockConfig.return_value.givelively_appeal = 'TeddyBearsPicnic'
 
     MockCivicrm().transaction_exists.return_value = False
 
@@ -200,10 +200,18 @@ def test_skip_givelively(MockConfig, MockCivicrm, MockRedis):
     parser.parse_line(row)
 
     # Did we send it?
-    nose.tools.assert_equals(0, MockRedis().send.call_count)
-
-    # Drop before looking up
-    nose.tools.assert_equals(0, MockCivicrm().transaction_exists.call_count)
+    nose.tools.assert_equals(1, MockRedis().send.call_count)
+    args = MockRedis().send.call_args
+    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'Others',
+                'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595,
+                'gateway': 'paypal', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0,
+                'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '',
+                'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net',
+                'street_address': '321 Notta Boulevard', 'direct_mail_appeal': 'TeddyBearsPicnic',
+                'no_thank_you': 'GiveLively'}
+    nose.tools.assert_equals('donations', args[0][0])
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)
 
 
 @patch("frqueue.redis_wrap.Redis")
