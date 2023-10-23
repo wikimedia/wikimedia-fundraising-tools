@@ -19,6 +19,21 @@ log = logging.getLogger(__name__)
 class TrrFile(object):
     VERSION = [4, 8]
     FILE_ENCODING = 'utf_8_sig'
+    # https://developer.paypal.com/docs/reports/reference/tcodes/
+    TRANSACTION_PREFIX_PAYMENT = 'T00'
+    TRANSACTION_PREFIX_TRANSFER = 'T03'
+    TRANSACTION_PREFIX_DEBIT_CARD = 'T05'
+    TRANSACTION_PREFIX_CREDIT_CARD = 'T07'
+    TRANSACTION_PREFIX_REFUND = 'T11'
+    TRANSACTION_PREFIX_CHARGEBACK = 'T12'
+    TRANSACTION_PREFIX_RESTRICTED_BALANCE_PURCHASE = 'T22'
+    TRANSACTION_SUBSCRIPTION_PAYMENT = 'T0002'
+    TRANSACTION_PAYMENT_BILL_USER_PAYMENT = 'T0003'  # Indicator of Braintree API
+    TRANSACTION_DONATION = 'T0013'  # We don't actually use this on payments, so it indicates a third-party platform
+    TRANSACTION_REVERSAL = 'T1106'  # Like a chargeback, but initiated by PayPal, not donor
+    TRANSACTION_REFUND = 'T1107'  # Initiated by merchant, i.e. us
+    TRANSACTION_CHARGEBACK = 'T1201'  # Initiated by donor
+
     redis = None
     # FIXME: these are version 8 headers, we would fail on multi-part v4 files...
     column_headers = [
@@ -156,12 +171,15 @@ class TrrFile(object):
         event_type = row['Transaction Event Code'][0:3]
 
         queue_name = None
-        if event_type in ('T00', 'T03', 'T05', 'T07', 'T22'):
-            if row['Transaction Event Code'] == 'T0002':
+        if event_type in (
+                self.TRANSACTION_PREFIX_PAYMENT, self.TRANSACTION_PREFIX_TRANSFER,
+                self.TRANSACTION_PREFIX_DEBIT_CARD, self.TRANSACTION_PREFIX_CREDIT_CARD,
+                self.TRANSACTION_PREFIX_RESTRICTED_BALANCE_PURCHASE):
+            if row['Transaction Event Code'] == self.TRANSACTION_SUBSCRIPTION_PAYMENT:
                 queue_name = 'recurring'
                 out['txn_type'] = 'subscr_payment'
                 out['subscr_id'] = row['PayPal Reference ID']
-            elif row['Transaction Event Code'] == 'T0003':
+            elif row['Transaction Event Code'] == self.TRANSACTION_PAYMENT_BILL_USER_PAYMENT:
                 # https://developer.paypal.com/docs/reports/reference/tcodes/ T0003 is PreApproved Payment Bill User Payment, while paypal express should be T0006
                 log.info("Opt out braintree txn from paypal audit \t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=out['date'], type=row['Transaction Event Code']))
                 # Braintree txn, no need to audit
@@ -173,18 +191,18 @@ class TrrFile(object):
                 return
             else:
                 queue_name = 'donations'
-        elif event_type in ('T11', 'T12'):
+        elif event_type in (self.TRANSACTION_PREFIX_REFUND, self.TRANSACTION_PREFIX_CHARGEBACK):
             out['gateway_refund_id'] = out['gateway_txn_id']
             out['gross_currency'] = out['currency']
 
             if row['PayPal Reference ID Type'] == 'TXN':
                 out['gateway_parent_id'] = row['PayPal Reference ID']
 
-            if row['Transaction Event Code'] == 'T1106':
+            if row['Transaction Event Code'] == self.TRANSACTION_REVERSAL:
                 out['type'] = 'reversal'
-            elif row['Transaction Event Code'] == 'T1107':
+            elif row['Transaction Event Code'] == self.TRANSACTION_REFUND:
                 out['type'] = 'refund'
-            elif row['Transaction Event Code'] == 'T1201':
+            elif row['Transaction Event Code'] == self.TRANSACTION_CHARGEBACK:
                 out['type'] = 'chargeback'
             else:
                 log.info("-Unknown\t{id}\t{date}\t(Refundish type {type})".format(id=out['gateway_txn_id'], date=out['date'], type=row['Transaction Event Code']))
@@ -273,7 +291,7 @@ class TrrFile(object):
         if not hasattr(self.config, 'givelively_appeal') or not self.config.givelively_appeal:
             return
         # GiveLively codes their transactions as donations and sets no Invoice ID or Custom Field
-        if row["Transaction Event Code"] == "T0013" and not row["Invoice ID"] and not row["Custom Field"]:
+        if row["Transaction Event Code"] == self.TRANSACTION_DONATION and not row["Invoice ID"] and not row["Custom Field"]:
             log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
             out['no_thank_you'] = 'GiveLively'
             out['direct_mail_appeal'] = self.config.givelively_appeal
