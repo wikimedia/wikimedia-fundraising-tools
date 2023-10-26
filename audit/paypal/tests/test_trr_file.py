@@ -360,3 +360,25 @@ def test_duplicate_recurring(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     nose.tools.assert_equals(None, args)
+
+
+@patch("frqueue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals.get_config")
+def test_reject(MockConfig, MockCivicrm, MockRedis):
+    '''
+    Test that we reject certain donations based on configuration
+    '''
+    row = get_csv_row("express_checkout_donation")
+    MockConfig.return_value.rejects = {"Payer's Account ID": 'donor@generous.net'}
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # We shouldn't even look up the transaction in the db
+    nose.tools.assert_equals(0, MockCivicrm().transaction_exists.call_count)
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    nose.tools.assert_equals(None, args)
