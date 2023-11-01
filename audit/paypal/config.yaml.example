@@ -85,3 +85,8 @@ logging:
         handlers:
             - console
             - error
+
+# This is a way to reject rows based on the raw values found in the TRR file
+# For each column name you can specify a single scalar or an array of values to reject
+rejects:
+    Payer's Account ID: bogusaddress@example.com

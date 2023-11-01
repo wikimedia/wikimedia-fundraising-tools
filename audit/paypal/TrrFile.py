@@ -2,7 +2,7 @@
 
 See https://developer.paypal.com/docs/reports/sftp-reports/transaction-detail/
 '''
-
+import collections.abc
 import logging
 import re
 
@@ -111,6 +111,9 @@ class TrrFile(object):
     def parse_line(self, row):
         # Drop all rows in non-successful status
         if row['Transactional Status'] != 'S':
+            return
+
+        if self.is_reject(row):
             return
 
         if row['Billing Address Line1']:
@@ -295,3 +298,13 @@ class TrrFile(object):
             log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
             out['no_thank_you'] = 'GiveLively'
             out['direct_mail_appeal'] = self.config.givelively_appeal
+
+    def is_reject(self, row):
+        if not hasattr(self.config, 'rejects') or not isinstance(self.config.rejects, dict):
+            return False
+        for key in self.config.rejects:
+            config_val = self.config.rejects[key]
+            if row[key] == config_val or (isinstance(config_val, collections.abc.Sequence) and row[key] in config_val):
+                log.info("Rejecting because {key} is {value}".format(key=key, value=row[key]))
+                return True
+        return False
