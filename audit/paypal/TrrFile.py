@@ -131,7 +131,7 @@ class TrrFile(object):
             'gateway_status': row['Transactional Status'],
             'note': row['Transaction Note'],
             'email': row['Payer\'s Account ID'],
-
+            'payment_method': 'paypal',
             'street_address': row[addr_prefix + 'Line1'],
             'supplemental_address_1': row[addr_prefix + 'Line2'],
             'city': row[addr_prefix + 'City'],
@@ -151,12 +151,6 @@ class TrrFile(object):
 
         if 'Last Name' in row:
             out['last_name'] = row['Last Name']
-
-        # FIXME: This sends stuff like 'Express Checkout' or 'Others' in
-        # the payment_method field, which is discarded and replaced with
-        # 'paypal' at the queue consumer
-        if 'Payment Source' in row:
-            out['payment_method'] = row['Payment Source']
 
         if 'Card Type' in row:
             out['payment_submethod'] = row['Card Type']
