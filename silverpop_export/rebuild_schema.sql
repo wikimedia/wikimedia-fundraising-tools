@@ -24,9 +24,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   state VARCHAR(64),
   postal_code VARCHAR(128),
 
-  donor_segment_id INT(11),
-  donor_status_id INT(11),
-
   INDEX spex_contact_id (contact_id),
   INDEX spex_email (email),
   INDEX spex_country (country),
@@ -37,7 +34,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
 ) COLLATE 'utf8mb4_unicode_ci';
 
-CREATE TABLE `silverpop_email_map`
+CREATE TABLE IF NOT EXISTS `silverpop_email_map`
 (
   `email` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `master_email_id` INT(16) NOT NULL,
@@ -98,12 +95,22 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
   all_funds_latest_donation_date DATETIME,
+  all_funds_total_2018_2019 DECIMAL(20, 2),
+  all_funds_total_2019_2020 DECIMAL(20, 2),
+  all_funds_total_2020_2021 DECIMAL(20, 2),
+  all_funds_total_2021_2022 DECIMAL(20, 2),
+  all_funds_total_2022_2023 DECIMAL(20, 2),
+  all_funds_total_2023_2024 DECIMAL(20, 2),
+  all_funds_total_2024_2025 DECIMAL(20, 2),
+  all_funds_total_2025_2026 DECIMAL(20, 2),
   foundation_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
   foundation_last_donation_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
+  donor_segment_id DECIMAL(20, 2),
+  donor_status_id DECIMAL(20, 2),
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
@@ -162,6 +169,16 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_highest_donation_date DATETIME,
   lifetime_usd_total DECIMAL(20, 2),
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
+
+-- aggregate contribution amounts
+  all_funds_total_2018_2019 DECIMAL(20, 2),
+  all_funds_total_2019_2020 DECIMAL(20, 2),
+  all_funds_total_2020_2021 DECIMAL(20, 2),
+  all_funds_total_2021_2022 DECIMAL(20, 2),
+  all_funds_total_2022_2023 DECIMAL(20, 2),
+  all_funds_total_2023_2024 DECIMAL(20, 2),
+  all_funds_total_2024_2025 DECIMAL(20, 2),
+  all_funds_total_2025_2026 DECIMAL(20, 2),
 
 -- Endowment stats ----
   endowment_last_donation_date DATETIME NULL,
