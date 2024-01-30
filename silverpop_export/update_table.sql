@@ -421,7 +421,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(lt.latest_native_amount, 0) as foundation_latest_native_amount,
   foundation_last_donation_date,foundation_first_donation_date,
   addr.city,addr.country,addr.state,addr.postal_code,
-  stats.donor_status_id, stats.donor_segment_id,
+  stats.donor_segment_id, stats.donor_status_id,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
