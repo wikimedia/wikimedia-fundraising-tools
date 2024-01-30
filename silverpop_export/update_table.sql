@@ -523,7 +523,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_status_id = 35 THEN 'Lybunt'
         WHEN donor_status_id = 50 THEN 'Lapsed'
         WHEN donor_status_id = 60 THEN 'Deep Lapsed'
-        WHEN donor_status_id = 60 THEN 'Ultra lapsed'
+        WHEN donor_status_id = 70 THEN 'Ultra lapsed'
         WHEN donor_status_id = 80 THEN 'Active Recurring'
         WHEN donor_status_id = 85 THEN 'Delinquent Recurring'
         WHEN donor_status_id = 90 THEN 'Recent lapsed Recurring'
