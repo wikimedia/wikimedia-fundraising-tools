@@ -125,7 +125,7 @@ class SarFile(object):
             out['txn_type'] = 'subscr_eot'
 
         if self.config.no_thankyou:
-            out['thankyou_date'] = 0
+            out['no_thank_you'] = 'Audit configured not to send TY messages'
 
         log_params['type'] = out['txn_type']
         log.info("+Sending\t{id}\t{date}\t{type}".format(**log_params))

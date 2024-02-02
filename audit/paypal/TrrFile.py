@@ -218,15 +218,14 @@ class TrrFile(object):
             log.info("recurring txn missing subscr_id\t{id}\t{date}".format(id=out['gateway_txn_id'], date=out['date']))
             raise Exception('Missing field subscr_id')
 
+        if self.config.no_thankyou:
+            out['no_thank_you'] = 'Audit configured not to send TY messages'
+
         if queue_name == 'donations' or queue_name == 'recurring':
             self.add_fields_when_givelively(row, out)
 
         if 'last_name' not in out and queue_name != 'refund':
             out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
-
-        # FIXME: should set no_thank_you, shouldn't it?
-        if self.config.no_thankyou:
-            out['thankyou_date'] = 0
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
         self.send(queue_name, out)

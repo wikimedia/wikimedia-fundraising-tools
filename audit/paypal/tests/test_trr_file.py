@@ -146,7 +146,7 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     assert args[0][0] == 'refund'
-    expected = {'last_name': 'Man', 'thankyou_date': 0, 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    expected = {'last_name': 'Man', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
 
@@ -168,7 +168,7 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595, 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
+    expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595, 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
     nose.tools.assert_equals('donations', args[0][0])
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
@@ -202,7 +202,7 @@ def test_tag_givelively(MockConfig, MockCivicrm, MockRedis):
     # Did we send it?
     nose.tools.assert_equals(1, MockRedis().send.call_count)
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'paypal',
+    expected = {'last_name': 'Who', 'city': 'Whoville', 'payment_method': 'paypal',
                 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595,
                 'gateway': 'paypal', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0,
                 'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '',
@@ -251,7 +251,7 @@ def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'txn_type': 'subscr_payment', 'subscr_id': 'I-SS5RD7POSD46', 'last_name': 'Who', 'thankyou_date': 0, 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1488634565, 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '4JH2438EE9876546W', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488634565, 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
+    expected = {'txn_type': 'subscr_payment', 'subscr_id': 'I-SS5RD7POSD46', 'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1488634565, 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '4JH2438EE9876546W', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488634565, 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
     nose.tools.assert_equals('recurring', args[0][0])
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
@@ -274,7 +274,7 @@ def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1490200499, 'gateway_refund_id': '3HD08833MR473623T', 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '3HD08833MR473623T', 'gross_currency': 'JPY', 'country': 'US', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200499, 'gateway_parent_id': '1V551844CE5526421', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
+    expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1490200499, 'gateway_refund_id': '3HD08833MR473623T', 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '3HD08833MR473623T', 'gross_currency': 'JPY', 'country': 'US', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200499, 'gateway_parent_id': '1V551844CE5526421', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
@@ -297,7 +297,7 @@ def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    expected = {'last_name': 'Who', 'thankyou_date': 0, 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1490200431, 'gateway_refund_id': '8WG23468CX793000L', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '8WG23468CX793000L', 'gross_currency': 'JPY', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200431, 'gateway_parent_id': '4JH2438EE9876546W', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
+    expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1490200431, 'gateway_refund_id': '8WG23468CX793000L', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '8WG23468CX793000L', 'gross_currency': 'JPY', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200431, 'gateway_parent_id': '4JH2438EE9876546W', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
@@ -338,7 +338,7 @@ def test_recurring(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     assert args[0][0] == 'recurring'
-    expected = {'last_name': 'Man', 'txn_type': 'subscr_payment', 'thankyou_date': 0, 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1474743301, 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
+    expected = {'last_name': 'Man', 'txn_type': 'subscr_payment', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1474743301, 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
 
