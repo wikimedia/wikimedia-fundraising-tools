@@ -1,11 +1,11 @@
-# Deploy as /etc/fundraising/astropay-audit.yaml or $HOME/.fundraising/astropay-audit.yaml
+# Deploy as /etc/fundraising/dlocal-audit.yaml or $HOME/.fundraising/dlocal-audit.yaml
 
 # Local path where unprocessed files land
 #
-incoming_path: /var/spool/audit/astropay/incoming
+incoming_path: /var/spool/audit/dlocal/incoming
 
 # After processing (or being skipped), audit files are stored here
-archive_path: /archive/audit/astropay/archive
+archive_path: /archive/audit/dlocal/archive
 
 # Connection parameters
 sftp:
