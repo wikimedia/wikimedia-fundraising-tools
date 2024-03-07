@@ -508,6 +508,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     CASE
         WHEN donor_segment_id = 100 THEN 'Major Donor'
         WHEN donor_segment_id = 200 THEN 'Mid Tier'
+        WHEN donor_segment_id = 200 THEN 'Mid-Value Prospect'
         WHEN donor_segment_id = 400 THEN 'Recurring donor'
         WHEN donor_segment_id = 500 THEN 'Grassroots Plus Donor'
         WHEN donor_segment_id = 600 THEN 'Grassroots Donor'
