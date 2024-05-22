@@ -504,7 +504,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.employer_name,
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
-    donor_segment_id,
+    COALESCE(donor_segment_id, 1000) as donor_segment_id,
     CASE
         WHEN donor_segment_id = 100 THEN 'Major Donor'
         WHEN donor_segment_id = 200 THEN 'Mid Tier'
@@ -514,10 +514,14 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_segment_id = 600 THEN 'Grassroots Donor'
         WHEN donor_segment_id = 900 THEN 'All other Donors'
         WHEN donor_segment_id = 1000 THEN 'Non Donors'
-        ELSE ''
+        ELSE 'Non Donors'
         END as donor_segment,
-    donor_status_id,
+    COALESCE(donor_status_id, 100) as donor_status_id,
     CASE
+        WHEN donor_status_id = 2 THEN 'Active Recurring'
+        WHEN donor_status_id = 4 THEN 'Delinquent Recurring'
+        WHEN donor_status_id = 6 THEN 'Recent lapsed Recurring'
+        WHEN donor_status_id = 8 THEN 'Deep lapsed Recurring'
         WHEN donor_status_id = 10 THEN 'New'
         WHEN donor_status_id = 20 THEN 'Consecutive'
         WHEN donor_status_id = 30 THEN 'Active'
@@ -525,12 +529,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_status_id = 50 THEN 'Lapsed'
         WHEN donor_status_id = 60 THEN 'Deep Lapsed'
         WHEN donor_status_id = 70 THEN 'Ultra lapsed'
-        WHEN donor_status_id = 80 THEN 'Active Recurring'
-        WHEN donor_status_id = 85 THEN 'Delinquent Recurring'
-        WHEN donor_status_id = 90 THEN 'Recent lapsed Recurring'
-        WHEN donor_status_id = 95 THEN 'Deep lapsed Recurring'
         WHEN donor_status_id = 100 THEN 'Non donor'
-        ELSE ''
+        ELSE 'Non donor'
         END as donor_status,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
     IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') TS_birth_date,
