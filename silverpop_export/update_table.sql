@@ -516,7 +516,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_segment_id = 1000 THEN 'Non Donors'
         ELSE 'Non Donors'
         END as donor_segment,
-    COALESCE(donor_status_id, 100) as donor_status_id,
+    COALESCE(donor_status_id, 1000) as donor_status_id,
     CASE
         WHEN donor_status_id = 2 THEN 'Active Recurring'
         WHEN donor_status_id = 4 THEN 'Delinquent Recurring'
@@ -529,7 +529,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_status_id = 50 THEN 'Lapsed'
         WHEN donor_status_id = 60 THEN 'Deep Lapsed'
         WHEN donor_status_id = 70 THEN 'Ultra lapsed'
-        WHEN donor_status_id = 100 THEN 'Non donor'
+        WHEN donor_status_id = 1000 THEN 'Non donor'
         ELSE 'Non donor'
         END as donor_status,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
