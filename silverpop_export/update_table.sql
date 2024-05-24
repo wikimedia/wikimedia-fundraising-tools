@@ -331,7 +331,16 @@ INSERT INTO silverpop_has_recur (
  ( -- Hat tip to Eileen
    SELECT count(*) > 0
    FROM civicrm.civicrm_activity_contact ac
-     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id AND a.activity_type_id IN (165, 166)
+     INNER JOIN civicrm.civicrm_activity a
+         ON a.id = ac.activity_id
+            AND (
+                -- Either upgraded (165) at any time in the past
+                a.activity_type_id = 165 OR (
+                    -- Or declined to upgrade (166) in the past year
+                    a.activity_type_id = 166 AND
+                    a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                )
+            )
    WHERE ac.contact_id = recur.contact_id
  ) as recurring_has_upgrade_activity
  FROM

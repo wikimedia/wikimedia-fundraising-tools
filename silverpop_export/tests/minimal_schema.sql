@@ -288,6 +288,7 @@ CREATE TABLE `civicrm_value_relationship_metadata` (
 DROP TABLE IF EXISTS civicrm_activity;
 CREATE TABLE `civicrm_activity` (
     `id` int(10) unsigned NOT NULL,
+    `activity_date_time` datetime DEFAULT current_timestamp(),
     `activity_type_id` int(10) unsigned NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
