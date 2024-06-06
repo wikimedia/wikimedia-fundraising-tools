@@ -320,9 +320,9 @@ INSERT INTO silverpop_has_recur (
    AND recur.cancel_date IS NULL
    ) THEN recur.id ELSE NULL END) as foundation_recurring_active_count,
  (-- latest active recur id if any or latest inactive recur id
- CASE WHEN ((end_date IS NULL OR end_date > NOW())
+ CASE WHEN COUNT(DISTINCT CASE WHEN (end_date IS NULL OR end_date > NOW())
  AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
- AND recur.cancel_date IS NULL)
+ AND recur.cancel_date IS NULL > 0 THEN recur.id ELSE NULL END) > 0
  THEN MAX(IF(((end_date IS NULL OR end_date > NOW())
   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
   AND recur.cancel_date IS NULL
