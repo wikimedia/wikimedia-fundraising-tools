@@ -320,9 +320,9 @@ INSERT INTO silverpop_has_recur (
    AND recur.cancel_date IS NULL
    ) THEN recur.id ELSE NULL END) as foundation_recurring_active_count,
  (-- latest active recur id if any or latest inactive recur id
- CASE WHEN ((end_date IS NULL OR end_date > NOW())
+ CASE WHEN COUNT(DISTINCT CASE WHEN (end_date IS NULL OR end_date > NOW())
  AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
- AND recur.cancel_date IS NULL)
+ AND recur.cancel_date IS NULL > 0 THEN recur.id ELSE NULL END) > 0
  THEN MAX(IF(((end_date IS NULL OR end_date > NOW())
   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
   AND recur.cancel_date IS NULL
@@ -331,7 +331,16 @@ INSERT INTO silverpop_has_recur (
  ( -- Hat tip to Eileen
    SELECT count(*) > 0
    FROM civicrm.civicrm_activity_contact ac
-     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id AND a.activity_type_id IN (165, 166)
+     INNER JOIN civicrm.civicrm_activity a
+         ON a.id = ac.activity_id
+            AND (
+                -- Either upgraded (165) at any time in the past
+                a.activity_type_id = 165 OR (
+                    -- Or declined to upgrade (166) in the past year
+                    a.activity_type_id = 166 AND
+                    a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                )
+            )
    WHERE ac.contact_id = recur.contact_id
  ) as recurring_has_upgrade_activity
  FROM
