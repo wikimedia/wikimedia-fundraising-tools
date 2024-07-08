@@ -382,3 +382,34 @@ def test_reject(MockConfig, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     nose.tools.assert_equals(None, args)
+
+
+@patch("frqueue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals.get_config")
+def test_tag_givingfund(MockConfig, MockCivicrm, MockRedis):
+    '''
+    Test that we tag Giving Fund donations with the contact_id and blank name & email
+    '''
+    row = get_csv_row("giving_fund")
+
+    MockConfig.return_value.givingfund_cid = 1234567
+    MockConfig.return_value.givingfund_emails = ['ppgfuspay@paypalgivingfund.org']
+
+    MockCivicrm().transaction_exists.return_value = False
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # Did we send it?
+    nose.tools.assert_equals(1, MockRedis().send.call_count)
+    args = MockRedis().send.call_args
+    expected = {'no_thank_you': 'Audit configured not to send TY messages', 'payment_method': 'paypal',
+                'contact_id': 1234567, 'gateway_status': 'S', 'currency': 'JPY', 'date': 1488477595,
+                'gateway': 'paypal_ec', 'gross': 150.0, 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421',
+                'payment_submethod': '', 'note': '', 'settled_date': 1488477595,
+                'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
+    nose.tools.assert_equals('donations', args[0][0])
+    actual = args[0][1]
+    nose.tools.assert_equals(expected, actual)

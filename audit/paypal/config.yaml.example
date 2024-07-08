@@ -58,6 +58,14 @@ no_thankyou: 0
 # If not set or set to something false, treat GiveLively donations as any other.
 givelively_appeal: EV1V23
 
+# See https://phabricator.wikimedia.org/T363768
+# PayPal Giving Fund donations come tagged with the email address of the current
+# CEO of the Fund. Tag them with the contact ID of the Fund's organization record
+# so we don't attach them to an individual record.
+givingfund_cid: 3729480
+givingfund_emails:
+    - ppgfuspay@paypalgivingfund.org
+
 logging:
     disable_existing_loggers: false
     version: 1
