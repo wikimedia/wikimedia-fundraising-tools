@@ -219,7 +219,8 @@ create table civicrm_value_1_prospect_5
     `endowment_stage_169`             varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `net_worth_170`                   varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `family_composition_173`          varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `occupation_175`                  varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+    `occupation_175`                  varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `data_axle_is_grandparent`        int(3) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS civicrm_value_matching_gift;
