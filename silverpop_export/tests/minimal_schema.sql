@@ -136,6 +136,7 @@ create table civicrm_contribution (
     trxn_id varchar(255) COLLATE utf8mb4_unicode_ci,
     contribution_status_id int(10) unsigned,
     financial_type_id int(10) unsigned,
+    payment_method_id int(10) unsigned,
     KEY `received_date` (`receive_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -53,7 +53,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   email VARCHAR(255) PRIMARY KEY,
   latest_currency VARCHAR(3),
   latest_currency_symbol VARCHAR(8),
-  latest_native_amount DECIMAL(20, 2)
+  latest_native_amount DECIMAL(20, 2),
+  latest_payment_method VARCHAR(64),
+  latest_donation_source VARCHAR(64)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
@@ -61,6 +63,8 @@ CREATE TABLE IF NOT EXISTS `silverpop_endowment_latest` (
   `endowment_latest_currency` VARCHAR(8),
   `endowment_latest_currency_symbol` VARCHAR(8),
   `endowment_latest_native_amount` DECIMAL(20, 2),
+  `endowment_latest_payment_method` VARCHAR(64),
+  `endowment_latest_donation_source` VARCHAR(64),
   KEY `email` (`email`)
 ) COLLATE 'utf8mb4_unicode_ci';
 
