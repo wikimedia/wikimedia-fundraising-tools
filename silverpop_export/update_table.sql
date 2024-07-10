@@ -616,12 +616,21 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
     END as TS_occupation,
+    CASE
+      WHEN data_axle_is_grandparent IS NULL THEN ''
+      WHEN data_axle_is_grandparent = 0 THEN 'No'
+      WHEN data_axle_is_grandparent = 1 THEN 'Yes'
+    END as dataaxle_is_grandparent,
+    '' as directmail_receivers,
+    '' as directmail_id,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
       as both_funds_first_donation_date,
     IFNULL(DATE_FORMAT(IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_donation_date, foundation_highest_donation_date), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
+    IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
+        as both_funds_highest_native_amount,
     IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_usd_amount, foundation_highest_usd_amount)
       as both_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_last_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
@@ -656,11 +665,14 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(cr.currency, '') as AF_recurring_latest_currency,
     IF (pp.name IN ('adyen', 'ingenico') AND foundation_recurring_active_count = 1 AND recurring_has_upgrade_activity = 0, 'Yes', 'No')
         as AF_recurring_eligible_for_upgrade,
+    '' as both_funds_has_given_on_email,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)
      as both_funds_latest_currency,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
      as both_funds_latest_currency_symbol,
     e.modified_date,
+    '' as both_funds_latest_donation_source,
+    '' as both_funds_latest_payment_method,
     all_funds_total_2018_2019 as both_funds_usd_total_fy1819,
     all_funds_total_2019_2020 as both_funds_usd_total_fy1920,
     all_funds_total_2020_2021 as both_funds_usd_total_fy2021,
@@ -704,12 +716,16 @@ AF_recurring_latest_currency,
 AF_recurring_eligible_for_upgrade,
 both_funds_donation_count,
 both_funds_first_donation_date,
+both_funds_has_given_on_email,
+both_funds_highest_native_amount,
 both_funds_highest_donation_date,
 both_funds_highest_usd_amount,
 both_funds_latest_currency,
 both_funds_latest_currency_symbol,
 both_funds_latest_donation_date,
+both_funds_latest_donation_source,
 both_funds_latest_native_amount,
+both_funds_latest_payment_method,
 both_funds_usd_total_fy1819,
 both_funds_usd_total_fy1920,
 both_funds_usd_total_fy2021,
@@ -720,6 +736,9 @@ both_funds_usd_total_fy2425,
 both_funds_usd_total_fy2526,
 contact_hash,
 country,
+dataaxle_is_grandparent,
+directmail_receivers,
+directmail_id,
 donor_segment,
 donor_segment_id,
 donor_status,
