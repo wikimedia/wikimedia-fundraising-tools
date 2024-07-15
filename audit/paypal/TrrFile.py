@@ -221,11 +221,12 @@ class TrrFile(object):
         if self.config.no_thankyou:
             out['no_thank_you'] = 'Audit configured not to send TY messages'
 
-        if queue_name == 'donations' or queue_name == 'recurring':
-            self.add_fields_when_givelively(row, out)
-
         if 'last_name' not in out and queue_name != 'refund':
             out['first_name'], out['last_name'] = paypal_api.PaypalApiClassic().fetch_donor_name(out['gateway_txn_id'])
+
+        if queue_name == 'donations' or queue_name == 'recurring':
+            self.add_fields_when_givelively(row, out)
+            self.add_contact_id_when_givingfund(out)
 
         log.info("+Sending\t{id}\t{date}\t{type}".format(id=out['gateway_txn_id'], date=row['Transaction Initiation Date'], type=queue_name))
         self.send(queue_name, out)
@@ -291,6 +292,17 @@ class TrrFile(object):
             log.info("-Likely GiveLively\t{id}".format(id=row["Transaction ID"]))
             out['no_thank_you'] = 'GiveLively'
             out['direct_mail_appeal'] = self.config.givelively_appeal
+
+    def add_contact_id_when_givingfund(self, out):
+        if not hasattr(self.config, 'givingfund_cid') or not self.config.givingfund_cid:
+            return
+        if not hasattr(self.config, 'givingfund_emails') or not self.config.givingfund_emails:
+            return
+        if out['email'] in self.config.givingfund_emails:
+            for field in ['city', 'country', 'email', 'first_name', 'last_name', 'postal_code', 'state_province',
+                          'street_address', 'supplemental_address_1']:
+                del out[field]
+            out['contact_id'] = self.config.givingfund_cid
 
     def is_reject(self, row):
         if not hasattr(self.config, 'rejects') or not isinstance(self.config.rejects, dict):
