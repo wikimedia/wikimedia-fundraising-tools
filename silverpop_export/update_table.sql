@@ -663,7 +663,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(DATE_FORMAT(foundation_recurring_latest_donation_date, '%m/%d/%Y'), '') as AF_recurring_latest_donation_date,
     COALESCE(cr.amount, 0) as AF_recurring_latest_native_amount,
     COALESCE(cr.currency, '') as AF_recurring_latest_currency,
-    IF (pp.name IN ('adyen', 'ingenico') AND foundation_recurring_active_count = 1 AND recurring_has_upgrade_activity = 0, 'Yes', 'No')
+    IF (pp.name IN ('adyen', 'ingenico') AND foundation_recurring_active_count = 1 AND recurring_has_upgrade_activity = 0 AND cr.frequency_unit = 'month', 'Yes', 'No')
         as AF_recurring_eligible_for_upgrade,
     '' as both_funds_has_given_on_email,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency, endowment_latest_currency)

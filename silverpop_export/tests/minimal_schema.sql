@@ -147,6 +147,7 @@ CREATE TABLE civicrm_contribution_recur
     amount decimal(20, 2) NOT NULL COMMENT 'Amount to be contributed or charged each recurrence.',
     currency varchar(3) NOT NULL DEFAULT 'USD',
     contribution_status_id int(10) unsigned DEFAULT '1',
+    frequency_unit varchar(8) DEFAULT 'month',
     payment_processor_id int(10) NULL,
     end_date datetime,
     start_date datetime,
