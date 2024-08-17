@@ -458,27 +458,31 @@ def test_recurring_upgrade_eligibility():
             (1, 'paypaldonor@localhost', 1, 0),
             (2, 'adyendonor@localhost', 1, 0),
             (3, 'multipledonor@localhost', 1, 0),
-            (4, 'alreadyupgraded@localhost', 1, 0);
+            (4, 'alreadyupgraded@localhost', 1, 0),
+            (5, 'annualdonor@localhost', 1, 0);
         """, """
         insert into civicrm_contact (id, modified_date) values
             (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
             (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
             (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+            (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
         """, """
-        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, payment_processor_id ) values
-            (1, 1, 1.01, 'USD', 5, 2),
-            (2, 2, 2.02, 'EUR', 5, 1),
-            (3, 3, 3.03, 'GBP', 5, 1),
-            (4, 3, 4.04, 'PLN', 5, 1),
-            (5, 4, 5.05, 'COP', 5, 1);
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, frequency_unit, payment_processor_id ) values
+            (1, 1, 1.01, 'USD', 5, 'month', 2),
+            (2, 2, 2.02, 'EUR', 5, 'month', 1),
+            (3, 3, 3.03, 'GBP', 5, 'month', 1),
+            (4, 3, 4.04, 'PLN', 5, 'month', 1),
+            (5, 4, 5.05, 'COP', 5, 'month', 1),
+            (6, 5, 6.06, 'COP', 5, 'year', 1);
         """, """
         insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
             (1, 1, 1, '2015-01-03', 1.01, 'xyz123', 1, 1),
             (2, 2, 2, '2016-05-05', 2.02, 'abc456', 1, 1),
             (3, 3, 3, '2017-05-05', 3.03, 'def789', 1, 1),
             (4, 3, 4, '2017-05-05', 4.04, 'ghi012', 1, 1),
-            (5, 4, 5, '2017-05-05', 5.05, 'jkl345', 1, 1);
+            (5, 4, 5, '2017-05-05', 5.05, 'jkl345', 1, 1),
+            (6, 5, 6, '2017-05-05', 6.06, 'mno678', 1, 1);
         """, """
         insert into civicrm_activity (id, activity_type_id) values
             (1, 165);
@@ -495,6 +499,7 @@ def test_recurring_upgrade_eligibility():
     assert_equal(cursor.fetchone(), (2, 'Yes',))
     assert_equal(cursor.fetchone(), (3, 'No',))
     assert_equal(cursor.fetchone(), (4, 'No',))
+    assert_equal(cursor.fetchone(), (5, 'No',))
 
 
 def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
