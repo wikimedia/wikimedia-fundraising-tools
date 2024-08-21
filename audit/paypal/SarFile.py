@@ -94,11 +94,14 @@ class SarFile(object):
         }
 
         # FIXME what historical evil caused...
-        if row['Subscription Period 3'] != "1 M":
-            raise RuntimeError("Unknown subscription period {period}".format(period=row['Subscription Period 3']))
-        else:
+        if row['Subscription Period 3'] == "1 M":
             out['frequency_interval'] = '1'
             out['frequency_unit'] = 'month'
+        elif row['Subscription Period 3'] == "1 Y":
+            out['frequency_interval'] = '1'
+            out['frequency_unit'] = 'year'
+        else:
+            raise RuntimeError("Unknown subscription period {period}".format(period=row['Subscription Period 3']))
 
         log_params = {
             'id': out['subscr_id'],
