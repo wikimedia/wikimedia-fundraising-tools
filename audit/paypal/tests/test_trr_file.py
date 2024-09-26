@@ -409,7 +409,9 @@ def test_tag_givingfund(MockConfig, MockCivicrm, MockRedis):
                 'contact_id': 1234567, 'gateway_status': 'S', 'currency': 'JPY', 'date': 1488477595,
                 'gateway': 'paypal_ec', 'gross': 150.0, 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421',
                 'payment_submethod': '', 'note': '', 'settled_date': 1488477595,
-                'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
+                'contribution_tracking_id': '46239229', 'order_id': '46239229.1',
+                'Gift_Data.Appeal': 'White Mail', 'Gift_Data.Campaign': 'Donor Advised Fund',
+                'Gift_Data.Channel': 'Other Offline', 'Gift_Data.Fund': 'Major Gifts - CC104'}
     nose.tools.assert_equals('donations', args[0][0])
     actual = args[0][1]
     nose.tools.assert_equals(expected, actual)
