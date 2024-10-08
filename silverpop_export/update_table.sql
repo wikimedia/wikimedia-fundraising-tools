@@ -25,7 +25,7 @@ FROM
 -- silverpop_export_staging - summarised contact data with complexities around country, language, opt in, opt out resolved
 -- silverpop_missing_countries - support table for building the above table
 -- silverpop_email_map - summary table of contact data where we want 'the one that has this data', provides master_id
---    for later filtering. Note master_id currently calculated by highest email id - ideally would be most recent donor
+--    for later filtering.
 -- silverpop_export_stat aggregate data about contact's contibutions
 -- silverpop_export_latest - data about contact's most recent foundation donation
 -- silverpop_export_highest - data about contact's highest foundation donation
@@ -108,7 +108,7 @@ BEGIN;
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
-    # We need to be careful with this group by. We want the sum by email but we don't want
+    # We need to be careful with this group by. We want the sum by email but we do not want
     # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
 
@@ -125,24 +125,22 @@ INSERT INTO silverpop_email_map (
   opted_in,
   modified_date
 )
-  SELECT email,
-    # MAX here is attempt to get the most recent, although it would be better to accurately calculate most recent donor.
-    MAX(id) as master_email_id,
-    # We definitely prefer 'an' address over no address so use MAX - but ideally we would prefer most recent donor.
-    MAX(address_id) as address_id,
+  SELECT ex.email,
+    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.id, NULL)), MAX(id)) as master_email_id,
+    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
     # Use MAX to prefer non-blank
     MAX(preferred_language) as preferred_language,
     # Use MAX as any opted out IS opted out.
     MAX(opted_out) as opted_out,
     # 0 if they have ever actually opted out, else 1
-    # we use this for filtering so don't need to preserve the nuance.
+    # we use this for filtering so do not need to preserve the nuance.
     # This should be revisited per https://phabricator.wikimedia.org/T256522
     MIN(IF (opted_in = 0, 0, 1)) as opted_in,
     MAX(modified_date) as modified_date
-  FROM silverpop_export_staging
-    -- This index force seems to not change the speed much....
-    FORCE INDEX (spex_email)
-  GROUP BY email
+  FROM silverpop_export_staging ex
+  INNER JOIN silverpop_export_stat stat
+    ON ex.email = stat.email
+  GROUP BY ex.email
 ;
 
 -- Find the latest donation for each email address. Ordering by
@@ -637,7 +635,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       as both_funds_latest_donation_date,
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_native_amount, endowment_latest_native_amount)
      as both_funds_latest_native_amount,
-    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') as endowment_last_donation_date,
+    IFNULL(DATE_FORMAT(endowment_last_donation_date, '%m/%d/%Y'), '') as endowment_latest_donation_date,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') as endowment_first_donation_date,
     endowment_number_donations as endowment_donation_count,
     IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') as endowment_highest_donation_date,
@@ -756,7 +754,7 @@ endowment_highest_donation_date,
 endowment_highest_native_amount,
 endowment_highest_native_currency,
 endowment_highest_usd_amount,
-endowment_last_donation_date,
+endowment_latest_donation_date,
 endowment_latest_currency,
 endowment_latest_native_amount,
 firstname,
