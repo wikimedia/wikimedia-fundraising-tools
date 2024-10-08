@@ -108,7 +108,7 @@ BEGIN;
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
-    # We need to be careful with this group by. We want the sum by email but we don't want
+    # We need to be careful with this group by. We want the sum by email but we do not want
     # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
 
@@ -135,7 +135,7 @@ INSERT INTO silverpop_email_map (
     # Use MAX as any opted out IS opted out.
     MAX(opted_out) as opted_out,
     # 0 if they have ever actually opted out, else 1
-    # we use this for filtering so don't need to preserve the nuance.
+    # we use this for filtering so do not need to preserve the nuance.
     # This should be revisited per https://phabricator.wikimedia.org/T256522
     MIN(IF (opted_in = 0, 0, 1)) as opted_in,
     MAX(modified_date) as modified_date
