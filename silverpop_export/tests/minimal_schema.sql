@@ -54,6 +54,29 @@ values
     ('GBP', '£'),
     ('DZD', NULL);
 
+drop table if exists civicrm_entity_tag;
+create table civicrm_entity_tag
+(
+    id int unsigned auto_increment primary key,
+    entity_table varchar(64)  null,
+    entity_id    int unsigned not null,
+    tag_id       int unsigned not null
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+drop table if exists civicrm_tag;
+create table civicrm_tag
+(
+    id int unsigned auto_increment primary key,
+    name          varchar(64) not null,
+    label         varchar(64)  not null
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO civicrm_tag (name, label) VALUES
+('Preference_End_Of_The_Year_Campaign_Only', 'Preference: exclude-from-6C-annual-campaigns'),
+('Preference_Exclude_from_Direct_Mail_Campaigns', 'Preference: exclude-from-direct-mail-campaigns'),
+('Preference_Exclude_from_SMS_campaigns ', 'Preference: exclude-from-sms-campaigns'),
+('Preference_Spring_Campaign_Only', 'Preference: exclude-from-spring-campaigns');
+
 drop table if exists wmf_donor;
 CREATE TABLE `wmf_donor`
 (
