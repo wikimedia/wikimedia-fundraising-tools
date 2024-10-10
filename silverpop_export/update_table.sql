@@ -499,6 +499,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.email,
     IFNULL(e.first_name, '') firstname,
     IFNULL(e.last_name, '') lastname,
+    '' as preferences_tags,
     CASE
       WHEN gender_id =1 THEN 'Female'
       WHEN gender_id =2 THEN 'Male'
@@ -762,6 +763,7 @@ gender,
 lastname,
 latest_optin_response,
 postal_code,
+preferences_tags,
 state,
 TS_birth_date,
 TS_charitable_contributions_decile,
