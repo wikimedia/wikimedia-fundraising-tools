@@ -67,6 +67,31 @@ def test_duplicate():
     assert_equal(cursor.fetchone(), (1,))
 
 
+def test_tag():
+    '''
+    Test that we export preference tags.
+    '''
+
+    run_update_with_fixtures(fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_entity_tag (id, tag_id, entity_id) values
+        (1, 1, 1),
+        (2, 2, 1),
+        (3, 2, 2);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select preferences_tags from silverpop_export_view WHERE email = 'person1@localhost'")
+    assert_equal(cursor.fetchone(), ('exclude-from-6C-annual-campaigns;exclude-from-direct-mail-campaigns',))
+
+
 def test_no_donations():
     '''
     Test that we set the donation-related fields correctly when a contact has

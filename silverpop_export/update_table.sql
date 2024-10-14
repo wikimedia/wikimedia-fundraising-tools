@@ -473,6 +473,27 @@ SELECT
 FROM
     silverpop_export
 COMMIT;
+
+-- create preference_tags table. Currently, this is basically instant
+-- with only a few hundred tagged contacts so drop & create
+-- for simplicity.
+-- Query OK, 325 rows affected (0.014 sec)
+DROP TABLE IF EXISTS preference_tags;
+
+CREATE TABLE preference_tags
+(email VARCHAR(64) NOT NULL, INDEX(email), preference_tags VARCHAR(258))
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SELECT email, GROUP_CONCAT(DISTINCT TRIM(REPLACE(tag.label, 'Preference: ', '')) SEPARATOR ';') as preference_tags
+FROM civicrm.civicrm_entity_tag e
+  INNER JOIN civicrm.civicrm_tag tag
+    ON e.tag_id = tag.id
+    AND tag.label LIKE 'Preference: %'
+    AND tag.used_for = 'civicrm_contact'
+  INNER JOIN civicrm.civicrm_email email
+    ON email.contact_id = e.entity_id
+    AND email.is_primary = 1
+GROUP BY email.email;
+
 -- Create a nice view to export from
 -- There are two possibilities for limiting this view to only include newly modified contacts
 -- add a where statement or join on an already-limited table.
@@ -499,7 +520,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.email,
     IFNULL(e.first_name, '') firstname,
     IFNULL(e.last_name, '') lastname,
-    '' as preferences_tags,
+    COALESCE(pt.preference_tags, '') as preferences_tags,
     CASE
       WHEN gender_id =1 THEN 'Female'
       WHEN gender_id =2 THEN 'Male'
@@ -688,6 +709,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
+  LEFT JOIN preference_tags pt ON pt.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
   LEFT JOIN civicrm.civicrm_contribution_recur cr ON e.foundation_recurring_latest_contribution_recur_id = cr.id
   LEFT JOIN civicrm.civicrm_payment_processor pp ON cr.payment_processor_id = pp.id;

@@ -68,14 +68,16 @@ create table civicrm_tag
 (
     id int unsigned auto_increment primary key,
     name          varchar(64) not null,
-    label         varchar(64)  not null
+    label         varchar(64)  not null,
+    used_for      varchar(64)  not null
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO civicrm_tag (name, label) VALUES
-('Preference_End_Of_The_Year_Campaign_Only', 'Preference: exclude-from-6C-annual-campaigns'),
-('Preference_Exclude_from_Direct_Mail_Campaigns', 'Preference: exclude-from-direct-mail-campaigns'),
-('Preference_Exclude_from_SMS_campaigns ', 'Preference: exclude-from-sms-campaigns'),
-('Preference_Spring_Campaign_Only', 'Preference: exclude-from-spring-campaigns');
+INSERT INTO civicrm_tag (name, label, used_for) VALUES
+('Preference_End_Of_The_Year_Campaign_Only', 'Preference: exclude-from-6C-annual-campaigns', 'civicrm_contact'),
+('Preference_Exclude_from_Direct_Mail_Campaigns', 'Preference: exclude-from-direct-mail-campaigns', 'civicrm_contact'),
+('Preference_Exclude_from_SMS_campaigns ', 'Preference: exclude-from-sms-campaigns', 'civicrm_contact'),
+('Preference_Spring_Campaign_Only', 'Preference: exclude-from-spring-campaigns', 'civicrm_contact');
 
 drop table if exists wmf_donor;
 CREATE TABLE `wmf_donor`
