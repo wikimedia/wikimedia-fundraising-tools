@@ -177,7 +177,8 @@ CREATE TABLE civicrm_contribution_recur
     payment_processor_id int(10) NULL,
     end_date datetime,
     start_date datetime,
-    cancel_date datetime
+    cancel_date datetime,
+    cancel_reason varchar(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

@@ -298,6 +298,9 @@ INSERT INTO silverpop_has_recur (
   foundation_has_active_recurring_donation,
   foundation_recurring_first_donation_date,
   foundation_recurring_latest_donation_date,
+  -- this is used to determine the most recent cancel reason (across both fund)
+  -- to avoid targeting people who have cancelled for (e.g) financial reasons
+  most_recent_cancel_date,
   foundation_recurring_active_count,
   foundation_recurring_latest_contribution_recur_id,
   recurring_has_upgrade_activity
@@ -312,6 +315,7 @@ INSERT INTO silverpop_has_recur (
  ) as foundation_has_active_recurring_donation,
  MIN(receive_date) as `foundation_recurring_first_donation_date`,
  MAX(receive_date) as `foundation_recurring_latest_donation_date`,
+ MAX(recur.cancel_date) as most_recent_cancel_date,
  COUNT(DISTINCT CASE WHEN
   ((end_date IS NULL OR end_date > NOW())
    AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
@@ -352,6 +356,39 @@ INSERT INTO silverpop_has_recur (
  INNER JOIN silverpop_update_world t ON t.email = email.email
  GROUP BY email;
 COMMIT;
+
+DELETE cancel FROM silverpop_update_world t INNER JOIN cancel_reason cancel ON t.email = cancel.email;
+INSERT INTO cancel_reason
+SELECT recur.email,
+  -- this list is defined / hard-coded in WMFHook/QuickForm
+  -- the use of MAX here is on the off change there are 2 cancel reasons
+  -- on exactly the same date & for FULL GROUP BY compliance - but it does nothing really.
+  MAX(
+  CASE
+    WHEN r.cancel_reason = 'Other And Unspecified' THEN 'other_and_unspecified'
+    WHEN r.cancel_reason = 'Financial Reasons' THEN 'financial_reasons'
+    WHEN r.cancel_reason = 'Duplicate recurring donation' THEN 'duplicate_recurring_donation'
+    WHEN r.cancel_reason = 'Wikipedia content related complaint' THEN 'wikipedia_content_related_complaint'
+    WHEN r.cancel_reason = 'Wikimedia Foundation related complaint' THEN 'wikimedia_foundation_related_complaint'
+    WHEN r.cancel_reason = 'Lack of donation management tools' THEN 'lack_of_donation_management_tools'
+    WHEN r.cancel_reason = 'Matching Gift' THEN 'matching_gift'
+    WHEN r.cancel_reason = 'Unintended recurring donation' THEN 'unintended_recurring_donation'
+    WHEN r.cancel_reason = 'Chapter' THEN 'chapter'
+    WHEN r.cancel_reason = 'Update' THEN 'update'
+    ELSE 'not_communicated_lapsed'
+  END) as most_recent_cancel_reason
+FROM silverpop_has_recur recur
+INNER JOIN civicrm.civicrm_email e
+  ON e.email = recur.email AND is_primary = 1
+INNER JOIN civicrm.civicrm_contribution_recur r
+  ON r.contact_id = e.contact_id AND cancel_date IS NOT NULL
+WHERE most_recent_cancel_date > DATE_SUB(foundation_recurring_latest_donation_date, INTERVAL 6 WEEK)
+  AND most_recent_cancel_date = r.cancel_date
+-- DR were not entering this in a curated way before June / July 2024
+-- so any data before that is likely inaccurate - it is probably easier
+-- to leave out for now & add more in if stakeholders confirm they want more.
+  AND r.cancel_date > '2024-06-01'
+GROUP BY recur.email;
 
 BEGIN;
 -- Delete recent rows from export table (make way for updated version).
@@ -703,7 +740,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     all_funds_total_2025_2026 as both_funds_usd_total_fy2526,
     IFNULL(gift.matching_gifts_provider_info_url, '') as matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
-    IFNULL(gift.online_form_url, '') matching_gifts_online_form_url
+    IFNULL(gift.online_form_url, '') matching_gifts_online_form_url,
+    IFNULL(most_recent_cancel_reason, '') most_recent_cancel_reason
   FROM silverpop_export e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
@@ -712,6 +750,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN preference_tags pt ON pt.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
   LEFT JOIN civicrm.civicrm_contribution_recur cr ON e.foundation_recurring_latest_contribution_recur_id = cr.id
+  LEFT JOIN cancel_reason ON cancel_reason.email = e.email
   LEFT JOIN civicrm.civicrm_payment_processor pp ON cr.payment_processor_id = pp.id;
 
 SET @sql =CONCAT("CREATE OR REPLACE VIEW silverpop_export_view AS
@@ -784,6 +823,7 @@ firstname,
 gender,
 lastname,
 latest_optin_response,
+most_recent_cancel_reason,
 postal_code,
 preferences_tags,
 state,
