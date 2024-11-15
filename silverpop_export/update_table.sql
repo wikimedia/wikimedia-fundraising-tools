@@ -380,6 +380,7 @@ SELECT recur.email,
 FROM silverpop_has_recur recur
 INNER JOIN civicrm.civicrm_email e
   ON e.email = recur.email AND is_primary = 1
+INNER JOIN silverpop_update_world t ON t.email = e.email
 INNER JOIN civicrm.civicrm_contribution_recur r
   ON r.contact_id = e.contact_id AND cancel_date IS NOT NULL
 WHERE most_recent_cancel_date > DATE_SUB(foundation_recurring_latest_donation_date, INTERVAL 6 WEEK)
