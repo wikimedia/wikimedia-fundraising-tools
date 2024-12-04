@@ -375,6 +375,7 @@ SELECT recur.email,
     WHEN r.cancel_reason = 'Unintended recurring donation' THEN 'unintended_recurring_donation'
     WHEN r.cancel_reason = 'Chapter' THEN 'chapter'
     WHEN r.cancel_reason = 'Update' THEN 'update'
+    WHEN r.cancel_reason = 'Frequency' THEN 'frequency'
     ELSE 'not_communicated_lapsed'
   END) as most_recent_cancel_reason
 FROM silverpop_has_recur recur
