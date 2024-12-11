@@ -332,3 +332,18 @@ CREATE TABLE `civicrm_payment_processor` (
     `id` int(10) unsigned NOT NULL,
     `name` varchar(64)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE if EXISTS civicrm_value_1_gift_data_7;
+CREATE TABLE `civicrm_value_1_gift_data_7` (
+`id` int(10) unsigned NOT NULL,
+`entity_id` int(10) unsigned NOT NULL,
+`fund` varchar(255) DEFAULT 'Unrestricted - General',
+`campaign` varchar(255) DEFAULT 'Individual Gift',
+`appeal` varchar(255) DEFAULT NULL,
+`letter_code` varchar(255) DEFAULT NULL,
+`thank__you_stage_53` varchar(255) DEFAULT 'Development_Stage',
+`donor_specified_340` varchar(255) DEFAULT NULL,
+`package` varchar(255) DEFAULT NULL,
+`channel` varchar(255) DEFAULT NULL,
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
