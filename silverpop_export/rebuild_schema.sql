@@ -124,19 +124,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   INDEX(endowment_highest_usd_amount)
 ) COLLATE 'utf8mb4_unicode_ci';
 
-CREATE TABLE IF NOT EXISTS `silverpop_export_matching_gift`
-(
-  `employer_id` INT(10) UNSIGNED,
-  `employer_name` VARCHAR(255),
-  `matching_gifts_provider_info_url` VARCHAR(255),
-  `guide_url` VARCHAR(255),
-  `online_form_url` VARCHAR(255),
-  `minimum_gift_matched_usd` DECIMAL(20, 2),
-  `match_policy_last_updated` DATETIME,
-  INDEX mg_employer_id (`employer_id`)
-) DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS silverpop_export
 (
   id INT UNSIGNED PRIMARY KEY, -- This is actually civicrm_email.id

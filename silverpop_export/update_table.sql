@@ -1,23 +1,4 @@
 SET autocommit = 1;
-INSERT INTO silverpop_export_matching_gift (
-  employer_id,
-  employer_name,
-  matching_gifts_provider_info_url,
-  guide_url,
-  online_form_url,
-  minimum_gift_matched_usd,
-  match_policy_last_updated
-)
-SELECT
-    entity_id,
-    name_from_matching_gift_db,
-    matching_gifts_provider_info_url,
-    guide_url,
-    online_form_url,
-    minimum_gift_matched_usd,
-    match_policy_last_updated
-FROM
-    civicrm.civicrm_value_matching_gift;
 
 -- Updates the silverpop_export table
 
@@ -160,17 +141,20 @@ INSERT INTO silverpop_export_latest (
    email,
    latest_currency,
    latest_currency_symbol,
-   latest_native_amount
+   latest_native_amount,
+   latest_donation_source
 )
   SELECT
     t.email,
     MAX(extra.original_currency) as latest_currency,
     MAX(cur.symbol) as latest_currency_symbol,
-    MAX(extra.original_amount) as latest_native_amount
+    MAX(extra.original_amount) as latest_native_amount,
+    MAX(gift.channel)  as latest_donation_source
   FROM silverpop_update_world t
     INNER JOIN silverpop_export_stat export ON t.email = export.email
     LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
     LEFT JOIN civicrm.civicrm_contribution c ON c.contact_id = email.contact_id
+    LEFT JOIN civicrm.civicrm_value_1_gift_data_7 gift ON gift.entity_id = c.id
     LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
     LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
     WHERE c.receive_date = export.foundation_last_donation_date
@@ -228,7 +212,8 @@ INSERT INTO silverpop_endowment_latest (
   email,
   endowment_latest_currency,
   endowment_latest_currency_symbol,
-  endowment_latest_native_amount
+  endowment_latest_native_amount,
+  endowment_latest_donation_source
 )
 SELECT
   email.email,
@@ -238,11 +223,13 @@ SELECT
   -- so the value of handling currency better here is low.
   MAX(extra.original_currency) as endowment_latest_currency,
   MAX(cur.symbol) as endowment_latest_currency_symbol,
-  MAX(extra.original_amount) as endowment_latest_native_amount
+  MAX(extra.original_amount) as endowment_latest_native_amount,
+  MAX(gift.channel) as endowment_latest_donation_source
 FROM silverpop_update_world t
         INNER JOIN silverpop_export_stat export ON t.email = export.email
         LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
         LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
+        LEFT JOIN civicrm.civicrm_value_1_gift_data_7 gift ON gift.entity_id = c.id
         LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
         LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
 WHERE c.receive_date = export.endowment_last_donation_date
@@ -730,7 +717,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_latest_currency_symbol, endowment_latest_currency_symbol)
      as both_funds_latest_currency_symbol,
     e.modified_date,
-    '' as both_funds_latest_donation_source,
+    IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , COALESCE(latest_donation_source, ''), COALESCE(endowment_latest_donation_source, ''))
+       as both_funds_latest_donation_source,
     '' as both_funds_latest_payment_method,
     all_funds_total_2018_2019 as both_funds_usd_total_fy1819,
     all_funds_total_2019_2020 as both_funds_usd_total_fy1920,
@@ -748,6 +736,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
+  LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
   LEFT JOIN preference_tags pt ON pt.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id

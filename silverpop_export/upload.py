@@ -20,16 +20,14 @@ def upload_most_recent():
     # updatesglob = os.path.join(config.working_path, "DatabaseUpdate-*.csv")
     unsubglob = os.path.join(config.working_path, "Unsubscribes-*.csv")
     optoutglob = os.path.join(config.working_path, "Optout-*.csv")
-    matchinggiftsglob = os.path.join(config.working_path, "MatchingGifts-*.csv")
     checksumemailsglob = os.path.join(config.working_path, "ChecksumEmails-*.csv")
     # Find most recently created export files.
     # updatefile = max(glob.iglob(updatesglob), key=os.path.getctime)
     unsubfile = max(glob.iglob(unsubglob), key=os.path.getctime)
-    matchinggiftsfile = max(glob.iglob(matchinggiftsglob), key=os.path.getctime)
     optoutfile = max(glob.iglob(optoutglob), key=os.path.getctime)
     checksumemailsfile = max(glob.iglob(checksumemailsglob), key=os.path.getctime)
 
-    upload([unsubfile, matchinggiftsfile, optoutfile, checksumemailsfile])
+    upload([unsubfile, optoutfile, checksumemailsfile])
 
 
 def upload(files=None):

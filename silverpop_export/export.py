@@ -36,10 +36,6 @@ def export_all():
         config.working_path,
         'Optout-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
     )
-    matchingiftsfile = os.path.join(
-        config.working_path,
-        'MatchingGifts-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
-    )
     checksumemailsfile = os.path.join(
         config.working_path,
         'ChecksumEmails-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
@@ -48,7 +44,6 @@ def export_all():
     export_data(output_path=updatefile)
     export_unsubscribes(output_path=unsubfile)
     export_unsubscribes(output_path=optoutfile)
-    export_matching_gifts(output_path=matchingiftsfile)
     export_checksum_email(output_path=checksumemailsfile)
     rotate_files()
 
@@ -121,23 +116,6 @@ def export_unsubscribes(output_path=None):
         query=exportq,
         output=output_path,
         sort_by_index="id"
-    )
-
-
-def export_matching_gifts(output_path=None):
-    config = process.globals.get_config()
-
-    db = DbConnection(**config.silverpop_db)
-
-    log.info("Starting matching gifts data export")
-    exportq = DbQuery()
-    exportq.tables.append('silverpop_export_matching_gift')
-    exportq.columns.append('*')
-    run_export_query(
-        db=db,
-        query=exportq,
-        output=output_path,
-        sort_by_index="employer_id"
     )
 
 
