@@ -1,5 +1,6 @@
 SET autocommit = 1;
-
+SELECT @recurringUpgradeType := value FROM civicrm_option_value WHERE name = 'Recurring Upgrade';
+SELECT @recurringUpgradeTypeDecline := value FROM civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
 -- Updates the silverpop_export table
 
 -- Explanation of tables (as of now, still being re-worked).
@@ -323,10 +324,10 @@ INSERT INTO silverpop_has_recur (
      INNER JOIN civicrm.civicrm_activity a
          ON a.id = ac.activity_id
             AND (
-                -- Either upgraded (165) at any time in the past
-                a.activity_type_id = 165 OR (
-                    -- Or declined to upgrade (166) in the past year
-                    a.activity_type_id = 166 AND
+                -- Either upgraded at any time in the past
+                a.activity_type_id = @recurringUpgradeType OR (
+                    -- Or declined to upgrade in the past year
+                    a.activity_type_id = @recurringUpgradeTypeDecline AND
                     a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
                 )
             )

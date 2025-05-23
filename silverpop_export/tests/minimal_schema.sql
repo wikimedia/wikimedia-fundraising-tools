@@ -347,3 +347,29 @@ CREATE TABLE `civicrm_value_1_gift_data_7` (
 `channel` varchar(255) DEFAULT NULL,
 PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_option_value;
+
+CREATE TABLE `civicrm_option_value` (
+`id` int(10) unsigned NOT NULL,
+`option_group_id` int(10) unsigned COMMENT 'Group which this option belongs to.',
+`label` varchar(512) DEFAULT NULL,
+`value` varchar(512) DEFAULT NULL,
+`name` varchar(255) DEFAULT NULL COMMENT 'Stores a fixed (non-translated) name for this option value. Lookup functions should use the name as the key for the option value row.',
+`grouping` varchar(64) DEFAULT NULL COMMENT 'Use to sort and/or set display properties for sub-set(s) of options within an option group. EXAMPLE: Use for college_interest field, to differentiate partners from non-partners.',
+`filter` int(10) unsigned DEFAULT 0 COMMENT 'Bitwise logic can be used to create subsets of options within an option_group for different uses.',
+`is_default` tinyint(4) DEFAULT 0 COMMENT 'Is this the default option for the group?',
+`weight` int(10) unsigned NOT NULL COMMENT 'Controls display sort order.',
+`description` mediumtext DEFAULT NULL,
+`is_optgroup` tinyint(4) DEFAULT 0 COMMENT 'Is this row simply a display header? Expected usage is to render these as OPTGROUP tags within a SELECT field list of options?',
+`is_reserved` tinyint(4) DEFAULT 0 COMMENT 'Is this a predefined system object?',
+`is_active` tinyint(4) DEFAULT 1 COMMENT 'Is this option active?',
+`component_id` int(10) unsigned DEFAULT NULL COMMENT 'Component that this option value belongs/caters to.',
+`domain_id` int(10) unsigned DEFAULT NULL COMMENT 'Which Domain is this option value for',
+`visibility_id` int(10) unsigned DEFAULT NULL,
+`icon` varchar(255) DEFAULT NULL COMMENT 'crm-i icon class',
+`color` varchar(255) DEFAULT NULL COMMENT 'Hex color value e.g. #ffffff'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(1, 165, 'Recurring Upgrade', 1);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(2, 166, 'Recurring Upgrade Decline', 2);
