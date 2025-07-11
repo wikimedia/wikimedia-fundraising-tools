@@ -19,8 +19,8 @@ def setup():
     global db_name
     # FIXME: parameterize test configuration better
     db_pass = None
-    if 'EXECUTOR_NUMBER' in os.environ:
-        # We're running under Jenkins.  Assume things.
+    if 'CI' in os.environ:
+        # We're running under CI.  Assume things.
         db_name = "test"
         db_user = "root"
         db_host = "127.0.0.1"
