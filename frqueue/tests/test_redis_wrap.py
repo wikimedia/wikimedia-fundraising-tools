@@ -1,5 +1,5 @@
 import json
-import mock
+from unittest import mock
 from frqueue.redis_wrap import Redis
 
 # TODO:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from decimal import Decimal
-import mock
+from unittest import mock
 from nose.tools import assert_equal
 import pymysql
 import os
