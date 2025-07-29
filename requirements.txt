@@ -7,4 +7,3 @@ PyYAML>=3.11
 redis
 # scipy - just use the package.
 simplemediawiki
-pynose
