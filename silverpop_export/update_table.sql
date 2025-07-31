@@ -496,7 +496,7 @@ INSERT INTO silverpop_export_checksum_email (
 )
 SELECT
     email,
-    CONCAT(MD5(CONCAT(contact_hash, '_', contact_id, '_', UNIX_TIMESTAMP(), '_', '720')),"_",UNIX_TIMESTAMP(),"_","720")
+    CONCAT(MD5(CONCAT(contact_hash, '_', contact_id, '_', UNIX_TIMESTAMP(), '_', '1440')),"_",UNIX_TIMESTAMP(),"_","1440")
 FROM
     silverpop_export
 COMMIT;
