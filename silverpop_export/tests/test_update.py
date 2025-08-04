@@ -2,7 +2,6 @@
 import datetime
 from decimal import Decimal
 from unittest import mock
-from nose.tools import assert_equal
 import pymysql
 import os
 import warnings
@@ -10,13 +9,11 @@ import warnings
 import database.db
 import silverpop_export.update
 
-conn = None
-db_name = None
+import pytest
 
 
-def setup():
-    global conn
-    global db_name
+@pytest.fixture()
+def testdb():
     # FIXME: parameterize test configuration better
     db_pass = None
     if 'CI' in os.environ:
@@ -39,20 +36,26 @@ def setup():
     conn.execute("create database " + db_name)
     conn.db_conn.select_db(db_name)
 
+    return [conn, db_name]
 
-def test_test_setup():
+
+def test_test_setup(testdb):
     '''
     Set up the civcrm and export databases and run the update with no data.
     '''
-    run_update_with_fixtures(fixture_queries=[])
+    conn, db_name = testdb
+    print("Conn:", conn, "dbname:", db_name)
+
+    run_update_with_fixtures(testdb, fixture_queries=[])
 
 
-def test_duplicate():
+def test_duplicate(testdb):
     '''
     Test that we export one record for a duplicate contact.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0),
         (2, 'person1@localhost', 1, 0);
@@ -64,15 +67,16 @@ def test_duplicate():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(*) from silverpop_export")
-    assert_equal(cursor.fetchone(), (1,))
+    assert cursor.fetchone() == (1,)
 
 
-def test_tag():
+def test_tag(testdb):
     '''
     Test that we export preference tags.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0),
         (2, 'person1@localhost', 1, 0);
@@ -89,16 +93,17 @@ def test_tag():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select preferences_tags from silverpop_export_view WHERE email = 'person1@localhost'")
-    assert_equal(cursor.fetchone(), ('exclude-from-6C-annual-campaigns;exclude-from-direct-mail-campaigns',))
+    assert cursor.fetchone() == ('exclude-from-6C-annual-campaigns;exclude-from-direct-mail-campaigns',)
 
 
-def test_no_donations():
+def test_no_donations(testdb):
     '''
     Test that we set the donation-related fields correctly when a contact has
     no donations.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -123,15 +128,16 @@ def test_no_donations():
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
                 '')
-    assert_equal(actual, expected)
+    assert actual == expected
 
 
-def test_refund_history():
+def test_refund_history(testdb):
     '''
     Test that we don't include refunded donations in a donor's history
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -153,16 +159,17 @@ def test_refund_history():
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_highest_usd_amount, lifetime_usd_total, donation_count, foundation_latest_currency, foundation_latest_native_amount, foundation_last_donation_date  from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
-    assert_equal(cursor.fetchone(), expected)
+    assert cursor.fetchone() == expected
 
 
-def test_first_donation():
+def test_first_donation(testdb):
     """
     Test that we correctly calculate the first donation date,
     not counting refunded donations.
     """
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -186,15 +193,16 @@ def test_first_donation():
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_first_donation_date from silverpop_export")
     expected = (datetime.datetime(2016, 5, 5),)
-    assert_equal(cursor.fetchone(), expected)
+    assert cursor.fetchone() == expected
 
 
-def test_native_amount():
+def test_native_amount(testdb):
     '''
     Test that we correctly calculate the highest native amount and currency
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -219,15 +227,16 @@ def test_native_amount():
     cursor.execute("select foundation_highest_usd_amount, foundation_highest_native_amount, foundation_highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
     actual = cursor.fetchone()
-    assert_equal(actual, expected)
+    assert actual == expected
 
 
-def test_currency_symbol():
+def test_currency_symbol(testdb):
     '''
     Test that we correctly pull in the currency symbol for the latest donation
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -252,15 +261,16 @@ def test_currency_symbol():
     cursor.execute("select foundation_latest_currency, foundation_latest_currency_symbol from silverpop_export")
     expected = ('GBP', u'£')
     actual = cursor.fetchone()
-    assert_equal(actual, expected)
+    assert actual == expected
 
 
-def test_export_hash():
+def test_export_hash(testdb):
     '''
     Test that we export the contact_hash into silverpop_export.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -270,15 +280,16 @@ def test_export_hash():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select contact_hash from silverpop_export")
-    assert_equal(cursor.fetchone(), ('abfe829234baa87s76d',))
+    assert cursor.fetchone() == ('abfe829234baa87s76d',)
 
 
-def test_bad_ct_country():
+def test_bad_ct_country(testdb):
     '''
     Test that we use the Civi address in place of XX civicrm_contribution_tracking
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -303,15 +314,16 @@ def test_bad_ct_country():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select country from silverpop_export")
-    assert_equal(cursor.fetchone(), ('PE',))
+    assert cursor.fetchone() == ('PE',)
 
 
-def test_exclusion():
+def test_exclusion(testdb):
     '''
     Test that we exclude former email addresses from the log table.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0);
     """, """
@@ -325,17 +337,18 @@ def test_exclusion():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select email from silverpop_export")
-    assert_equal(cursor.fetchone(), ('person1@localhost',))
+    assert cursor.fetchone() == ('person1@localhost',)
     cursor.execute("select email from silverpop_excluded")
-    assert_equal(cursor.fetchone(), ('formerperson1@localhost',))
+    assert cursor.fetchone() == ('formerperson1@localhost',)
 
 
-def test_optin_negative_exclusion():
+def test_optin_negative_exclusion(testdb):
     '''
     Test that we exclude former email addresses from the log table.
     '''
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'optinnull@localhost', 1, 0),
         (2, 'optinone@localhost', 1, 0),
@@ -358,18 +371,20 @@ def test_optin_negative_exclusion():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(email) from silverpop_export")
-    assert_equal(cursor.fetchone(), (2,))
+    assert cursor.fetchone() == (2,)
     cursor.execute("select count(email) from silverpop_excluded")
-    assert_equal(cursor.fetchone(), (1,))
+    assert cursor.fetchone() == (1,)
     cursor.execute("select email from silverpop_excluded order by id desc")
-    assert_equal(cursor.fetchone(), ('optinzero@localhost',))
+    assert cursor.fetchone() == ('optinzero@localhost',)
 
 
-def test_employer_id_filter():
+def test_employer_id_filter(testdb):
     '''
     Test that we only export employer ID and name when provided_by_donor is true
     '''
-    run_update_with_fixtures(fixture_queries=["""
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_relationship_type (id, name_a_b) values
             (4, 'Sibling of'),
             (5, 'Employee of');
@@ -403,17 +418,18 @@ def test_employer_id_filter():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(employer_id) from silverpop_export")
-    assert_equal(cursor.fetchone(), (1,))
+    assert cursor.fetchone() == (1,)
     cursor.execute("select employer_id, employer_name from silverpop_export where email='customfieldone@localhost'")
-    assert_equal(cursor.fetchone(), (1, 'Blah de Blah',))
+    assert cursor.fetchone() == (1, 'Blah de Blah',)
 
 
-def test_multiple_recurring():
+def test_multiple_recurring(testdb):
     """
     Test that we correctly calculate the number of active recurrings and the latest ID
     """
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_email (contact_id, email, is_primary, on_hold) values
             (1, 'person1@localhost', 1, 0);
         """, """
@@ -435,15 +451,16 @@ def test_multiple_recurring():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
-    assert_equal(cursor.fetchone(), (2, 3,))
+    assert cursor.fetchone() == (2, 3,)
 
 
-def test_multiple_only_inactive_recurring():
+def test_multiple_only_inactive_recurring(testdb):
     """
     Test that we correctly calculate the number of inactive recurrings and the latest ID
     """
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_email (contact_id, email, is_primary, on_hold) values
             (1, 'person1@localhost', 1, 0);
         """, """
@@ -465,16 +482,17 @@ def test_multiple_only_inactive_recurring():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
-    assert_equal(cursor.fetchone(), (0, 5,))
+    assert cursor.fetchone() == (0, 5,)
 
 
-def test_recurring_upgrade_eligibility():
+def test_recurring_upgrade_eligibility(testdb):
     """
     Test that we correctly calculate who is eligible for a recurring upgrade solicitation.
     PayPal donors are not, nor are donors with multiple recurrings or any upgrade activities.
     """
+    conn, db_name = testdb
 
-    run_update_with_fixtures(fixture_queries=["""
+    run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_payment_processor (id, name) values
             (1, 'adyen'),
             (2, 'paypal');
@@ -518,16 +536,18 @@ def test_recurring_upgrade_eligibility():
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_recurring_active_count, recurring_has_upgrade_activity from silverpop_export where contact_id=2")
-    assert_equal(cursor.fetchone(), (1, 0,))
+    assert cursor.fetchone(), (1, 0,)
     cursor.execute("select ContactID, AF_recurring_eligible_for_upgrade from silverpop_export_view order by ContactID")
-    assert_equal(cursor.fetchone(), (1, 'No',))
-    assert_equal(cursor.fetchone(), (2, 'Yes',))
-    assert_equal(cursor.fetchone(), (3, 'No',))
-    assert_equal(cursor.fetchone(), (4, 'No',))
-    assert_equal(cursor.fetchone(), (5, 'No',))
+    assert cursor.fetchone() == (1, 'No',)
+    assert cursor.fetchone() == (2, 'Yes',)
+    assert cursor.fetchone() == (3, 'No',)
+    assert cursor.fetchone() == (4, 'No',)
+    assert cursor.fetchone() == (5, 'No',)
 
 
-def run_update_with_fixtures(fixture_path=None, fixture_queries=None):
+def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
+    conn, db_name = testdb
+
     with mock.patch("database.db.Connection") as MockConnection:
 
         # Always return our test database connection.

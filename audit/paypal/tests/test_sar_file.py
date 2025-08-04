@@ -1,12 +1,8 @@
 import csv
 from unittest.mock import patch
-import nose.tools
 import os
 
 import audit.paypal.SarFile
-
-# weird thing we have to do to get better assert_equals feedback
-nose.tools.assert_equals.__self__.maxDiff = None
 
 
 def get_csv_row(filename):
@@ -35,9 +31,9 @@ def test_subscr_signup(MockConfig, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     expected = {'subscr_id': 'S-7J123456DS987654B', 'txn_type': 'subscr_signup', 'currency': 'EUR', 'gross': 3.0, 'frequency_unit': 'month', 'frequency_interval': '1', 'create_date': 1493539200, 'start_date': 1493539200, 'email': 'recurring.donor@example.com', 'first_name': 'Donantus', 'last_name': 'Recurricus', 'street_address': 'Rue Faux, 41', 'city': 'Paris', 'state_province': 'Paris', 'country': 'FR', 'postal_code': '12345', 'gateway': 'paypal'}
-    nose.tools.assert_equals('recurring', args[0][0])
+    assert 'recurring' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -59,6 +55,6 @@ def test_subscr_cancel(MockConfig, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     expected = {'subscr_id': 'S-7J123456DS987654B', 'txn_type': 'subscr_cancel', 'currency': 'EUR', 'gross': 3.0, 'frequency_unit': 'month', 'frequency_interval': '1', 'cancel_date': 1493539200, 'email': 'recurring.donor@example.com', 'first_name': 'Donantus', 'last_name': 'Recurricus', 'street_address': 'Rue Faux, 41', 'city': 'Paris', 'state_province': 'Paris', 'country': 'FR', 'postal_code': '12345', 'gateway': 'paypal'}
-    nose.tools.assert_equals('recurring', args[0][0])
+    assert 'recurring' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual

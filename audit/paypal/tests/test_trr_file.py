@@ -1,12 +1,9 @@
 import csv
 from unittest.mock import patch
-import nose.tools
 import os
 
 import audit.paypal.TrrFile
-
-# weird thing we have to do to get better assert_equals feedback
-nose.tools.assert_equals.__self__.maxDiff = None
+import pytest
 
 
 def get_base_row():
@@ -118,12 +115,8 @@ def test_recurring_charge_without_subscription(MockPaypalApi, MockGlobals, MockC
     MockCivicrm().transaction_exists.return_value = False
 
     parser = audit.paypal.TrrFile.TrrFile("dummy_path")
-    with nose.tools.assert_raises(Exception) as cm:
+    with pytest.raises(match="Missing field subscr_id"):
         parser.parse_line(row)
-
-    # Should have failed with a specific missing field error.
-    # FIXME: Annoyingly, this masks any other, unexpected exception.
-    nose.tools.assert_equals("Missing field subscr_id", str(cm.exception))
 
     # Make sure we didn't try to send anything to the queue.
     MockRedis().send.assert_has_calls([])
@@ -148,7 +141,7 @@ def test_refund_send(MockGlobals, MockCivicrm, MockRedis):
     assert args[0][0] == 'refund'
     expected = {'last_name': 'Man', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'gateway_refund_id': 'AS7D98AS7D9A8S7D9AS', 'gateway': 'paypal', 'state_province': '', 'gross': 10.0, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'gross_currency': 'USD', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1474743301, 'gateway_parent_id': '3GJH3GJ3334214812', 'type': 'refund', 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -169,17 +162,17 @@ def test_ec_donation_send(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595, 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '1V551844CE5526421', 'country': 'US', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
-    nose.tools.assert_equals('donations', args[0][0])
+    assert 'donations' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
     # We should look up donations under both gateway codes in case we guessed wrong
-    nose.tools.assert_equals(2, MockCivicrm().transaction_exists.call_count)
+    assert 2 == MockCivicrm().transaction_exists.call_count
 
     # The first lookup should use the more likely gateway code. The second lookup
     # (which is the one stored in call_args) should use the other gateway code.
     exist_args = MockCivicrm().transaction_exists.call_args
-    nose.tools.assert_equals({'gateway_txn_id': '1V551844CE5526421', 'gateway': 'paypal'}, exist_args.kwargs)
+    assert {'gateway_txn_id': '1V551844CE5526421', 'gateway': 'paypal'} == exist_args.kwargs
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -200,7 +193,7 @@ def test_tag_givelively(MockConfig, MockCivicrm, MockRedis):
     parser.parse_line(row)
 
     # Did we send it?
-    nose.tools.assert_equals(1, MockRedis().send.call_count)
+    assert 1 == MockRedis().send.call_count
     args = MockRedis().send.call_args
     expected = {'last_name': 'Who', 'city': 'Whoville', 'payment_method': 'paypal',
                 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1488477595,
@@ -209,9 +202,9 @@ def test_tag_givelively(MockConfig, MockCivicrm, MockRedis):
                 'supplemental_address_1': '', 'settled_date': 1488477595, 'email': 'donor@generous.net',
                 'street_address': '321 Notta Boulevard', 'direct_mail_appeal': 'TeddyBearsPicnic',
                 'no_thank_you': 'GiveLively'}
-    nose.tools.assert_equals('donations', args[0][0])
+    assert 'donations' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -231,7 +224,8 @@ def test_ec_donation_denied_not_sent(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    nose.tools.assert_equals(None, args)
+
+    assert args is None
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -252,9 +246,9 @@ def test_ec_recurring_donation_send(MockGlobals, MockCivicrm, MockRedis):
     # Did we send it?
     args = MockRedis().send.call_args
     expected = {'txn_type': 'subscr_payment', 'subscr_id': 'I-SS5RD7POSD46', 'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1488634565, 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '4JH2438EE9876546W', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1488634565, 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
-    nose.tools.assert_equals('recurring', args[0][0])
+    assert 'recurring' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -277,7 +271,7 @@ def test_ec_refund_send(MockGlobals, MockCivicrm, MockRedis):
     expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': 'Whoville', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '97211', 'date': 1490200499, 'gateway_refund_id': '3HD08833MR473623T', 'gateway': 'paypal_ec', 'state_province': 'OR', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '3HD08833MR473623T', 'gross_currency': 'JPY', 'country': 'US', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200499, 'gateway_parent_id': '1V551844CE5526421', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '321 Notta Boulevard', 'contribution_tracking_id': '46239229', 'order_id': '46239229.1'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -300,7 +294,7 @@ def test_ec_recurring_refund_send(MockGlobals, MockCivicrm, MockRedis):
     expected = {'last_name': 'Who', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'JPY', 'postal_code': '', 'date': 1490200431, 'gateway_refund_id': '8WG23468CX793000L', 'gateway': 'paypal_ec', 'state_province': '', 'gross': 150.0, 'first_name': 'Cindy Lou', 'fee': 43.0, 'gateway_txn_id': '8WG23468CX793000L', 'gross_currency': 'JPY', 'country': '', 'payment_submethod': '', 'note': 'refund', 'supplemental_address_1': '', 'settled_date': 1490200431, 'gateway_parent_id': '4JH2438EE9876546W', 'type': 'refund', 'email': 'donor@generous.net', 'street_address': '', 'contribution_tracking_id': '45931681', 'order_id': '45931681.1'}
     assert args[0][0] == 'refund'
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -340,7 +334,7 @@ def test_recurring(MockGlobals, MockCivicrm, MockRedis):
     assert args[0][0] == 'recurring'
     expected = {'last_name': 'Man', 'txn_type': 'subscr_payment', 'no_thank_you': 'Audit configured not to send TY messages', 'city': '', 'payment_method': 'paypal', 'gateway_status': 'S', 'currency': 'USD', 'postal_code': '', 'date': 1474743301, 'subscr_id': '3GJH3GJ3334214812', 'gateway': 'paypal', 'state_province': '', 'gross': 0.1, 'first_name': 'Banana', 'fee': 0.55, 'gateway_txn_id': 'AS7D98AS7D9A8S7D9AS', 'country': '', 'payment_submethod': '', 'note': '', 'supplemental_address_1': '', 'settled_date': 1474743301, 'email': 'prankster@anonymous.net', 'street_address': '', 'contribution_tracking_id': '1234567', 'order_id': '1234567'}
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -359,7 +353,7 @@ def test_duplicate_recurring(MockGlobals, MockCivicrm, MockRedis):
 
     # Did we send it?
     args = MockRedis().send.call_args
-    nose.tools.assert_equals(None, args)
+    assert args is None
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -377,11 +371,11 @@ def test_reject(MockConfig, MockCivicrm, MockRedis):
     parser.parse_line(row)
 
     # We shouldn't even look up the transaction in the db
-    nose.tools.assert_equals(0, MockCivicrm().transaction_exists.call_count)
+    assert 0 == MockCivicrm().transaction_exists.call_count
 
     # Did we send it?
     args = MockRedis().send.call_args
-    nose.tools.assert_equals(None, args)
+    assert args is None
 
 
 @patch("frqueue.redis_wrap.Redis")
@@ -403,7 +397,7 @@ def test_tag_givingfund(MockConfig, MockCivicrm, MockRedis):
     parser.parse_line(row)
 
     # Did we send it?
-    nose.tools.assert_equals(1, MockRedis().send.call_count)
+    assert 1 == MockRedis().send.call_count
     args = MockRedis().send.call_args
     expected = {'no_thank_you': 'Audit configured not to send TY messages', 'payment_method': 'paypal',
                 'contact_id': 1234567, 'gateway_status': 'S', 'currency': 'JPY', 'date': 1488477595,
@@ -412,6 +406,6 @@ def test_tag_givingfund(MockConfig, MockCivicrm, MockRedis):
                 'contribution_tracking_id': '46239229', 'order_id': '46239229.1',
                 'Gift_Data.Appeal': 'White Mail', 'Gift_Data.Campaign': 'Donor Advised Fund',
                 'Gift_Data.Channel': 'Other Offline', 'Gift_Data.Fund': 'Major Gifts - CC104'}
-    nose.tools.assert_equals('donations', args[0][0])
+    assert 'donations' == args[0][0]
     actual = args[0][1]
-    nose.tools.assert_equals(expected, actual)
+    assert expected == actual

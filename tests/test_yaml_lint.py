@@ -1,19 +1,17 @@
+from glob import glob
 import os
+
+import pytest
 import yaml
 
-
-def test_valid_yaml():
-    basedir = os.path.realpath(os.path.join(__file__, '..', '..'))
-    yaml_files = []
-    for dirpath, dirnames, filenames in os.walk(basedir):
-        yaml_files.extend(
-            [os.path.join(dirpath, f) for f in filenames
-             if f.endswith('.yaml') or f.endswith('.yaml.example')]
-        )
-    for yaml_file in yaml_files:
-        yield is_valid_yaml, yaml_file
+_basedir = os.path.realpath(os.path.join(__file__, '..', '..'))
+yaml_files = (
+    glob(os.path.join(_basedir, '**/*.yaml.example'), recursive=True)
+    + glob(os.path.join(_basedir, '**/*.yaml'), recursive=True)
+)
 
 
-def is_valid_yaml(filename):
-    with open(filename, 'r') as f:
+@pytest.mark.parametrize("yaml_file", yaml_files)
+def test_is_valid_yaml(yaml_file):
+    with open(yaml_file, 'r') as f:
         yaml.safe_load(f)
