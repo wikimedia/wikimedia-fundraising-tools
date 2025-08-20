@@ -1,6 +1,6 @@
 SET autocommit = 1;
-SELECT @recurringUpgradeType := value FROM civicrm_option_value WHERE name = 'Recurring Upgrade';
-SELECT @recurringUpgradeTypeDecline := value FROM civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
+SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade';
+SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
 -- Updates the silverpop_export table
 
 -- Explanation of tables (as of now, still being re-worked).
