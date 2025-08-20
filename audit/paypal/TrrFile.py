@@ -309,6 +309,9 @@ class TrrFile(object):
             out['Gift_Data.Fund'] = 'Major Gifts - CC104'
 
     def is_reject(self, row):
+        # Discard Gravy txns based on Custom Field pattern matching
+        if len(row['Custom Field']) > 20 and row['Custom Field'].find('.') == -1 and not row['Custom Field'].isnumeric():
+            return True
         if not hasattr(self.config, 'rejects') or not isinstance(self.config.rejects, dict):
             return False
         for key in self.config.rejects:

@@ -409,3 +409,24 @@ def test_tag_givingfund(MockConfig, MockCivicrm, MockRedis):
     assert 'donations' == args[0][0]
     actual = args[0][1]
     assert expected == actual
+
+
+@patch("frqueue.redis_wrap.Redis")
+@patch("civicrm.civicrm.Civicrm")
+@patch("process.globals")
+def test_reject_gravy(MockGlobals, MockCivicrm, MockRedis):
+    '''
+    Test that we reject Gravy donations based on Custom Field pattern
+    '''
+    row = get_csv_row("gravy_donation")
+
+    parser = audit.paypal.TrrFile.TrrFile("dummy_path")
+
+    parser.parse_line(row)
+
+    # We shouldn't even look up the transaction in the db
+    assert 0 == MockCivicrm().transaction_exists.call_count
+
+    # Did we send it?
+    args = MockRedis().send.call_args
+    assert args is None
