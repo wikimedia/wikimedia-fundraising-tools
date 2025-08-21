@@ -51,7 +51,7 @@ SET @offSetInDays = 14;
 -- we could do these updates often -eg. hourly but would need to track last updated.
 INSERT INTO silverpop_excluded (email)
 SELECT DISTINCT e.email
-FROM log_civicrm.log_civicrm_email e
+FROM civicrm.log_civicrm_email e
 LEFT JOIN civicrm.civicrm_contact c ON c.id = e.contact_id
 -- see comment block for long discussion of this WHERE
 WHERE e.id <= (SELECT MAX(id) FROM silverpop_export_staging)
@@ -65,7 +65,7 @@ ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 -- Query OK, 1058 rows affected (2.32 sec)
 INSERT INTO silverpop_excluded (email)
 SELECT DISTINCT e.email
-FROM log_civicrm.log_civicrm_email e
+FROM civicrm.log_civicrm_email e
 WHERE e.id <= (SELECT MAX(id) FROM silverpop_export_staging)
 AND e.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
 ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
