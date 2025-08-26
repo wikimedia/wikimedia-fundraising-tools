@@ -48,7 +48,7 @@ BEGIN;
    endowment_first_donation_date,
    endowment_number_donations,
    donor_segment_id,
-   donor_status_id,
+   donor_status_bin,
    all_funds_total_2018_2019,
    all_funds_total_2019_2020,
    all_funds_total_2020_2021,
@@ -77,7 +77,27 @@ BEGIN;
     -- push up the field name (Major Donor) - hence the type is varchar. But, we need to do
     -- any comparisons directly on the wmf_donor table, where it is an int.
     MIN(donor.donor_segment_id) as donor_segment,
-    MIN(donor.donor_status_id) as donor_status,
+    -- Status values are trickier - if we want to combine one lybunt (35) record
+    -- and one new (25) record, the correct answer is 'consecutive' (20). So
+    -- we translate to bitwise flags for the merge, then check flags in the
+    -- output view.
+    BIT_OR(
+      CASE
+        WHEN donor.donor_status_id =  2 THEN 256 -- B'100000000'
+        WHEN donor.donor_status_id =  4 THEN 128 -- B'010000000'
+        WHEN donor.donor_status_id =  6 THEN  64 -- B'001000000'
+        WHEN donor.donor_status_id =  8 THEN  32 -- B'000100000'
+        WHEN donor.donor_status_id = 20 THEN  24 -- B'000011000'
+        WHEN donor.donor_status_id = 25 THEN  16 -- B'000010000'
+        WHEN donor.donor_status_id = 30 THEN  20 -- B'000010100'
+        WHEN donor.donor_status_id = 35 THEN   8 -- B'000001000'
+        WHEN donor.donor_status_id = 50 THEN   4 -- B'000000100'
+        WHEN donor.donor_status_id = 60 THEN   2 -- B'000000010'
+        WHEN donor.donor_status_id = 70 THEN   1 -- B'000000001'
+        WHEN donor.donor_status_id = 1000 THEN 0
+        ELSE 0
+      END
+    ) as donor_status_bin,
     COALESCE(SUM(donor.all_funds_total_2018_2019), 0) as all_funds_total_2018_2019,
     COALESCE(SUM(donor.all_funds_total_2019_2020), 0) as all_funds_total_2019_2020,
     COALESCE(SUM(donor.all_funds_total_2020_2021), 0) as all_funds_total_2020_2021,
@@ -421,7 +441,7 @@ INSERT INTO silverpop_export (
   foundation_latest_currency,foundation_latest_currency_symbol,foundation_latest_native_amount,
   foundation_last_donation_date, foundation_first_donation_date,
   city,country,state,postal_code,
-  donor_segment_id, donor_status_id,
+  donor_segment_id, donor_status_bin,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount,
   all_funds_total_2018_2019,
@@ -455,7 +475,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(lt.latest_native_amount, 0) as foundation_latest_native_amount,
   foundation_last_donation_date,foundation_first_donation_date,
   addr.city,addr.country,addr.state,addr.postal_code,
-  stats.donor_segment_id, stats.donor_status_id,
+  stats.donor_segment_id, stats.donor_status_bin,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
@@ -572,7 +592,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_segment_id = 1000 THEN 'Non Donor'
         ELSE 'Non Donor'
         END as donor_segment,
-    COALESCE(donor_status_id, 1000) as donor_status_id,
+    donor_status_id,
     CASE
         WHEN donor_status_id = 2 THEN 'Active Recurring'
         WHEN donor_status_id = 4 THEN 'Delinquent Recurring'
@@ -729,7 +749,29 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url,
     IFNULL(most_recent_cancel_reason, '') most_recent_cancel_reason
-  FROM silverpop_export e
+  FROM (
+    SELECT *,
+    CASE
+      WHEN donor_status_bin & 256 /* B'100000000' */ THEN 2
+      WHEN donor_status_bin & 128 /* B'010000000' */ THEN 4
+      WHEN donor_status_bin &  64 /* B'001000000' */ THEN 6
+      WHEN donor_status_bin &  32 /* B'000100000' */ THEN 8
+      -- Has a donation this year and one last year (and potentially others)
+      WHEN donor_status_bin & 24 = 24 /* B'000011000' */ THEN 20
+      -- Note exact match, just one donation this year and nothing else
+      WHEN donor_status_bin =  16 /* B'000010000' */ THEN 25
+      -- Has a donation this year (and something else, since above not matched)
+      WHEN donor_status_bin &  16 /* B'000010000' */ THEN 30
+      -- Has a donation last year (and maybe before). Not this year, since above not matched)
+      WHEN donor_status_bin &   8 /* B'000001000' */ THEN 35
+      -- Last donation two years ago
+      WHEN donor_status_bin &   4 /* B'000000100' */ THEN 50
+      -- Last donation up to 5 years ago
+      WHEN donor_status_bin &   2 /* B'000000010' */ THEN 60
+      WHEN donor_status_bin &   1 /* B'000000001' */ THEN 70
+      ELSE 1000
+  END as donor_status_id
+  FROM silverpop_export) AS e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email

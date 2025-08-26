@@ -545,6 +545,61 @@ def test_recurring_upgrade_eligibility(testdb):
     assert cursor.fetchone() == (5, 'No',)
 
 
+def test_merge_status(testdb):
+    '''
+    Test that we correctly merge status IDs
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'neworlybunt@localhost', 1, 0),
+        (2, 'neworlybunt@localhost', 1, 0),
+        (3, 'newordeeplapsed@localhost', 1, 0),
+        (4, 'newordeeplapsed@localhost', 1, 0),
+        (5, 'newornondonor@localhost', 1, 0),
+        (6, 'newornondonor@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (6, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2025-01-01', 10, 'xyz123', 1, 1),
+        (2, 2, '2024-01-01', 9, 'nnn777', 1, 1),
+        (3, 3, '2025-01-01', 10, 'aaa123', 1, 1),
+        (4, 4, '2018-01-01', 9, 'bbb777', 1, 1),
+        (5, 5, '2025-01-01', 10, 'ccc123', 1, 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 10, 'USD'),
+        (2, 9, 'USD'),
+        (3, 10, 'USD'),
+        (4, 9, 'USD'),
+        (5, 10, 'USD');
+    """, """
+    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, donor_status_id) values
+        (1, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
+        (2, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2024-01-01', 35),
+        (3, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
+        (4, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2018-01-01', 70),
+        (5, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
+        (6, 0.00, 0.00, 0.00, NULL, NULL, NULL, 1000);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select count(*) from silverpop_export")
+    assert cursor.fetchone() == (3,)
+    cursor.execute("select ContactID, donor_status_id, donor_status from silverpop_export_view order by ContactID")
+    assert cursor.fetchone() == (1, 20, 'Consecutive')
+    assert cursor.fetchone() == (3, 30, 'Active')
+    assert cursor.fetchone() == (5, 25, 'New')
+
+
 def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
     conn, db_name = testdb
 
