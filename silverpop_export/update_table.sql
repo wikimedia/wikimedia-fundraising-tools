@@ -663,11 +663,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
     END as TS_occupation,
-    CASE
-      WHEN data_axle_is_grandparent IS NULL THEN ''
-      WHEN data_axle_is_grandparent = 0 THEN 'No'
-      WHEN data_axle_is_grandparent = 1 THEN 'Yes'
-    END as dataaxle_is_grandparent,
+    '' as dataaxle_is_grandparent,
     '' as directmail_receivers,
     '' as directmail_id,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
