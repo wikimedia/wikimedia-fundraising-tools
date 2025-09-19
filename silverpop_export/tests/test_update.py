@@ -196,6 +196,55 @@ def test_first_donation(testdb):
     assert cursor.fetchone() == expected
 
 
+def test_highest_donation_date(testdb):
+    """
+    Test that we correctly calculate the highest donation date,
+    using the most recent donation date if two donations of equal amounts to endowment and foundation are the highest.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person2@localhost', 1, 0),
+        (3, 'person3@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 21.25, 'xyz123', 1, 1),
+        (2, 1, '2016-05-05', 21.25, 'abc456', 1, 26),
+        (3, 1, '2017-05-05', 11.25, 'def789', 1, 1),
+        (4, 2, '2015-02-03', 32.25, 'abc123', 1, 1),
+        (5, 2, '2018-05-05', 22.25, 'xyz456', 1, 26),
+        (6, 3, '2017-05-05', 13.25, 'hij789', 1, 1),
+        (7, 3, '2018-03-03', 33.25, 'def123', 1, 26);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 21.25, 'USD'),
+        (2, 21.25, 'USD'),
+        (3, 11.25, 'USD'),
+        (4, 32.25, 'USD'),
+        (5, 22.25, 'USD'),
+        (6, 13.25, 'USD'),
+        (7, 33.25, 'USD');
+    """, """
+       insert into wmf_donor (entity_id, endowment_largest_donation, largest_donation) values
+       (1, 21.25, 21.25),
+       (2, 22.25, 32.25),
+       (3, 33.25, 13.25);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select both_funds_highest_donation_date from silverpop_export_view order by ContactID")
+    assert cursor.fetchone() == ('05/05/2016',)
+    assert cursor.fetchone() == ('02/03/2015',)
+    assert cursor.fetchone() == ('03/03/2018',)
+
+
 def test_native_amount(testdb):
     '''
     Test that we correctly calculate the highest native amount and currency

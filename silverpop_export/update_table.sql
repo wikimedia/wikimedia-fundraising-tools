@@ -690,7 +690,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
       as both_funds_first_donation_date,
-    IFNULL(DATE_FORMAT(IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_donation_date, foundation_highest_donation_date), '%m/%d/%Y'), '')
+    IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
     IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
         as both_funds_highest_native_amount,
