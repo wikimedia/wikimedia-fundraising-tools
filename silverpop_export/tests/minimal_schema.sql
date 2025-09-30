@@ -266,6 +266,14 @@ CREATE TABLE `civicrm_value_matching_gift` (
     `subsidiaries` VARCHAR(5000) -- horrible hack to make tests work! https://stackoverflow.com/questions/31468080/the-used-table-type-does-not-support-blob-text-columns
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_value_direct_mail_data;
+CREATE TABLE `civicrm_value_direct_mail_data` (
+    `id` INT(10) UNSIGNED NOT NULL,
+    `entity_id` INT(10) UNSIGNED NOT NULL,
+    `direct_mail_appeal` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `direct_mail_package` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS civicrm_relationship;
 CREATE TABLE `civicrm_relationship` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -318,13 +326,15 @@ DROP TABLE IF EXISTS civicrm_activity;
 CREATE TABLE `civicrm_activity` (
     `id` int(10) unsigned NOT NULL,
     `activity_date_time` datetime DEFAULT current_timestamp(),
-    `activity_type_id` int(10) unsigned NOT NULL
+    `activity_type_id` int(10) unsigned NOT NULL,
+    `status_id` int(10) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS civicrm_activity_contact;
 CREATE TABLE `civicrm_activity_contact` (
     `contact_id` int(10) unsigned NOT NULL,
-    `activity_id` int(10) unsigned NOT NULL
+    `activity_id` int(10) unsigned NOT NULL,
+    `record_type_id` int(10) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS civicrm_payment_processor;
@@ -373,3 +383,5 @@ CREATE TABLE `civicrm_option_value` (
 
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(1, 165, 'Recurring Upgrade', 1);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(2, 166, 'Recurring Upgrade Decline', 2);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direct Mail', 3);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);

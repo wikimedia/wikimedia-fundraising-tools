@@ -649,6 +649,48 @@ def test_merge_status(testdb):
     assert cursor.fetchone() == (5, 25, 'New')
 
 
+def test_direct_mail(testdb):
+    '''
+    Test that we get the most recent direct mail appeal code, if it was within the last 12 months.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person2@localhost', 1, 0),
+        (3, 'person3@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
+        (1, 1, 3),
+        (2, 1, 3),
+        (3, 2, 3);
+    """, """
+    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time) values
+        (1, 181, 2, DATE_SUB(NOW(), INTERVAL 11 MONTH)),
+        (2, 181, 2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, 181, 2, DATE_SUB(NOW(), INTERVAL 13 MONTH));
+    """, """
+    insert into civicrm_value_direct_mail_data (id, entity_id, direct_mail_appeal) values
+        (1, 1, 'ABC'),
+        (2, 2, 'DEF'),
+        (3, 3, 'XYZ');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select direct_mail_latest_appeal from silverpop_export_view WHERE email = 'person1@localhost'")
+    assert cursor.fetchone() == ('DEF',)
+    cursor.execute("select direct_mail_latest_appeal from silverpop_export_view WHERE email = 'person2@localhost'")
+    assert cursor.fetchone() == (None,)
+    cursor.execute("select direct_mail_latest_appeal from silverpop_export_view WHERE email = 'person3@localhost'")
+    assert cursor.fetchone() == (None,)
+
+
 def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
     conn, db_name = testdb
 
