@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
-  donor_status_id DECIMAL(20, 2),
+  donor_status_bin INT(10) UNSIGNED,
   endowment_last_donation_date DATETIME NULL,
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   postal_code VARCHAR(128),
 
   donor_segment_id INT(11),
-  donor_status_id INT(11),
+  donor_status_bin INT(10) UNSIGNED,
 
   INDEX spex_modified_date (modified_date),
   CONSTRAINT sp_email UNIQUE (email),
