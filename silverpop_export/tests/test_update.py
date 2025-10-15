@@ -275,6 +275,8 @@ def test_native_amount(testdb):
     cursor = conn.db_conn.cursor()
     cursor.execute("select foundation_highest_usd_amount, foundation_highest_native_amount, foundation_highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
+    cursor.execute("select both_funds_highest_usd_amount, both_funds_highest_native_amount, both_funds_highest_native_currency from silverpop_export_view_full")
+    expected = (Decimal('10.95'), Decimal('9'), 'GBP')
     actual = cursor.fetchone()
     assert actual == expected
 
