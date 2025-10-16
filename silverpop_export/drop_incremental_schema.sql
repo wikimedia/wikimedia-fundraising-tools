@@ -10,3 +10,4 @@ DROP TABLE IF EXISTS silverpop_endowment_latest;
 DROP TABLE IF EXISTS silverpop_endowment_highest;
 DROP TABLE IF EXISTS silverpop_has_recur;
 DROP TABLE IF EXISTS silverpop_export_checksum_email;
+DROP TABLE IF EXISTS silverpop_latest_direct_mail;

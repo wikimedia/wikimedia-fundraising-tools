@@ -94,6 +94,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export_highest
   highest_donation_date DATETIME
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
+(
+  email VARCHAR(255) PRIMARY KEY,
+  appeal VARCHAR(255)
+) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
@@ -138,6 +143,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   opted_in TINYINT(1),
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
+  direct_mail_latest_appeal VARCHAR(255),
 
 -- Matching gift employer data
   matching_gifts_provider_info_url VARCHAR(255),

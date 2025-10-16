@@ -1,6 +1,9 @@
 SET autocommit = 1;
 SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade';
 SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
+SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
+SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
+
 -- Updates the silverpop_export table
 
 -- Explanation of tables (as of now, still being re-worked).
@@ -19,6 +22,8 @@ SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value W
 --    need to be changed in our incremental update.
 -- silverpop_countrylangs - look up of our best guess of the language associated with the donor's country if we
 --   don't know their language
+-- silverpop_latest_direct_mail - data about contact's most recent direct mail activity in the last 12 months
+--   (noting that direct mail appeals older than 12 months will not be removed from contacts until they are modified)
 
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
@@ -401,6 +406,40 @@ WHERE most_recent_cancel_date > DATE_SUB(foundation_recurring_latest_donation_da
 GROUP BY recur.email;
 
 BEGIN;
+-- Delete recent rows from silverpop_latest_direct_mail table (make way for updated version).
+DELETE dm FROM silverpop_update_world t INNER JOIN silverpop_latest_direct_mail dm ON t.email = dm.email;
+-- Add recent rows to silverpop_latest_direct_mail table
+-- 180618 rows in set (6.489 sec) for all contacts
+INSERT INTO silverpop_latest_direct_mail (
+    email,
+    appeal
+)
+SELECT
+    latest_activity.email,
+    dm.direct_mail_appeal
+FROM (
+         SELECT
+             ROW_NUMBER() OVER (
+                PARTITION BY email.email
+                ORDER BY a.activity_date_time DESC
+             ) as rank,
+             a.activity_date_time,
+             a.id as activity_id,
+             email.email as email
+         FROM civicrm.civicrm_activity a
+         INNER JOIN civicrm.civicrm_activity_contact ac ON a.id = ac.activity_id
+         INNER JOIN civicrm.civicrm_email email ON ac.contact_id = email.contact_id AND is_primary = 1
+         INNER JOIN silverpop_update_world t ON t.email = email.email
+         WHERE ac.record_type_id = @activityTargets
+           AND a.status_id = 2 -- Completed
+           AND a.activity_type_id = @directMailType
+           AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
+     ) latest_activity
+INNER JOIN civicrm.civicrm_value_direct_mail_data dm ON latest_activity.activity_id = dm.entity_id
+WHERE latest_activity.rank = 1;
+COMMIT;
+
+BEGIN;
 -- Delete recent rows from export table (make way for updated version).
 -- Query OK, 653187 rows affected (10.02 sec)
 DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
@@ -489,7 +528,6 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
    stats.all_funds_total_2025_2026
 FROM silverpop_update_world t
 INNER JOIN silverpop_export_staging ex ON t.email = ex.email
-
 -- this inner join is restricting us to only one record per email.
 -- currently it is the highest email_id. Ideally it will later to change to
 -- email_id associated with the highest donation.
@@ -684,16 +722,17 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       ELSE ''
     END as TS_occupation,
     '' as dataaxle_is_grandparent,
-    '' as directmail_receivers,
-    '' as directmail_id,
+    dm.appeal as direct_mail_latest_appeal,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
       as both_funds_first_donation_date,
-    IFNULL(DATE_FORMAT(IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_donation_date, foundation_highest_donation_date), '%m/%d/%Y'), '')
+    IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
     IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
         as both_funds_highest_native_amount,
+    IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_currency, foundation_highest_native_currency)
+        as both_funds_highest_native_currency,
     IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_usd_amount, foundation_highest_usd_amount)
       as both_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(IF (endowment_last_donation_date IS NULL OR foundation_last_donation_date > endowment_last_donation_date , foundation_last_donation_date, endowment_last_donation_date), '%m/%d/%Y'), '')
@@ -774,6 +813,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   FROM silverpop_export) AS e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
+  LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_endowment_latest endow_late ON endow_late.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
@@ -808,6 +848,7 @@ both_funds_donation_count,
 both_funds_first_donation_date,
 both_funds_has_given_on_email,
 both_funds_highest_native_amount,
+both_funds_highest_native_currency,
 both_funds_highest_donation_date,
 both_funds_highest_usd_amount,
 both_funds_latest_currency,
@@ -827,8 +868,7 @@ both_funds_usd_total_fy2526,
 contact_hash,
 country,
 dataaxle_is_grandparent,
-directmail_receivers,
-directmail_id,
+direct_mail_latest_appeal,
 donor_segment,
 donor_segment_id,
 donor_status,
