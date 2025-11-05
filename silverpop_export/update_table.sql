@@ -88,18 +88,21 @@ BEGIN;
     -- output view.
     BIT_OR(
       CASE
-        WHEN donor.donor_status_id =  2 THEN 256 -- B'100000000'
-        WHEN donor.donor_status_id =  4 THEN 128 -- B'010000000'
-        WHEN donor.donor_status_id =  6 THEN  64 -- B'001000000'
-        WHEN donor.donor_status_id =  8 THEN  32 -- B'000100000'
-        WHEN donor.donor_status_id = 20 THEN  24 -- B'000011000'
-        WHEN donor.donor_status_id = 25 THEN  16 -- B'000010000'
-        WHEN donor.donor_status_id = 30 THEN  20 -- B'000010100'
-        WHEN donor.donor_status_id = 35 THEN   8 -- B'000001000'
-        WHEN donor.donor_status_id = 50 THEN   4 -- B'000000100'
-        WHEN donor.donor_status_id = 60 THEN   2 -- B'000000010'
-        WHEN donor.donor_status_id = 70 THEN   1 -- B'000000001'
-        WHEN donor.donor_status_id = 1000 THEN 0
+        WHEN donor.donor_status_id =  2 THEN 2048 -- B'100000000000'
+        WHEN donor.donor_status_id =  4 THEN 1024 -- B'010000000000'
+        WHEN donor.donor_status_id =  6 THEN  512 -- B'001000000000'
+        WHEN donor.donor_status_id =  8 THEN  256 -- B'000100000000'
+        WHEN donor.donor_status_id = 12 THEN  128 -- B'000010000000'
+        WHEN donor.donor_status_id = 14 THEN   64 -- B'000001000000'
+        WHEN donor.donor_status_id = 16 THEN   32 -- B'000000100000'
+        WHEN donor.donor_status_id = 20 THEN   24 -- B'000000011000'
+        WHEN donor.donor_status_id = 25 THEN   16 -- B'000000010000'
+        WHEN donor.donor_status_id = 30 THEN   20 -- B'000000010100'
+        WHEN donor.donor_status_id = 35 THEN    8 -- B'000000001000'
+        WHEN donor.donor_status_id = 50 THEN    4 -- B'000000000100'
+        WHEN donor.donor_status_id = 60 THEN    2 -- B'000000000010'
+        WHEN donor.donor_status_id = 70 THEN    1 -- B'000000000001'
+        WHEN donor.donor_status_id = 1000 THEN  0
         ELSE 0
       END
     ) as donor_status_bin,
@@ -624,6 +627,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_segment_id = 200 THEN 'Mid Tier'
         WHEN donor_segment_id = 200 THEN 'Mid-Value Prospect'
         WHEN donor_segment_id = 400 THEN 'Recurring donor'
+        WHEN donor_segment_id = 450 THEN 'Recurring Annual Donor'
         WHEN donor_segment_id = 500 THEN 'Grassroots Plus Donor'
         WHEN donor_segment_id = 600 THEN 'Grassroots Donor'
         WHEN donor_segment_id = 900 THEN 'All other Donors'
@@ -636,6 +640,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
         WHEN donor_status_id = 4 THEN 'Delinquent Recurring'
         WHEN donor_status_id = 6 THEN 'Recent lapsed Recurring'
         WHEN donor_status_id = 8 THEN 'Deep lapsed Recurring'
+        WHEN donor_status_id = 12 THEN 'Active Annual Recurring'
+        WHEN donor_status_id = 14 THEN 'Delinquent Annual Recurring'
+        WHEN donor_status_id = 16 THEN 'Lapsed Annual Recurring'
         WHEN donor_status_id = 20 THEN 'Consecutive'
         WHEN donor_status_id = 25 THEN 'New'
         WHEN donor_status_id = 30 THEN 'Active'
@@ -791,23 +798,26 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   FROM (
     SELECT *,
     CASE
-      WHEN donor_status_bin & 256 /* B'100000000' */ THEN 2
-      WHEN donor_status_bin & 128 /* B'010000000' */ THEN 4
-      WHEN donor_status_bin &  64 /* B'001000000' */ THEN 6
-      WHEN donor_status_bin &  32 /* B'000100000' */ THEN 8
+      WHEN donor_status_bin & 2048 /* B'100000000000' */ THEN 2
+      WHEN donor_status_bin & 1024 /* B'010000000000' */ THEN 4
+      WHEN donor_status_bin &  512 /* B'001000000000' */ THEN 6
+      WHEN donor_status_bin &  256 /* B'000100000000' */ THEN 8
+      WHEN donor_status_bin &  128 /* B'000010000000' */ THEN 12
+      WHEN donor_status_bin &   64 /* B'000001000000' */ THEN 14
+      WHEN donor_status_bin &   32 /* B'000000100000' */ THEN 16
       -- Has a donation this year and one last year (and potentially others)
-      WHEN donor_status_bin & 24 = 24 /* B'000011000' */ THEN 20
+      WHEN donor_status_bin & 24 = 24 /* B'000000011000' */ THEN 20
       -- Note exact match, just one donation this year and nothing else
-      WHEN donor_status_bin =  16 /* B'000010000' */ THEN 25
+      WHEN donor_status_bin =   16 /* B'000000010000' */ THEN 25
       -- Has a donation this year (and something else, since above not matched)
-      WHEN donor_status_bin &  16 /* B'000010000' */ THEN 30
+      WHEN donor_status_bin &   16 /* B'000000010000' */ THEN 30
       -- Has a donation last year (and maybe before). Not this year, since above not matched)
-      WHEN donor_status_bin &   8 /* B'000001000' */ THEN 35
+      WHEN donor_status_bin &    8 /* B'000000001000' */ THEN 35
       -- Last donation two years ago
-      WHEN donor_status_bin &   4 /* B'000000100' */ THEN 50
+      WHEN donor_status_bin &    4 /* B'000000000100' */ THEN 50
       -- Last donation up to 5 years ago
-      WHEN donor_status_bin &   2 /* B'000000010' */ THEN 60
-      WHEN donor_status_bin &   1 /* B'000000001' */ THEN 70
+      WHEN donor_status_bin &    2 /* B'000000000010' */ THEN 60
+      WHEN donor_status_bin &    1 /* B'000000000001' */ THEN 70
       ELSE 1000
   END as donor_status_id
   FROM silverpop_export) AS e
