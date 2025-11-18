@@ -13,16 +13,23 @@ import process.lock as lock
 
 
 log = logging.getLogger(__name__)
+prometheus_file = None
 
 
 def export_all():
     """
     Dump database contents to CSVs.
     """
+    global prometheus_file
+
     log.info("Begin Silverpop Export")
     config = process.globals.get_config()
 
     make_sure_path_exists(config.working_path)
+
+    if 'prometheus_path' in config and config.prometheus_path is not None:
+        prometheus_file = open(config.prometheus_path, 'w')
+        log.debug("Opened prometheus_file %s" % config.prometheus_path)
 
     updatefile = os.path.join(
         config.working_path,
@@ -42,16 +49,22 @@ def export_all():
     )
 
     export_data(output_path=updatefile)
-    export_unsubscribes(output_path=unsubfile)
-    export_unsubscribes(output_path=optoutfile)
+    export_unsubscribes(output_path=unsubfile, metric_phase="Unsubscribes")
+    export_unsubscribes(output_path=optoutfile, metric_phase="Optout")
     export_checksum_email(output_path=checksumemailsfile)
+
+    if prometheus_file is not None:
+        prometheus_file.flush()
+        prometheus_file.close()
+
     rotate_files()
 
     log.info("End Silverpop Export")
 
 
-def run_export_query(db=None, query=None, output=None, sort_by_index=None):
+def run_export_query(db=None, query=None, output=None, sort_by_index=None, metric_phase=None):
     """Export query results as a CSV file"""
+    global prometheus_file
 
     # Get a file-like object
     if not hasattr(output, 'write'):
@@ -83,6 +96,8 @@ def run_export_query(db=None, query=None, output=None, sort_by_index=None):
     output.flush()
     output.close()
     log.info("Wrote %d rows" % num_rows)
+    if metric_phase is not None and prometheus_file is not None:
+        prometheus_file.write("acoustic_export_count{phase=\"%s\"} %d\n" % (metric_phase, num_rows))
 
 
 def export_data(output_path=None):
@@ -98,11 +113,12 @@ def export_data(output_path=None):
         db=db,
         query=exportq,
         output=output_path,
-        sort_by_index="ContactID"
+        sort_by_index="ContactID",
+        metric_phase="DatabaseUpdate"
     )
 
 
-def export_unsubscribes(output_path=None):
+def export_unsubscribes(output_path=None, metric_phase=None):
     config = process.globals.get_config()
 
     db = DbConnection(**config.silverpop_db)
@@ -115,7 +131,8 @@ def export_unsubscribes(output_path=None):
         db=db,
         query=exportq,
         output=output_path,
-        sort_by_index="email"
+        sort_by_index="email",
+        metric_phase=metric_phase
     )
 
 
@@ -132,7 +149,8 @@ def export_checksum_email(output_path=None):
         db=db,
         query=exportq,
         output=output_path,
-        sort_by_index="email"
+        sort_by_index="email",
+        metric_phase="ChecksumEmails"
     )
 
 

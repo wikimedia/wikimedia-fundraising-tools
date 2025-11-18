@@ -4,6 +4,9 @@
 # Directory which will stage the working files
 working_path: /tmp/
 
+# File to output Prometheus-format metrics
+prometheus_path: /tmp/acoustic_export.prom
+
 # For archival purposes, how many days of old runs should we keep? 0 means forever.
 days_to_keep_files: 1
 
