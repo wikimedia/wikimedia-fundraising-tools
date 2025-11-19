@@ -84,4 +84,4 @@ FROM silverpop_excluded
   ON m.uf_name = silverpop_excluded.email;
 
 CREATE OR REPLACE VIEW silverpop_excluded_utf8 as
-  SELECT CONVERT(email USING utf8) as email, id FROM silverpop_excluded;
+  SELECT CONVERT(email USING utf8) as email FROM silverpop_excluded;
