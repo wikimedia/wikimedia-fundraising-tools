@@ -457,14 +457,14 @@ DELETE export FROM silverpop_export export
 -- If the email changed from one email to another the email based delete will not pick it up.
 -- Query OK, 161272 rows affected (5.93 sec)
 DELETE export FROM silverpop_export_staging t INNER JOIN silverpop_export export ON t.id = export.id
-WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
+WHERE t.modified_date BETWEEN @startDate AND @endDate;
 
 -- Delete rows based on contact_id having a recently modified_date
 -- This addresses the situation where the primary email of the contact has changed
 -- and there may be a row associated with the old contact_id.
 -- Query OK, 2017 rows affected (1.32 sec)
 DELETE export FROM silverpop_export_staging t INNER JOIN silverpop_export export ON t.contact_id = export.contact_id
-WHERE t.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
+WHERE t.modified_date BETWEEN @startDate AND @endDate;
 
 -- Move the data from the staging table into the persistent one
 -- Query OK, 653187 rows affected (50.32 sec)
@@ -915,7 +915,7 @@ TS_family_composition,
 TS_income_range,
 TS_occupation
 FROM silverpop_export_view_full
-WHERE modified_date > DATE_SUB(NOW(), INTERVAL ", @offSetInDays, " DAY)");
+WHERE modified_date BETWEEN '", @startDate, "' AND '", @endDate, "'");
 prepare stmnt1 from @sql;
 execute stmnt1;
 deallocate prepare stmnt1;

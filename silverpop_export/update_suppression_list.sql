@@ -4,12 +4,6 @@
 -- (by the email team) to purge it.
 -- Although we upload the entire list each night it would be OK to upload new entries.
 
-# Default offset - we can maybe pass this in from python.
-# I think 2 (2 days) is probably the right value but a higher value for now
-#reduces the risk a script fails and we don't notice.
-# temporarily set to 14 days to catch any missed since we updated.
-SET @offSetInDays = 14;
-
 -- There are basically 2 steps to this -
 -- 1) create/ augment the list of possible emails to suppress
 -- 2) delete all valid emails.
@@ -55,7 +49,7 @@ FROM civicrm.log_civicrm_email e
 LEFT JOIN civicrm.civicrm_contact c ON c.id = e.contact_id
 -- see comment block for long discussion of this WHERE
 WHERE e.id <= (SELECT MAX(id) FROM silverpop_export_staging)
-  AND c.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+  AND c.modified_date BETWEEN @startDate AND @endDate
 ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 
 -- In the test we check the possibility of updated orphaned emails.
@@ -67,7 +61,7 @@ INSERT INTO silverpop_excluded (email)
 SELECT DISTINCT e.email
 FROM civicrm.log_civicrm_email e
 WHERE e.id <= (SELECT MAX(id) FROM silverpop_export_staging)
-AND e.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+AND e.log_date BETWEEN @startDate AND @endDate
 ON DUPLICATE KEY UPDATE email = silverpop_excluded.email;
 
 -- Remove all the known-good addresses from the suppression list.
@@ -90,4 +84,4 @@ FROM silverpop_excluded
   ON m.uf_name = silverpop_excluded.email;
 
 CREATE OR REPLACE VIEW silverpop_excluded_utf8 as
-  SELECT CONVERT(email USING utf8) as email, id FROM silverpop_excluded;
+  SELECT CONVERT(email USING utf8) as email FROM silverpop_excluded;

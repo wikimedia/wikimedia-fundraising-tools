@@ -55,6 +55,6 @@ WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
   AND e.is_primary = 1
-  #AND c.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+  #AND c.modified_date BETWEEN @startDate AND @endDate
   #AND staging.id IS NULL
 ;
