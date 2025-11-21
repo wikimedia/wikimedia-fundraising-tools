@@ -9,11 +9,10 @@
 -- The intention is that this would be run more often than once a day and need not
 -- be only called from 'the whole script'
 
--- Default offset - we can maybe pass this in from python.
 -- I think 2 (2 days) is probably the right value but a higher value for now
 -- reduces the risk a script fails and we don't notice.
-SET @offSetInDays = __OFFSET_IN_DAYS__;
-
+SET @startDate = DATE_SUB(NOW(), INTERVAL __OFFSET_IN_DAYS__ DAY);
+SET @endDate = DATE_SUB(NOW(), INTERVAL 3 MINUTE);
 
 -- Drop and recreate the table tracking updated emails.
 -- if the rebuild fails for some reason this table will be empty
@@ -43,7 +42,7 @@ FROM civicrm.civicrm_contribution c
    LEFT JOIN civicrm.civicrm_contact contact ON contact.id = c.contact_id
 WHERE ct.country IS NOT NULL
   AND a.country_id IS NULL
-  AND contact.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+  AND contact.modified_date BETWEEN @startDate AND @endDate
 GROUP BY c.contact_id;
 
 -- Populate, or append to, the storage table all contacts that
@@ -89,7 +88,7 @@ WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
   AND e.is_primary = 1
-  AND c.modified_date BETWEEN DATE_SUB(NOW(), INTERVAL @offSetInDays DAY) AND DATE_SUB(NOW(), INTERVAL 3 MINUTE)
+  AND c.modified_date BETWEEN @startDate AND @endDate
   AND staging.id IS NULL
 ;
 
@@ -135,7 +134,7 @@ SET
 WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
-  AND c.modified_date > DATE_SUB(NOW(), INTERVAL  @offSetInDays DAY)
+  AND c.modified_date BETWEEN @startDate AND @endDate
   AND e.is_primary = 1;
 
 -- Get rid of any emails actually deleted since interval
@@ -153,7 +152,7 @@ WHERE
   -- delete if there is no email and
   -- it has been recently updated OR there are no update records.
   -- the latter would be consistent with a forget me.
-  (l.log_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY) OR l.log_date IS NULL)
+  (l.log_date BETWEEN @startDate AND @endDate OR l.log_date IS NULL)
   AND (e.email IS NULL OR e.email = '');
 
 -- Delete any emails associated with contacts that have been deleted.....
@@ -167,7 +166,7 @@ FROM silverpop_export_staging s
   LEFT JOIN civicrm.civicrm_email e
     ON s.id = e.id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = e.contact_id
-WHERE c.modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY)
+WHERE c.modified_date BETWEEN @startDate AND @endDate
   AND c.is_deleted = 1;
 
 -- Delete any emails that have been recorded in the deleted emails table
@@ -182,6 +181,6 @@ COMMIT;
 -- Query OK, 804581 rows affect ed (33.15 sec)
 INSERT INTO silverpop_update_world SELECT DISTINCT email
 FROM silverpop_export_staging
-WHERE modified_date > DATE_SUB(NOW(), INTERVAL @offSetInDays DAY);
+WHERE modified_date BETWEEN @startDate AND @endDate;
 
 

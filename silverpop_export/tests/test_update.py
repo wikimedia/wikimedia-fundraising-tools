@@ -393,6 +393,42 @@ def test_exclusion(testdb):
     assert cursor.fetchone() == ('formerperson1@localhost',)
 
 
+def test_modified_date(testdb):
+    '''
+    Test that we only include / exclude contacts that have been modified between 7 days and 3 minutes ago.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'person1@localhost', 1, 0),
+        (2, 2, 'person2@localhost', 1, 0),
+        (3, 3, 'person3@localhost', 0, 0),
+        (4, 4, 'person4@localhost', 0, 0),
+        (5, 5, 'person5@localhost', 1, 0);
+    """, """
+    insert into log_civicrm_email (id, contact_id, email, log_date) values
+        (1, 1, 'person1@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (2, 2, 'person2@localhost', DATE_SUB(NOW(), INTERVAL 8 DAY)),
+        (3, 3, 'person3@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, 4, 'person4@localhost', DATE_SUB(NOW(), INTERVAL 8 DAY)),
+        (5, 5, 'person5@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (2, DATE_SUB(NOW(), INTERVAL 8 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 8 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email from silverpop_export")
+    assert cursor.fetchall() == (('person5@localhost',),)
+    cursor.execute("select email from silverpop_excluded")
+    assert cursor.fetchall() == (('person3@localhost',),)
+
+
 def test_optin_negative_exclusion(testdb):
     '''
     Test that we exclude former email addresses from the log table.
