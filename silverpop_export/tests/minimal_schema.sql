@@ -10,6 +10,23 @@ create table civicrm_email (
     key UI_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+drop table if exists civicrm_phone;
+create table civicrm_phone (
+   id int(10) unsigned auto_increment primary key,
+   contact_id int(10) unsigned,
+   phone_numeric varchar(254) COLLATE utf8mb4_unicode_ci,
+   is_primary tinyint(4) default '1',
+   key UI_phone_numeric (phone_numeric)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+drop table if exists civicrm_phone_consent;
+create table civicrm_phone_consent (
+  id int(10) unsigned auto_increment primary key,
+  phone_number varchar(254) COLLATE utf8mb4_unicode_ci,
+  opted_in tinyint(4) default '1',
+  key UI_phone_number (phone_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 drop table if exists civicrm_deleted_email;
 create table civicrm_deleted_email (
     id int(10) unsigned primary key

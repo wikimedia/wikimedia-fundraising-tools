@@ -729,6 +729,54 @@ def test_direct_mail(testdb):
     assert cursor.fetchone() == (None,)
 
 
+def test_opted_out_email_but_sms_consent_included(testdb):
+    """
+    Test that a contact with an opted-out email but a phone + phone consent
+    is still included in the export.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=[
+        # Primary email for the contact
+        """
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'smsconsent@localhost', 1, 0);
+        """,
+        # Contact modified recently so they are within the incremental window
+        """
+        insert into civicrm_contact (id, modified_date) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """,
+        # Email communication preference: explicitly opted out (opt_in = 0)
+        """
+        insert into civicrm_value_1_communication_4 (entity_id, opt_in) values
+            (1, 0);
+        """,
+        # Phone number on the contact
+        """
+        insert into civicrm_phone (contact_id, phone_numeric) values
+            (1, '15551234567');
+        """,
+        # Phone consent: opted in for SMS on that phone number
+        """
+        insert into civicrm_phone_consent (phone_number, opted_in) values
+            ('15551234567', 1);
+        """
+    ])
+
+    cursor = conn.db_conn.cursor()
+
+    # They should still be included in the export despite the email opt-out,
+    # because sms_consent = 1 causes the OR branch in the export query to pass.
+    cursor.execute("select email, opted_in from silverpop_export")
+    row = cursor.fetchone()
+    assert row == ('smsconsent@localhost', 0)
+
+    # And for extra safety, make sure we only exported this one contact.
+    cursor.execute("select count(*) from silverpop_export")
+    assert cursor.fetchone() == (1,)
+
+
 def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
     conn, db_name = testdb
 
