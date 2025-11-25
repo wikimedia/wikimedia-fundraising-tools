@@ -43,9 +43,11 @@ CREATE TABLE IF NOT EXISTS `silverpop_email_map`
   `opted_out` TINYINT(1) DEFAULT NULL,
   `opted_in` TINYINT(1) DEFAULT NULL,
   `modified_date` DATETIME NULL,
+  `sms_consent` TINYINT(1) DEFAULT 0,
   KEY `master_email_id` (`master_email_id`),
   KEY `address_id` (`address_id`),
-  KEY `email` (`email`)
+  KEY `email` (`email`),
+  KEY `sms_consent` (`sms_consent`)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_latest

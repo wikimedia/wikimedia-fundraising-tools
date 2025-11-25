@@ -133,23 +133,27 @@ INSERT INTO silverpop_email_map (
   preferred_language,
   opted_out,
   opted_in,
-  modified_date
+  modified_date,
+  sms_consent
 )
   SELECT ex.email,
-    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.id, NULL)), MAX(id)) as master_email_id,
+    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
     COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
     # Use MAX to prefer non-blank
-    MAX(preferred_language) as preferred_language,
+    MAX(ex.preferred_language) as preferred_language,
     # Use MAX as any opted out IS opted out.
-    MAX(opted_out) as opted_out,
+    MAX(ex.opted_out) as opted_out,
     # 0 if they have ever actually opted out, else 1
     # we use this for filtering so do not need to preserve the nuance.
     # This should be revisited per https://phabricator.wikimedia.org/T256522
-    MIN(IF (opted_in = 0, 0, 1)) as opted_in,
-    MAX(modified_date) as modified_date
+    MIN(IF (ex.opted_in = 0, 0, 1)) as opted_in,
+    MAX(ex.modified_date) as modified_date,
+    MAX(pc.opted_in) as sms_consent
   FROM silverpop_export_staging ex
   INNER JOIN silverpop_export_stat stat
     ON ex.email = stat.email
+  LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
+  LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
   GROUP BY ex.email
 ;
 
@@ -542,8 +546,9 @@ LEFT JOIN silverpop_export_highest hg ON ex.email = hg.email
 LEFT JOIN silverpop_export_staging addr ON dedupe_table.address_id = addr.address_id
 
 -- using dedupe_table gets the 'max' - ie if ANY are 1 then we get that.
-WHERE dedupe_table.opted_out=0
-AND (ex.opted_in IS NULL OR ex.opted_in = 1)
+WHERE (dedupe_table.opted_out = 0
+    AND (ex.opted_in IS NULL OR ex.opted_in = 1)
+          ) OR sms_consent = 1
 ON DUPLICATE KEY UPDATE silverpop_export.id=ex.id;
 
 -- Delete rows then recreate so we don't include people we're deleting from the main table.
