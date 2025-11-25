@@ -31,6 +31,8 @@ def export_all():
         prometheus_file = open(config.prometheus_path, 'w')
         log.debug("Opened prometheus_file %s" % config.prometheus_path)
 
+    log.info("Writing files to directory " + config.working_path)
+
     updatefile = os.path.join(
         config.working_path,
         'DatabaseUpdate-' + time.strftime("%Y%m%d%H%M%S") + '.csv'
