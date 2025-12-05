@@ -12,8 +12,10 @@ from silverpop_export import export
 import process.lock as lock
 
 log = logging.getLogger(__name__)
-# default, can be overridden in config.offset_in_days or with a --days command-line parameter
+# default, can be overridden in config.offset_in_days or with a --days or -d command-line parameter
 offset_in_days = 7
+# default, can be overridden in config.rebuild_suppression or with a --rebuild_suppression or -rs command-line parameter
+rebuild_suppression = 0
 
 
 def load_queries(file):
@@ -73,7 +75,13 @@ def updateAll():
     log.info("Loading update query set")
     update_queries = load_queries('update_table.sql')
     log.info("Loading update query set")
-    update_suppression_queries = load_queries('update_suppression_list.sql')
+
+    if rebuild_suppression:
+        suppression_queries = load_queries('rebuild_suppression_list.sql')
+    else:
+        suppression_queries = load_queries('update_suppression_list.sql')
+
+    suppression_common_queries = load_queries('suppression_list_common.sql')
     db = DbConnection(**config.silverpop_db)
     log.info("Dropping schema (temporary step)")
     run_queries(db, drop_queries)
@@ -86,7 +94,8 @@ def updateAll():
     log.info("Starting update query run")
     run_queries(db, update_queries)
     log.info("Starting update query run")
-    run_queries(db, update_suppression_queries)
+    run_queries(db, suppression_queries)
+    run_queries(db, suppression_common_queries)
     export.export_all()
 
 
@@ -95,12 +104,18 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--days")
+    parser.add_argument("-rs", "--rebuild_suppression", action="store_true")
     args = parser.parse_args()
 
     if args.days is not None:
         offset_in_days = args.days
     elif "offset_in_days" in config:
         offset_in_days = config.offset_in_days
+
+    if args.rebuild_suppression:
+        rebuild_suppression = args.rebuild_suppression
+    elif "rebuild_suppression" in config:
+        rebuild_suppression = config.rebuild_suppression
 
     log.info("Begin Silverpop Update")
     lock.begin()

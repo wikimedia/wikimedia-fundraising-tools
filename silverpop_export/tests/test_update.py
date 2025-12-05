@@ -429,9 +429,104 @@ def test_modified_date(testdb):
     assert cursor.fetchall() == (('person3@localhost',),)
 
 
+def test_excluded(testdb):
+    '''
+    Test that we exclude all contacts that should be excluded, and only those that should be excluded.
+    First test the full rebuild, where contacts are excluded no matter their modified date,
+    then test the update with all the same data modified within the 7 day window.
+    This covers all the excluded cases covered for update_suppression_list in test_exclusion and test_optin_negative_exclusion.
+    '''
+    conn, db_name = testdb
+    fixture_queries = ["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'person1@localhost', 1, 2), -- EXCL on_hold
+        (2, 2, 'person2@localhost', 1, 0), -- EXCL is_opt_out
+        (3, 3, 'person3@localhost', 1, 0), -- EXCL do_not_email
+        (4, 4, 'person4@localhost', 1, 0), -- EXCL opt in = no
+        (5, 5, 'person5@localhost', 1, 0), -- EXCL do not solicit
+        (6, 6, 'person6@localhost', 1, 0), -- EXCL deleted contact
+        (7, 7, 'person7@localhost', 0, 0), -- non-primary, but is primary for next, so not excluded
+        (8, 8, 'person7@localhost', 1, 0),
+        (9, 9, 'person9@localhost', 0, 0), -- EXCL non-primary, not primary for other
+        (10, 10, 'person10@localhost', 1, 0), -- deleted but next with same email is not deleted, so not excluded
+        (11, 11, 'person10@localhost', 1, 0),
+        (12, 12, 'person12@localhost', 1, 0), -- deleted and opted out, but next with same email is not, so not excluded
+        (13, 13, 'person12@localhost', 1, 0),
+        -- 14 EXCL is only in log
+        (15, 15, 'person4@localhost', 1, 0); -- also excluded because same email as #4 above
+    """, """
+    insert into log_civicrm_email (id, contact_id, email, log_date) values
+        (1, 1, 'person1@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (2, 2, 'person2@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, 3, 'person3@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
+        (4, 4, 'person4@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (5, 5, 'person5@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (6, 6, 'person6@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
+        (7, 7, 'person7@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (8, 8, 'person7@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (9, 9, 'person9@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
+        (10, 10, 'person10@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (11, 11, 'person10@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (12, 12, 'person12@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
+        (13, 13, 'person12@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
+        (14, 14, 'person14@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)), -- only in log
+        (15, 15, 'person4@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR));
+    """, """
+    insert into civicrm_contact (id, modified_date, is_deleted, is_opt_out, do_not_email) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 1, 0), -- is_opt_out
+        (3, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 1), -- do_not_email
+        (4, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0),
+        (6, DATE_SUB(NOW(), INTERVAL 10 YEAR), 1, 0, 0), -- deleted contact
+        (7, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
+        (8, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0),
+        (9, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 0),
+        (10, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 1, 0, 0), -- deleted but next with same email is not deleted
+        (11, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0),
+        (12, DATE_SUB(NOW(), INTERVAL 10 YEAR ), 0, 0, 0),
+        (13, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
+        (15, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 0);
+    """, """
+    insert into civicrm_value_1_communication_4 (id, entity_id, do_not_solicit, opt_in) values
+        (1, 1, 0, NULL),
+        (4, 4, 0, 0), -- opt in = no
+        (5, 5, 1, 0); -- do not solicit
+    """]
+
+    expected = sorted([
+        ('person1@localhost',),
+        ('person2@localhost',),
+        ('person3@localhost',),
+        ('person4@localhost',),
+        ('person5@localhost',),
+        ('person6@localhost',),
+        ('person9@localhost',),
+        ('person14@localhost',),
+    ])
+
+    run_update_with_fixtures(testdb, rebuild_suppression=1, fixture_queries=fixture_queries)
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email from silverpop_excluded")
+    assert sorted(cursor.fetchall()) == expected
+
+    run_update_with_fixtures(testdb, rebuild_suppression=0, fixture_queries=fixture_queries + ["""
+           update log_civicrm_email
+           set log_date = DATE_SUB(NOW(), INTERVAL 3 DAY);
+       """, """
+           update civicrm_contact
+           set modified_date = DATE_SUB(NOW(), INTERVAL 3 DAY);
+       """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email from silverpop_excluded")
+    assert sorted(cursor.fetchall()) == expected
+
+
 def test_optin_negative_exclusion(testdb):
     '''
-    Test that we exclude former email addresses from the log table.
+    Test that we include contacts for opt in = Yes or Null and exclude them for opt in = No.
     '''
     conn, db_name = testdb
 
@@ -777,7 +872,7 @@ def test_opted_out_email_but_sms_consent_included(testdb):
     assert cursor.fetchone() == (1,)
 
 
-def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
+def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None, rebuild_suppression=0):
     conn, db_name = testdb
 
     with mock.patch("database.db.Connection") as MockConnection:
@@ -830,5 +925,8 @@ def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None):
             update_queries = silverpop_export.update.load_queries('update_table.sql')
             silverpop_export.update.run_queries(conn, update_queries)
 
-            update_suppression_queries = silverpop_export.update.load_queries('update_suppression_list.sql')
+            if rebuild_suppression:
+                update_suppression_queries = silverpop_export.update.load_queries('rebuild_suppression_list.sql')
+            else:
+                update_suppression_queries = silverpop_export.update.load_queries('update_suppression_list.sql')
             silverpop_export.update.run_queries(conn, update_suppression_queries)
