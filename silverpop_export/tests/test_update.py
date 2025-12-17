@@ -453,7 +453,17 @@ def test_excluded(testdb):
         (12, 12, 'person12@localhost', 1, 0), -- deleted and opted out, but next with same email is not, so not excluded
         (13, 13, 'person12@localhost', 1, 0),
         -- 14 EXCL is only in log
-        (15, 15, 'person4@localhost', 1, 0); -- also excluded because same email as #4 above
+        (15, 15, 'person4@localhost', 1, 0), -- also excluded because same email as #4 above
+        -- 16 is only in log, not excluded as 17 below
+        (17, 17, 'person17@localhost', 1, 0), -- not excluded, email previously shared with another contact
+        -- 18 is only in log, not excluded as 19 below
+        (19, 19, 'person19@localhost', 1, 0), -- not excluded, email previously shared with another contact
+        (20, 20, 'person20@localhost', 1, 0), -- not excluded because is primary (but not modified in window)
+        (21, 21, 'person20@localhost', 0, 0), -- not excluded, same email as above as non-primary, but contact modified in window
+        (22, 22, 'person20@localhost', 0, 0), -- not excluded, same email as above as non-primary, but email log_date in window
+        (23, 23, 'person23@localhost', 1, 0), -- primary email for next row
+        (24, 24, 'person23@localhost', 0, 0), -- not excluded, same email as above as non-primary even opted out
+        (99, 99, 'person99@localhost', 1, 0); -- included, making sure the highest id check doesn't affect the above
     """, """
     insert into log_civicrm_email (id, contact_id, email, log_date) values
         (1, 1, 'person1@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
@@ -470,7 +480,17 @@ def test_excluded(testdb):
         (12, 12, 'person12@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
         (13, 13, 'person12@localhost', DATE_SUB(NOW(), INTERVAL 1 MINUTE)),
         (14, 14, 'person14@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)), -- only in log
-        (15, 15, 'person4@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR));
+        (15, 15, 'person4@localhost', DATE_SUB(NOW(), INTERVAL 10 YEAR)),
+        (16, 16, 'person17@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)), -- only in log for this contact, but email associated with another contact
+        (17, 17, 'person17@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)),
+        (18, 18, 'person19@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)), -- only in log for this contact (e.g. deleted) within the 7 day window, but email associated with another contact
+        (19, 19, 'person19@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)),
+        (20, 20, 'person20@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)),
+        (21, 21, 'person20@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (22, 22, 'person20@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)),
+        (23, 23, 'person23@localhost', DATE_SUB(NOW(), INTERVAL 100 DAY)),
+        (24, 24, 'person23@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (99, 99, 'person99@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contact (id, modified_date, is_deleted, is_opt_out, do_not_email) values
         (1, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
@@ -486,7 +506,18 @@ def test_excluded(testdb):
         (11, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0),
         (12, DATE_SUB(NOW(), INTERVAL 10 YEAR ), 0, 0, 0),
         (13, DATE_SUB(NOW(), INTERVAL 1 MINUTE), 0, 0, 0),
-        (15, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 0);
+        (15, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 0),
+        (16, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0), -- this contact is modified within the 7 day window, but only has the email in the log_
+        (17, DATE_SUB(NOW(), INTERVAL 10 YEAR), 0, 0, 0), -- this contact has the same email as the above used to have, but not modified in the window
+        (18, DATE_SUB(NOW(), INTERVAL 100 DAY), 0, 0, 0),
+        (19, DATE_SUB(NOW(), INTERVAL 100 DAY), 0, 0, 0),
+        (20, DATE_SUB(NOW(), INTERVAL 100 DAY), 0, 0, 0),
+        (21, DATE_SUB(NOW(), INTERVAL 100 DAY), 0, 0, 0),
+        (22, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0),
+        (23, DATE_SUB(NOW(), INTERVAL 100 DAY), 0, 0, 0),
+        (24, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 1, 0),
+        (99, DATE_SUB(NOW(), INTERVAL 1 DAY), 0, 0, 0);
+
     """, """
     insert into civicrm_value_1_communication_4 (id, entity_id, do_not_solicit, opt_in) values
         (1, 1, 0, NULL),
@@ -513,10 +544,12 @@ def test_excluded(testdb):
 
     run_update_with_fixtures(testdb, rebuild_suppression=0, fixture_queries=fixture_queries + ["""
            update log_civicrm_email
-           set log_date = DATE_SUB(NOW(), INTERVAL 3 DAY);
+           set log_date = DATE_SUB(NOW(), INTERVAL 3 DAY)
+           where id not in (16, 17, 18, 19, 20, 21, 22, 23, 24); -- these matter when they were modified
        """, """
            update civicrm_contact
-           set modified_date = DATE_SUB(NOW(), INTERVAL 3 DAY);
+           set modified_date = DATE_SUB(NOW(), INTERVAL 3 DAY)
+           where id not in (16, 17, 18, 19, 20, 21, 22, 23, 24);
        """])
 
     cursor = conn.db_conn.cursor()
