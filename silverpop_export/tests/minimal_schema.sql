@@ -402,3 +402,4 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(1, 165, 'Recur
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(2, 166, 'Recurring Upgrade Decline', 2);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direct Mail', 3);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);

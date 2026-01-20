@@ -857,6 +857,37 @@ def test_direct_mail(testdb):
     assert cursor.fetchone() == (None,)
 
 
+def test_double_opt_in(testdb):
+    '''
+    Test that we set double_opt_in_activity = 1 if an activity exists.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person2@localhost', 1, 0),
+        (3, 'person2@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
+        (1, 3, 3);
+    """, """
+    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time) values
+        (1, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH));
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person1@localhost'")
+    assert cursor.fetchone() == (0,)
+    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person2@localhost'")
+    assert cursor.fetchone() == (1,)
+
+
 def test_opted_out_email_but_sms_consent_included(testdb):
     """
     Test that a contact with an opted-out email but a phone + phone consent
