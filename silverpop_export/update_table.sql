@@ -2,8 +2,8 @@ SET autocommit = 1;
 SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade';
 SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
+SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
-
 -- Updates the silverpop_export table
 
 -- Explanation of tables (as of now, still being re-worked).
@@ -134,7 +134,8 @@ INSERT INTO silverpop_email_map (
   opted_out,
   opted_in,
   modified_date,
-  sms_consent
+  sms_consent,
+  double_opt_in_activity
 )
   SELECT ex.email,
     COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
@@ -148,14 +149,20 @@ INSERT INTO silverpop_email_map (
     # This should be revisited per https://phabricator.wikimedia.org/T256522
     MIN(IF (ex.opted_in = 0, 0, 1)) as opted_in,
     MAX(ex.modified_date) as modified_date,
-    MAX(pc.opted_in) as sms_consent
+    MAX(pc.opted_in) as sms_consent,
+    MAX(IF(doi.contact_id IS NOT NULL, 1, 0)) as double_opt_in_activity
   FROM silverpop_export_staging ex
   INNER JOIN silverpop_export_stat stat
     ON ex.email = stat.email
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
-  GROUP BY ex.email
-;
+  LEFT JOIN (
+    SELECT DISTINCT ac.contact_id
+    FROM civicrm.civicrm_activity_contact ac
+    INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
+    WHERE a.activity_type_id = @doubleOptInType
+  ) doi ON doi.contact_id = ex.contact_id
+  GROUP BY ex.email;
 
 -- Find the latest donation for each email address. Ordering by
 -- receive_date and total_amount descending should always insert
@@ -473,7 +480,8 @@ WHERE t.modified_date BETWEEN @startDate AND @endDate;
 -- Move the data from the staging table into the persistent one
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
-  id,modified_date, contact_id,contact_hash,first_name,last_name,preferred_language,email,opted_in, employer_id, employer_name,
+  id,modified_date, contact_id,contact_hash,first_name,last_name,preferred_language,
+  email, opted_in, double_opt_in_activity, employer_id, employer_name,
   -- has recurred isn't really used now - I'm just a bit reluctant to remove it in case they want it back.
   foundation_has_recurred_donation,
   foundation_has_active_recurring_donation,
@@ -502,7 +510,7 @@ INSERT INTO silverpop_export (
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email,ex.opted_in, ex.employer_id, ex.employer_name,
+  ex.email, ex.opted_in, dedupe_table.double_opt_in_activity, ex.employer_id, ex.employer_name,
   foundation_has_recurred_donation,
   foundation_has_active_recurring_donation,
   foundation_recurring_first_donation_date,
@@ -623,6 +631,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
+    e.double_opt_in_activity,
     e.employer_name,
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
@@ -890,6 +899,7 @@ donor_status,
 donor_status_id,
 email,
 email_greeting,
+double_opt_in_activity,
 employer_id,
 employer_name,
 matching_gifts_provider_info_url,
