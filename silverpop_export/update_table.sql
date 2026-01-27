@@ -631,7 +631,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
-    e.double_opt_in_activity,
+    IF(e.double_opt_in_activity = 1, 'Yes', 'No') AS double_opt_in_activity,
     e.employer_name,
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
