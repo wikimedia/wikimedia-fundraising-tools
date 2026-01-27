@@ -883,9 +883,9 @@ def test_double_opt_in(testdb):
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person1@localhost'")
-    assert cursor.fetchone() == (0,)
+    assert cursor.fetchone() == ("No",)
     cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person2@localhost'")
-    assert cursor.fetchone() == (1,)
+    assert cursor.fetchone() == ("Yes",)
 
 
 def test_opted_out_email_but_sms_consent_included(testdb):
