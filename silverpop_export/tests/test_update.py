@@ -368,6 +368,43 @@ def test_bad_ct_country(testdb):
     assert cursor.fetchone() == ('PE',)
 
 
+def test_missing_country_from_ct(testdb):
+    '''
+    Test that we use the latest CT country when address is missing
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-03', 9.50, 'xyz123', 1, 1);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (2, 1, '2025-01-03', 9.50, 'abc456', 1, 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 1000, 'JPY');
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (2, 1000, 'JPY');
+    """, """
+    insert into civicrm_contribution_tracking (contribution_id, country) values
+        (1, 'PT');
+    """, """
+    insert into civicrm_contribution_tracking (contribution_id, country) values
+        (2, 'ES');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select country from silverpop_export")
+    assert cursor.fetchone() == ('ES',)
+
+
 def test_exclusion(testdb):
     '''
     Test that we exclude former email addresses from the log table.

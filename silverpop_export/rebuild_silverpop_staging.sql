@@ -5,18 +5,18 @@
 -- Create a table of countries and languages for contacts with no country
 -- pulling data from contribution tracking.
 -- Query OK, 369156 rows affected (2 min 59.66 sec)
--- Create a table of countries and languages for contacts with no country
--- pulling data from contribution tracking.
--- Query OK, 369156 rows affected (2 min 59.66 sec)
 INSERT INTO silverpop_missing_countries
--- The use of MAX for country really means 'any', for lang it should help avoid NULL.
-SELECT c.contact_id, MAX(ct.country), MAX(lang) FROM civicrm.civicrm_contribution c
-                                                       LEFT JOIN civicrm.civicrm_contribution_tracking ct ON c.id = ct.contribution_id
-                                                       LEFT JOIN silverpop_countrylangs langs ON langs.country = ct.country
-                                                       LEFT JOIN civicrm.civicrm_address a ON a.contact_id = c.contact_id AND a.is_primary = 1
+-- Order by ct.id descending to get the most recent country inserted first,
+-- the use the 'ON DUPLICATE KEY UPDATE (no-op)' trick to ignore the rest
+SELECT c.contact_id, ct.country, lang
+FROM civicrm.civicrm_contribution c
+   LEFT JOIN civicrm.civicrm_contribution_tracking ct ON c.id = ct.contribution_id
+   LEFT JOIN silverpop_countrylangs langs ON langs.country = ct.country
+   LEFT JOIN civicrm.civicrm_address a ON a.contact_id = c.contact_id AND a.is_primary = 1
 WHERE ct.country IS NOT NULL
   AND a.country_id IS NULL
-GROUP BY c.contact_id;
+  ORDER BY ct.id desc
+ON DUPLICATE KEY UPDATE contact_id = c.contact_id;
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.

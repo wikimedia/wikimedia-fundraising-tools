@@ -233,6 +233,7 @@ create table wmf_contribution_extra (
 
 drop table if exists civicrm_contribution_tracking;
 create table civicrm_contribution_tracking (
+    id int(10) unsigned PRIMARY KEY AUTO_INCREMENT,
     contribution_id int(10) unsigned,
     country varchar(2)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
