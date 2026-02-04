@@ -161,6 +161,7 @@ INSERT INTO silverpop_email_map (
     FROM civicrm.civicrm_activity_contact ac
     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
     WHERE a.activity_type_id = @doubleOptInType
+      AND ac.record_type_id = @activityTargets
   ) doi ON doi.contact_id = ex.contact_id
   GROUP BY ex.email;
 
