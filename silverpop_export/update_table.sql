@@ -157,12 +157,13 @@ INSERT INTO silverpop_email_map (
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
   LEFT JOIN (
-    SELECT DISTINCT ac.contact_id
+    SELECT DISTINCT ac.contact_id, a.subject
     FROM civicrm.civicrm_activity_contact ac
     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
     WHERE a.activity_type_id = @doubleOptInType
       AND ac.record_type_id = @activityTargets
   ) doi ON doi.contact_id = ex.contact_id
+    AND doi.subject = ex.email
   GROUP BY ex.email;
 
 -- Find the latest donation for each email address. Ordering by
