@@ -1,0 +1,6 @@
+contact_id,email_address,donor_status_id
+12345,donor@example.com,30
+67890,recurring@example.org,2
+11111,lapsed@example.net,50
+22222,newdonor@example.com,25
+33333,nondonor@example.org,1000
