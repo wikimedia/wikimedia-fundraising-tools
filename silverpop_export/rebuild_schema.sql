@@ -212,10 +212,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 -- contribution tracking but not the Civi contact record (around 400k)
 CREATE TABLE IF NOT EXISTS `silverpop_missing_countries`
 (
-  `contact_id` INT(10) UNSIGNED NOT NULL COMMENT 'FK to Contact ID',
+  `contact_id` INT(10) UNSIGNED PRIMARY KEY NOT NULL COMMENT 'FK to Contact ID',
   `country` VARCHAR(2) DEFAULT NULL,
   `preferred_language` VARCHAR(32) DEFAULT NULL,
-  KEY `contact_id` (`contact_id`),
   KEY `country` (`country`)
 ) COLLATE 'utf8mb4_unicode_ci';
 

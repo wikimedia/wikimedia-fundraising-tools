@@ -1,6 +1,7 @@
 SET autocommit = 1;
 SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade';
 SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
+SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Downgrade';
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
@@ -157,11 +158,13 @@ INSERT INTO silverpop_email_map (
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
   LEFT JOIN (
-    SELECT DISTINCT ac.contact_id
+    SELECT DISTINCT ac.contact_id, a.subject
     FROM civicrm.civicrm_activity_contact ac
     INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
     WHERE a.activity_type_id = @doubleOptInType
+      AND ac.record_type_id = @activityTargets
   ) doi ON doi.contact_id = ex.contact_id
+    AND doi.subject = ex.email
   GROUP BY ex.email;
 
 -- Find the latest donation for each email address. Ordering by
@@ -363,12 +366,14 @@ INSERT INTO silverpop_has_recur (
      INNER JOIN civicrm.civicrm_activity a
          ON a.id = ac.activity_id
             AND (
-                -- Either upgraded at any time in the past
-                a.activity_type_id = @recurringUpgradeType OR (
-                    -- Or declined to upgrade in the past year
-                    a.activity_type_id = @recurringUpgradeTypeDecline AND
-                    a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
-                )
+                  -- Either upgraded or downgraded in the last 2 years
+                  ((a.activity_type_id = @recurringUpgradeType OR
+                  a.activity_type_id = @recurringDowngradeType)
+                  AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 2 YEAR))
+                OR
+                  -- Or declined to upgrade in the past year
+                  (a.activity_type_id = @recurringUpgradeTypeDecline AND
+                  a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR))
             )
    WHERE ac.contact_id = recur.contact_id
  ) as recurring_has_upgrade_activity
@@ -528,7 +533,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   lt.latest_currency_symbol as foundation_latest_currency_symbol,
   COALESCE(lt.latest_native_amount, 0) as foundation_latest_native_amount,
   foundation_last_donation_date,foundation_first_donation_date,
-  addr.city,addr.country,addr.state,addr.postal_code,
+  addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
   stats.donor_segment_id, stats.donor_status_bin,
   endowment_last_donation_date, endowment_first_donation_date,
   endowment_number_donations,
@@ -639,7 +644,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     CASE
         WHEN donor_segment_id = 100 THEN 'Major Donor'
         WHEN donor_segment_id = 200 THEN 'Mid Tier'
-        WHEN donor_segment_id = 200 THEN 'Mid-Value Prospect'
+        WHEN donor_segment_id = 300 THEN 'Mid-Value Prospect'
         WHEN donor_segment_id = 400 THEN 'Recurring donor'
         WHEN donor_segment_id = 450 THEN 'Recurring Annual Donor'
         WHEN donor_segment_id = 500 THEN 'Grassroots Plus Donor'

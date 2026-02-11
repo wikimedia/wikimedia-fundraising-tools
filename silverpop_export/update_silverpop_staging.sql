@@ -33,8 +33,9 @@ BEGIN;
 -- low volume of 'new catches'
 -- Query OK, 35 rows affected (6.29 sec)
 INSERT INTO silverpop_missing_countries
--- The use of MAX for country really means 'any', for lang it should help avoid NULL.
-SELECT c.contact_id, MAX(ct.country), MAX(lang)
+-- Order by ct.id descending to get the most recent country inserted first,
+-- the use the 'ON DUPLICATE KEY UPDATE (no-op)' trick to ignore the rest
+SELECT c.contact_id, ct.country, lang
 FROM civicrm.civicrm_contribution c
    LEFT JOIN civicrm.civicrm_contribution_tracking ct ON c.id = ct.contribution_id
    LEFT JOIN silverpop_countrylangs langs ON langs.country = ct.country
@@ -43,7 +44,8 @@ FROM civicrm.civicrm_contribution c
 WHERE ct.country IS NOT NULL
   AND a.country_id IS NULL
   AND contact.modified_date BETWEEN @startDate AND @endDate
-GROUP BY c.contact_id;
+  ORDER BY ct.id desc
+ON DUPLICATE KEY UPDATE contact_id = c.contact_id;
 
 -- Populate, or append to, the storage table all contacts that
 -- have an email address. ID is civicrm_email.id.
