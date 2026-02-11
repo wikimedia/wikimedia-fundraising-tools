@@ -1,6 +1,7 @@
 SET autocommit = 1;
 SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade';
 SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
+SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Downgrade';
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
@@ -365,12 +366,14 @@ INSERT INTO silverpop_has_recur (
      INNER JOIN civicrm.civicrm_activity a
          ON a.id = ac.activity_id
             AND (
-                -- Either upgraded at any time in the past
-                a.activity_type_id = @recurringUpgradeType OR (
-                    -- Or declined to upgrade in the past year
-                    a.activity_type_id = @recurringUpgradeTypeDecline AND
-                    a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
-                )
+                  -- Either upgraded or downgraded in the last 2 years
+                  ((a.activity_type_id = @recurringUpgradeType OR
+                  a.activity_type_id = @recurringDowngradeType)
+                  AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 2 YEAR))
+                OR
+                  -- Or declined to upgrade in the past year
+                  (a.activity_type_id = @recurringUpgradeTypeDecline AND
+                  a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR))
             )
    WHERE ac.contact_id = recur.contact_id
  ) as recurring_has_upgrade_activity

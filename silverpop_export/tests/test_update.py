@@ -754,14 +754,20 @@ def test_recurring_upgrade_eligibility(testdb):
             (2, 'adyendonor@localhost', 1, 0),
             (3, 'multipledonor@localhost', 1, 0),
             (4, 'alreadyupgraded@localhost', 1, 0),
-            (5, 'annualdonor@localhost', 1, 0);
+            (5, 'annualdonor@localhost', 1, 0),
+            (6, 'alreadydowngraded@localhost', 1, 0),
+            (7, 'declinedupgrade@localhost', 1, 0),
+            (8, 'upgradedlongago@localhost', 1, 0);
         """, """
         insert into civicrm_contact (id, modified_date) values
             (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
             (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
             (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
             (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+            (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (6, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (7, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (8, DATE_SUB(NOW(), INTERVAL 1 DAY));
         """, """
         insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, frequency_unit, payment_processor_id ) values
             (1, 1, 1.01, 'USD', 5, 'month', 2),
@@ -769,7 +775,10 @@ def test_recurring_upgrade_eligibility(testdb):
             (3, 3, 3.03, 'GBP', 5, 'month', 1),
             (4, 3, 4.04, 'PLN', 5, 'month', 1),
             (5, 4, 5.05, 'COP', 5, 'month', 1),
-            (6, 5, 6.06, 'COP', 5, 'year', 1);
+            (6, 5, 6.06, 'COP', 5, 'year', 1),
+            (7, 6, 7.07, 'CAD', 5, 'month', 1),
+            (8, 7, 8.08, 'NZD', 5, 'month', 1),
+            (9, 8, 9.09, 'AUD', 5, 'month', 1);
         """, """
         insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
             (1, 1, 1, '2015-01-03', 1.01, 'xyz123', 1, 1),
@@ -777,13 +786,22 @@ def test_recurring_upgrade_eligibility(testdb):
             (3, 3, 3, '2017-05-05', 3.03, 'def789', 1, 1),
             (4, 3, 4, '2017-05-05', 4.04, 'ghi012', 1, 1),
             (5, 4, 5, '2017-05-05', 5.05, 'jkl345', 1, 1),
-            (6, 5, 6, '2017-05-05', 6.06, 'mno678', 1, 1);
+            (6, 5, 6, '2017-05-05', 6.06, 'mno678', 1, 1),
+            (7, 6, 6, '2017-05-05', 7.07, 'qrs901', 1, 1),
+            (8, 7, 7, '2017-05-05', 8.08, 'tuv234', 1, 1),
+            (9, 8, 8, '2017-05-05', 9.09, 'wxy567', 1, 1);
         """, """
-        insert into civicrm_activity (id, activity_type_id) values
-            (1, 165);
+        insert into civicrm_activity (id, activity_type_id, activity_date_time) values
+            (1, 165, DATE_SUB(NOW(), INTERVAL 13 MONTH)),
+            (2, 168, DATE_SUB(NOW(), INTERVAL 13 MONTH)),
+            (3, 166, DATE_SUB(NOW(), INTERVAL 1 MONTH)),
+            (4, 165, DATE_SUB(NOW(), INTERVAL 33 MONTH));
         """, """
         insert into civicrm_activity_contact (activity_id, contact_id) values
-            (1, 4);
+            (1, 4),
+            (2, 6),
+            (3, 7),
+            (4, 8);
         """])
 
     cursor = conn.db_conn.cursor()
@@ -795,6 +813,9 @@ def test_recurring_upgrade_eligibility(testdb):
     assert cursor.fetchone() == (3, 'No',)
     assert cursor.fetchone() == (4, 'No',)
     assert cursor.fetchone() == (5, 'No',)
+    assert cursor.fetchone() == (6, 'No',)
+    assert cursor.fetchone() == (7, 'No',)
+    assert cursor.fetchone() == (8, 'Yes',)
 
 
 def test_merge_status(testdb):
