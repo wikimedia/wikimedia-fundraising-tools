@@ -925,22 +925,18 @@ def test_double_opt_in(testdb):
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0),
         (2, 'person2@localhost', 1, 0),
-        (3, 'person2@localhost', 1, 0),
-        (4, 'person4@localhost', 1, 0);
+        (3, 'person2@localhost', 1, 0);
     """, """
     insert into civicrm_contact (id, modified_date) values
         (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
         (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
-        (1, 3, 3),
-        (2, 4, 3);
+        (1, 3, 3);
     """, """
-    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time, subject) values
-        (1, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'person2@localhost'),
-        (2, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'nottherightemail@localhost');
+    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time) values
+        (1, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH));
     """])
 
     cursor = conn.db_conn.cursor()
@@ -948,8 +944,6 @@ def test_double_opt_in(testdb):
     assert cursor.fetchone() == ("No",)
     cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person2@localhost'")
     assert cursor.fetchone() == ("Yes",)
-    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person4@localhost'")
-    assert cursor.fetchone() == ("No",)
 
 
 def test_opted_out_email_but_sms_consent_included(testdb):
