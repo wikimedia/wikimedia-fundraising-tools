@@ -622,7 +622,7 @@ def test_optin_negative_exclusion(testdb):
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select count(email) from silverpop_export")
+    cursor.execute("select count(email) from silverpop_export_view")
     assert cursor.fetchone() == (2,)
     cursor.execute("select count(email) from silverpop_excluded")
     assert cursor.fetchone() == (1,)

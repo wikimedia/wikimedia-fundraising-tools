@@ -144,6 +144,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   preferred_language VARCHAR(12),
   email VARCHAR(255),
   opted_in TINYINT(1),
+  opted_out TINYINT(1),
+  sms_consent TINYINT(1),
   double_opt_in_activity TINYINT(1),
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
