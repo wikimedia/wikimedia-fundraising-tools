@@ -485,7 +485,7 @@ WHERE t.modified_date BETWEEN @startDate AND @endDate;
 -- Query OK, 653187 rows affected (50.32 sec)
 INSERT INTO silverpop_export (
   id,modified_date, contact_id,contact_hash,first_name,last_name,preferred_language,
-  email, opted_in, opted_out, sms_consent, double_opt_in_activity,
+  email, opted_in, do_not_solicit, opted_out, sms_consent, double_opt_in_activity,
   employer_id, employer_name,
   -- has recurred isn't really used now - I'm just a bit reluctant to remove it in case they want it back.
   foundation_has_recurred_donation,
@@ -515,7 +515,7 @@ INSERT INTO silverpop_export (
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email, ex.opted_in, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
+  ex.email, ex.opted_in, ex.do_not_solicit, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
   ex.employer_id, ex.employer_name,
   foundation_has_recurred_donation,
   foundation_has_active_recurring_donation,
@@ -632,7 +632,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(country, 'XX') country,
     state,
     postal_code,
-    opted_in, opted_out, sms_consent,
+    opted_in,
+    do_not_solicit, -- Only used in MediaWiki export, not Silverpop
+    opted_out, sms_consent,
     IF(e.double_opt_in_activity = 1, 'Yes', 'No') AS double_opt_in_activity,
     e.employer_name,
     e.employer_id,
