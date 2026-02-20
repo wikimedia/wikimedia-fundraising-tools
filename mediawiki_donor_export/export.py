@@ -7,7 +7,7 @@ Exports donor status data from silverpop_export_view_full for sync to MediaWiki.
 This module reads from the existing silverpop export views (built by the
 silverpop_export module) and produces a simple CSV with:
 
-  contact_id, email_address, donor_status_id
+  contact_id, email_address, donor_status_id, do_not_solicit
 
 Designed to run after the silverpop export has completed its table/view rebuild.
 """
@@ -27,16 +27,18 @@ log = logging.getLogger(__name__)
 EXPORT_QUERY = """
     SELECT
         e.ContactID AS contact_id,
-        e.email AS email_address,
-        e.donor_status_id
+        e.email,
+        e.donor_status_id,
+        e.do_not_solicit
     FROM silverpop_export_view_full e
 """
 
 EXPORT_QUERY_DELTA = """
     SELECT
         e.ContactID AS contact_id,
-        e.email AS email_address,
-        e.donor_status_id
+        e.email,
+        e.donor_status_id,
+        e.do_not_solicit
     FROM silverpop_export_view_full e
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
@@ -60,7 +62,7 @@ def export(days=None):
         log.info("Exporting donor status (full)")
         results = db.execute(EXPORT_QUERY)
 
-    fieldnames = ['contact_id', 'email_address', 'donor_status_id']
+    fieldnames = ['contact_id', 'email', 'donor_status_id', 'do_not_solicit']
 
     with open(output_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
