@@ -17,6 +17,7 @@ import csv
 import logging
 import os
 import time
+from datetime import datetime, timedelta
 
 import process.globals
 from database.db import Connection as DbConnection
@@ -43,10 +44,18 @@ EXPORT_QUERY_DELTA = """
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
 
+FRESHNESS_QUERY = """
+    SELECT UPDATE_TIME
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+        AND table_name = 'silverpop_export'
+"""
+
 
 def export(days=None):
     config = process.globals.get_config()
     db = DbConnection(**config.silverpop_db)
+    check_data_freshness(db)
 
     os.makedirs(config.working_path, exist_ok=True)
 
@@ -73,7 +82,21 @@ def export(days=None):
             num_rows += 1
 
     log.info("Wrote %d rows to %s", num_rows, output_path)
+    db.db_conn.close()
     return output_path
+
+
+def check_data_freshness(db, max_staleness_hours=36):
+    rows = db.execute(FRESHNESS_QUERY)
+    row = next(iter(rows), None)
+    if row is None or row['UPDATE_TIME'] is None:
+        raise RuntimeError("Cannot determine silverpop_export update time")
+    age = datetime.now() - row['UPDATE_TIME']
+    if age > timedelta(hours=max_staleness_hours):
+        raise RuntimeError(
+            f"silverpop_export data is stale: last updated {age} ago "
+            f"(max allowed: {max_staleness_hours}h)"
+        )
 
 
 if __name__ == '__main__':

@@ -5,7 +5,10 @@ MediaWiki user preferences. Produces a CSV containing `contact_id`,
 `email`, `donor_status_id` and `do_not_solicit`.
 
 Requires the silverpop export to have run first (it builds the views this
-module reads from).
+module reads from). Data is read from `silverpop_export_view_full`, but the
+freshness check runs against the underlying `silverpop_export` table - views
+have no update time of their own - and will abort if it has not been updated
+within the last 36 hours.
 
 ## Usage
 

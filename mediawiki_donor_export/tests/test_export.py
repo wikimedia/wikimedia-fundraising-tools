@@ -1,7 +1,10 @@
 import csv
 import os
 import tempfile
+from datetime import datetime, timedelta
 from unittest import mock
+
+import pytest
 
 from silverpop_export.tests.test_update import testdb, run_update_with_fixtures  # noqa: F401
 
@@ -42,7 +45,8 @@ def test_export(testdb):  # noqa: F811
     conn, db_name = testdb
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        with mock.patch("process.globals.get_config") as mock_config:
+        with mock.patch("process.globals.get_config") as mock_config, \
+             mock.patch("mediawiki_donor_export.export.check_data_freshness"):
             mock_config.return_value = mock.MagicMock(
                 silverpop_db={"user": conn.connectionArgs["user"],
                               "host": conn.connectionArgs["host"],
@@ -73,3 +77,48 @@ def test_export(testdb):  # noqa: F811
     assert by_email['lapsed@localhost']['donor_status_id'] == '50'
     assert by_email['active@localhost']['do_not_solicit'] == '0'
     assert by_email['lapsed@localhost']['do_not_solicit'] == '1'
+
+
+def test_fresh_data_permits_export():
+    """Data updated 1 hour ago should pass the freshness check."""
+    db = _make_db(datetime.now() - timedelta(hours=1))
+    export.check_data_freshness(db, max_staleness_hours=36)
+
+
+def test_stale_data_blocks_export():
+    """Data updated 48 hours ago should block the export."""
+    db = _make_db(datetime.now() - timedelta(hours=48))
+    with pytest.raises(RuntimeError, match="stale"):
+        export.check_data_freshness(db, max_staleness_hours=36)
+
+
+def test_null_update_time_blocks_export():
+    """NULL UPDATE_TIME (table missing or unsupported engine) should block."""
+    db = _make_db(None)
+    with pytest.raises(RuntimeError, match="Cannot determine"):
+        export.check_data_freshness(db, max_staleness_hours=36)
+
+
+def test_no_rows_blocks_export():
+    """No rows from information_schema (table doesn't exist) should block."""
+    db = mock.MagicMock()
+    db.execute.return_value = iter([])
+    with pytest.raises(RuntimeError, match="Cannot determine"):
+        export.check_data_freshness(db, max_staleness_hours=36)
+
+
+def test_one_second_past_threshold_blocks_export():
+    """Data one second beyond the threshold should block."""
+    db = _make_db(datetime.now() - timedelta(hours=36, seconds=1))
+    with pytest.raises(RuntimeError, match="stale"):
+        export.check_data_freshness(db, max_staleness_hours=36)
+
+
+def _make_db(update_time):
+    """Create a mock db that returns the given UPDATE_TIME."""
+    db = mock.MagicMock()
+    if update_time is None:
+        db.execute.return_value = iter([{'UPDATE_TIME': None}])
+    else:
+        db.execute.return_value = iter([{'UPDATE_TIME': update_time}])
+    return db
