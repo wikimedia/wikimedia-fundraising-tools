@@ -22,7 +22,7 @@ ON DUPLICATE KEY UPDATE contact_id = c.contact_id;
 -- have an email address. ID is civicrm_email.id.
 -- Query OK, 23986414 rows affected (23 min 34.44 sec)
 INSERT INTO silverpop_export_staging
-(id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, opted_in,
+(id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, do_not_solicit, opted_in,
  employer_id, employer_name, address_id, city, postal_code, country, state, all_funds_latest_donation_date)
 SELECT
   e.id,
@@ -30,6 +30,7 @@ SELECT
   e.contact_id, c.hash, e.email, c.first_name, c.last_name,
   REPLACE(COALESCE(c.preferred_language, cl.lang, 'en'), '_', '-') as preferred_language,
   (c.is_opt_out OR c.do_not_email OR e.on_hold OR COALESCE(v.do_not_solicit, 0)) as opted_out,
+  v.do_not_solicit as do_not_solicit,
   v.opt_in as opted_in,
   c.employer_id,
   IF(c.employer_id, c.organization_name, '') as employer_name,

@@ -1,0 +1,40 @@
+# Deploy as /etc/fundraising/mediawiki_donor_export.yaml,
+# or $HOME/.fundraising/mediawiki_donor_export.yaml
+
+# Directory which will stage the output CSV
+working_path: /tmp/mediawiki_donor_export/
+
+# Number of days worth of data to export (based on modified_date).
+# Omit or set to null for a full export of all contacts.
+offset_in_days: 3
+
+# Silverpop database (where silverpop_export_view_full lives)
+silverpop_db:
+    host: database
+    user: root
+    passwd: ""
+    db: silverpop
+    debug: false
+
+logging:
+    disable_existing_loggers: false
+    version: 1
+
+    formatters:
+        app_prefixed:
+            format: "mediawiki-donor-export: %(message)s\n"
+
+    handlers:
+        console:
+            class: logging.StreamHandler
+            stream: ext://sys.stdout
+
+        error:
+            class: logging.StreamHandler
+            level: ERROR
+
+    root:
+        level: DEBUG
+        handlers:
+            - console
+            - error
