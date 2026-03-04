@@ -44,6 +44,8 @@ EXPORT_QUERY_DELTA = """
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
 
+EXPORT_QUERY_LIMIT = " LIMIT %s"
+
 FRESHNESS_QUERY = """
     SELECT UPDATE_TIME
     FROM information_schema.tables
@@ -52,7 +54,7 @@ FRESHNESS_QUERY = """
 """
 
 
-def export(days=None):
+def export(days=None, limit=None):
     config = process.globals.get_config()
     db = DbConnection(**config.silverpop_db)
     check_data_freshness(db)
@@ -66,10 +68,18 @@ def export(days=None):
 
     if days is not None:
         log.info("Exporting donor status (delta: last %s days)", days)
-        results = db.execute(EXPORT_QUERY_DELTA, (days,))
+        query = EXPORT_QUERY_DELTA
+        params = (days,)
     else:
         log.info("Exporting donor status (full)")
-        results = db.execute(EXPORT_QUERY)
+        query = EXPORT_QUERY
+        params = None
+
+    if limit is not None:
+        query += EXPORT_QUERY_LIMIT
+        params = (params or ()) + (limit,)
+
+    results = db.execute(query, params)
 
     fieldnames = ['contact_id', 'email', 'donor_status_id', 'do_not_solicit']
 
@@ -109,6 +119,11 @@ if __name__ == '__main__':
         '-d', '--days', type=int, default=None,
         help='Export contacts modified in the last N days (default: full export)'
     )
+    parser.add_argument(
+        '-l', '--limit', type=int, default=None,
+        help='Limit the number of rows exported (useful for testing)'
+    )
+
     args = parser.parse_args()
 
     days = args.days
@@ -116,5 +131,5 @@ if __name__ == '__main__':
         days = config.offset_in_days
 
     lock.begin()
-    export(days=days)
+    export(days=days, limit=args.limit)
     lock.end()
