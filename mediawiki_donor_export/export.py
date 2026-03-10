@@ -17,6 +17,7 @@ import csv
 import logging
 import os
 import time
+import subprocess
 from datetime import datetime, timedelta
 
 import process.globals
@@ -79,21 +80,27 @@ def export(days=None, limit=None):
         query += EXPORT_QUERY_LIMIT
         params = (params or ()) + (limit,)
 
-    results = db.execute(query, params)
+    try:
+        results = db.execute(query, params)
 
-    fieldnames = ['contact_id', 'email', 'donor_status_id', 'do_not_solicit']
+        fieldnames = ['contact_id', 'email', 'donor_status_id', 'do_not_solicit']
 
-    with open(output_path, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        num_rows = 0
-        for row in results:
-            writer.writerow(row)
-            num_rows += 1
+        with open(output_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            num_rows = 0
+            for row in results:
+                writer.writerow(row)
+                num_rows += 1
 
-    log.info("Wrote %d rows to %s", num_rows, output_path)
-    db.db_conn.close()
-    return output_path
+        log.info("Wrote %d rows to %s", num_rows, output_path)
+
+        if 'encryption_key' in config:
+            output_path = encrypt_file(output_path, config.encryption_key)
+
+        return output_path
+    finally:
+        db.db_conn.close()
 
 
 def check_data_freshness(db, max_staleness_hours=36):
@@ -107,6 +114,30 @@ def check_data_freshness(db, max_staleness_hours=36):
             f"silverpop_export data is stale: last updated {age} ago "
             f"(max allowed: {max_staleness_hours}h)"
         )
+
+
+def encrypt_file(input_path, key):
+    enc_path = input_path + '.enc'
+    # Pass key via env var so it doesn't appear in the process argv
+    env = os.environ.copy()
+    env['OPENSSL_PASS'] = key
+    subprocess.run(
+        [
+            'openssl',
+            'enc',
+            '-aes-256-cbc',
+            '-salt',
+            '-pbkdf2',
+            '-in', input_path,
+            '-out', enc_path,
+            '-pass', 'env:OPENSSL_PASS',
+        ],
+        check=True,
+        env=env,
+    )
+    os.remove(input_path)
+    log.info("Encrypted output: %s", enc_path)
+    return enc_path
 
 
 if __name__ == '__main__':
