@@ -1,8 +1,8 @@
 # MediaWiki Donor Status Export
 
 Exports donor status data from `silverpop_export_view_full` for sync to
-MediaWiki user preferences. Produces a CSV containing `contact_id`,
-`email`, `donor_status_id` and `do_not_solicit`.
+MediaWiki user preferences. Produces a CSV containing `email` and
+`donor_status_id`.
 
 Requires the silverpop export to have run first (it builds the views this
 module reads from). Data is read from `silverpop_export_view_full`, but the

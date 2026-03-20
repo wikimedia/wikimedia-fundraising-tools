@@ -67,19 +67,17 @@ def test_export(testdb):  # noqa: F811
             rows = list(reader)
 
     # Should have the right columns
-    assert set(rows[0].keys()) == {'contact_id', 'email', 'donor_status_id', 'do_not_solicit'}
+    assert set(rows[0].keys()) == {'email', 'donor_status_id'}
 
     # Both donors should be present
     emails = {row['email'] for row in rows}
     assert 'active@localhost' in emails
     assert 'lapsed@localhost' in emails
 
-    # Check status and do_not_solicit values came through
+    # Check status values came through
     by_email = {row['email']: row for row in rows}
     assert by_email['active@localhost']['donor_status_id'] == '30'
     assert by_email['lapsed@localhost']['donor_status_id'] == '50'
-    assert by_email['active@localhost']['do_not_solicit'] == '0'
-    assert by_email['lapsed@localhost']['do_not_solicit'] == '1'
 
 
 def test_fresh_data_permits_export():
@@ -163,7 +161,7 @@ def test_export_with_encryption():
     """Export with encryption_key calls encrypt_file."""
     key = 'my-export-secret'
     fake_rows = [
-        {'contact_id': 1, 'email': 'enc@localhost', 'donor_status_id': 30, 'do_not_solicit': 0}
+        {'email': 'enc@localhost', 'donor_status_id': 30}
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -212,7 +210,7 @@ def test_encrypt_file_roundtrip_integration():
 def test_export_without_encryption_key():
     """Backwards compat: no encryption_key means plain CSV output."""
     fake_rows = [
-        {'contact_id': 1, 'email': 'plain@localhost', 'donor_status_id': 30, 'do_not_solicit': 0}
+        {'email': 'plain@localhost', 'donor_status_id': 30}
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
