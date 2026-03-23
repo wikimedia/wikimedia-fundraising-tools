@@ -126,7 +126,7 @@ BEGIN;
 COMMIT;
 
 
--- Query OK, 23199001 rows affected (11 min 55.19 sec)
+-- 44m rows affected (23 min 16.153 sec)
 INSERT INTO silverpop_email_map (
   email,
   master_email_id,
@@ -151,19 +151,20 @@ INSERT INTO silverpop_email_map (
     MIN(IF (ex.opted_in = 0, 0, 1)) as opted_in,
     MAX(ex.modified_date) as modified_date,
     MAX(pc.opted_in) as sms_consent,
-    MAX(IF(doi.contact_id IS NOT NULL, 1, 0)) as double_opt_in_activity
+    (EXISTS (
+      SELECT 1
+      FROM civicrm.civicrm_activity_contact ac
+      INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
+      WHERE ac.contact_id = ex.contact_id
+        AND ac.record_type_id = @activityTargets
+        AND a.activity_type_id = @doubleOptInType
+        AND a.subject = ex.email
+    )) as double_opt_in_activity
   FROM silverpop_export_staging ex
   INNER JOIN silverpop_export_stat stat
     ON ex.email = stat.email
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
-  LEFT JOIN (
-    SELECT DISTINCT ac.contact_id
-    FROM civicrm.civicrm_activity_contact ac
-    INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
-    WHERE a.activity_type_id = @doubleOptInType
-      AND ac.record_type_id = @activityTargets
-  ) doi ON doi.contact_id = ex.contact_id
   GROUP BY ex.email;
 
 -- Find the latest donation for each email address. Ordering by
