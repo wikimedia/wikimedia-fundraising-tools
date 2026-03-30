@@ -99,6 +99,9 @@ def export(days=None, limit=None):
         if 'encryption_key' in config:
             output_path = encrypt_file(output_path, config.encryption_key)
 
+        if 'sftp' in config:
+            upload(output_path)
+
         return output_path
     finally:
         db.db_conn.close()
@@ -115,6 +118,15 @@ def check_data_freshness(db, max_staleness_hours=36):
             f"silverpop_export data is stale: last updated {age} ago "
             f"(max allowed: {max_staleness_hours}h)"
         )
+
+
+def upload(path):
+    # Lazy import: paramiko is not in the test requirements
+    # SftpClient picks up the sftp config via process.globals.get_config()
+    from sftp.client import Client as SftpClient
+    log.info("Uploading %s via SFTP", os.path.basename(path))
+    sftpc = SftpClient()
+    sftpc.put(path, os.path.basename(path))
 
 
 def encrypt_file(input_path, key):

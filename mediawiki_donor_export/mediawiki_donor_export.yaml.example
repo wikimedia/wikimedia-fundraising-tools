@@ -13,6 +13,13 @@ offset_in_days: 3
 # Decrypt with: OPENSSL_PASS=KEY openssl enc -d -aes-256-cbc -pbkdf2 -in FILE.enc -out FILE.csv -pass env:OPENSSL_PASS
 # encryption_key: "my-shared-secret"
 
+# Optional: SFTP upload destination
+# sftp:
+#     host: sftp.example.org
+#     username: donor-export
+#     private_key: "-----BEGIN RSA PRIVATE KEY-----\n..."
+#     remote_root: /incoming/
+
 # Silverpop database (where silverpop_export_view_full lives)
 silverpop_db:
     host: database
