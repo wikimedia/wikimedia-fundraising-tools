@@ -137,6 +137,8 @@ def make_key(keystr=None):
         return paramiko.DSSKey(data=base64.b64decode(keystr.split(' ')[1]))
     elif 'ecdsa-' in keystr:
         return paramiko.ECDSAKey(data=base64.b64decode(keystr.split(' ')[1]))
+    elif 'ssh-ed25519' in keystr:
+        return paramiko.Ed25519Key(data=base64.b64decode(keystr.split(' ')[1]))
     elif 'BEGIN OPENSSH PRIVATE KEY' in keystr:
         fileish = io.StringIO(keystr)
         return paramiko.Ed25519Key.from_private_key(fileish)
