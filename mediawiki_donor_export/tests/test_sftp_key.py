@@ -18,6 +18,18 @@ def test_make_key_openssh_ed25519():
     assert isinstance(result, paramiko.Ed25519Key)
 
 
+def test_make_key_ssh_ed25519_public_key():
+    """make_key parses an ssh-ed25519 public key string."""
+    # Derive the public key from the test private key
+    private_key = make_key(TEST_OPENSSH_ED25519_KEY)
+    pub_blob = private_key.asbytes()
+    pub_b64 = __import__('base64').b64encode(pub_blob).decode()
+    pub_keystr = f"ssh-ed25519 {pub_b64} test@example.com"
+
+    result = make_key(pub_keystr)
+    assert isinstance(result, paramiko.Ed25519Key)
+
+
 def test_make_key_openssh_invalid_payload():
     """make_key raises when the OpenSSH key payload is garbage."""
     bad_key = "-----BEGIN OPENSSH PRIVATE KEY-----\nnotavalidkey\n-----END OPENSSH PRIVATE KEY-----"
