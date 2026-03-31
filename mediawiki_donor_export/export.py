@@ -7,7 +7,7 @@ Exports donor status data from silverpop_export_view_full for sync to MediaWiki.
 This module reads from the existing silverpop export views (built by the
 silverpop_export module) and produces a simple CSV with:
 
-  contact_id, email_address, donor_status_id, do_not_solicit
+  email_address, donor_status_id
 
 Designed to run after the silverpop export has completed its table/view rebuild.
 """
@@ -17,6 +17,7 @@ import csv
 import logging
 import os
 import time
+import subprocess
 from datetime import datetime, timedelta
 
 import process.globals
@@ -27,19 +28,19 @@ log = logging.getLogger(__name__)
 
 EXPORT_QUERY = """
     SELECT
-        e.ContactID AS contact_id,
+        -- e.ContactID AS contact_id,
         e.email,
-        e.donor_status_id,
-        e.do_not_solicit
+        e.donor_status_id
+        -- e.do_not_solicit
     FROM silverpop_export_view_full e
 """
 
 EXPORT_QUERY_DELTA = """
     SELECT
-        e.ContactID AS contact_id,
+        -- e.ContactID AS contact_id,
         e.email,
-        e.donor_status_id,
-        e.do_not_solicit
+        e.donor_status_id
+        -- e.do_not_solicit
     FROM silverpop_export_view_full e
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
@@ -79,21 +80,31 @@ def export(days=None, limit=None):
         query += EXPORT_QUERY_LIMIT
         params = (params or ()) + (limit,)
 
-    results = db.execute(query, params)
+    try:
+        results = db.execute(query, params)
 
-    fieldnames = ['contact_id', 'email', 'donor_status_id', 'do_not_solicit']
+        fieldnames = ['email', 'donor_status_id']
+        # fieldnames += ['contact_id', 'do_not_solicit']
 
-    with open(output_path, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        num_rows = 0
-        for row in results:
-            writer.writerow(row)
-            num_rows += 1
+        with open(output_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            num_rows = 0
+            for row in results:
+                writer.writerow(row)
+                num_rows += 1
 
-    log.info("Wrote %d rows to %s", num_rows, output_path)
-    db.db_conn.close()
-    return output_path
+        log.info("Wrote %d rows to %s", num_rows, output_path)
+
+        if 'encryption_key' in config:
+            output_path = encrypt_file(output_path, config.encryption_key)
+
+        if 'sftp' in config:
+            upload(output_path)
+
+        return output_path
+    finally:
+        db.db_conn.close()
 
 
 def check_data_freshness(db, max_staleness_hours=36):
@@ -107,6 +118,39 @@ def check_data_freshness(db, max_staleness_hours=36):
             f"silverpop_export data is stale: last updated {age} ago "
             f"(max allowed: {max_staleness_hours}h)"
         )
+
+
+def upload(path):
+    # Lazy import: paramiko is not in the test requirements
+    # SftpClient picks up the sftp config via process.globals.get_config()
+    from sftp.client import Client as SftpClient
+    log.info("Uploading %s via SFTP", os.path.basename(path))
+    sftpc = SftpClient()
+    sftpc.put(path, os.path.basename(path))
+
+
+def encrypt_file(input_path, key):
+    enc_path = input_path + '.enc'
+    # Pass key via env var so it doesn't appear in the process argv
+    env = os.environ.copy()
+    env['OPENSSL_PASS'] = key
+    subprocess.run(
+        [
+            'openssl',
+            'enc',
+            '-aes-256-cbc',
+            '-salt',
+            '-pbkdf2',
+            '-in', input_path,
+            '-out', enc_path,
+            '-pass', 'env:OPENSSL_PASS',
+        ],
+        check=True,
+        env=env,
+    )
+    os.remove(input_path)
+    log.info("Encrypted output: %s", enc_path)
+    return enc_path
 
 
 if __name__ == '__main__':
