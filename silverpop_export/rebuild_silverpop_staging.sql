@@ -39,7 +39,7 @@ SELECT
   a.postal_code,
   COALESCE(ctry.iso_code, mc.country) as country,
   st.name as state,
-  IF((donor.endowment_last_donation_date IS NULL OR donor.last_donation_date > donor.endowment_last_donation_date), donor.last_donation_date, donor.endowment_last_donation_date) as all_funds_latest_donation_date
+  donor.all_funds_last_donation_date as all_funds_latest_donation_date
 FROM civicrm.civicrm_email e
 --  LEFT JOIN silverpop_export_staging staging ON staging.id = e.id
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
