@@ -406,3 +406,5 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direc
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
+INSERT INTO civicrm_payment_processor (id, name) VALUES(13, 'paypal');
+INSERT INTO civicrm_payment_processor (id, name) VALUES(14, 'paypal_ec');
