@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   all_funds_total_2023_2024 DECIMAL(20, 2),
   all_funds_total_2024_2025 DECIMAL(20, 2),
   all_funds_total_2025_2026 DECIMAL(20, 2),
-  foundation_lifetime_usd_total DECIMAL(20, 2),
+  all_funds_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
   foundation_last_donation_date DATETIME,
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_highest_native_amount DECIMAL(20, 2),
   foundation_highest_native_currency VARCHAR(3),
   foundation_highest_donation_date DATETIME,
-  lifetime_usd_total DECIMAL(20, 2),
+  all_funds_lifetime_usd_total DECIMAL(20, 2),
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
 -- aggregate contribution amounts

@@ -117,7 +117,7 @@ def test_no_donations(testdb):
             AF_recurring_latest_donation_date,
             AF_recurring_first_donation_date, AF_highest_usd_amount,
             AF_highest_native_amount, AF_highest_native_currency,
-            AF_highest_donation_date, AF_lifetime_usd_total,
+            AF_highest_donation_date, both_funds_lifetime_usd_total,
             AF_donation_count, AF_latest_currency, AF_latest_native_amount,
             AF_latest_donation_date
         from silverpop_export_view
@@ -152,12 +152,12 @@ def test_refund_history(testdb):
         (1, 20.15, 'CAD'),
         (2, 35.15, 'CAD');
      """, """
-        insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, number_donations) values
+        insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, number_donations) values
             (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', '2015-01-03', 1);
      """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, lifetime_usd_total, donation_count, foundation_latest_currency, foundation_latest_native_amount, foundation_last_donation_date  from silverpop_export")
+    cursor.execute("select foundation_highest_usd_amount, all_funds_lifetime_usd_total, donation_count, foundation_latest_currency, foundation_latest_native_amount, foundation_last_donation_date  from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
 
@@ -186,7 +186,7 @@ def test_first_donation(testdb):
         (2, 35.15, 'CAD'),
         (3, 45.25, 'CAD');
     """, """
-       insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
+       insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
        (1, 60.70, 45.25, 35.35, 'CAD', '2016-05-05', '2017-05-05');
     """])
 
@@ -268,7 +268,7 @@ def test_native_amount(testdb):
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
         """, """
-    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
          (1, 30.45, 10.00, 10.00, 'USD', '2015-01-03');
     """])
 
@@ -304,7 +304,7 @@ def test_currency_symbol(testdb):
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
             """, """
-    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
         (1, 30.45, 10.00, 10.00, 'GBP', '2015-01-03', '2017-07-07');
     """])
 
@@ -855,7 +855,7 @@ def test_merge_status(testdb):
         (4, 9, 'USD'),
         (5, 10, 'USD');
     """, """
-    insert into wmf_donor (entity_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, donor_status_id) values
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date, donor_status_id) values
         (1, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
         (2, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2024-01-01', 35),
         (3, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
