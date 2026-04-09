@@ -32,17 +32,9 @@ def test_export(testdb):  # noqa: F811
             (1, 1, 0),
             (2, 2, 1);
     """, """
-        insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
-            (1, 1, '2025-01-01', 10.00, 'xyz1', 1, 1),
-            (2, 2, '2020-01-01', 10.00, 'xyz2', 1, 1);
-    """, """
-        insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
-            (1, 10.00, 'USD'),
-            (2, 10.00, 'USD');
-    """, """
-        insert into wmf_donor (entity_id, donor_status_id, lifetime_usd_total, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, last_donation_date) values
-            (1, 30, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01'),
-            (2, 50, 10.00, 10.00, 10.00, 'USD', '2020-01-01', '2020-01-01');
+        insert into wmf_donor (entity_id, donor_status_id) values
+            (1, 30),
+            (2, 50);
     """])
 
     conn, db_name = testdb

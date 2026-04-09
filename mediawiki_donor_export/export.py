@@ -127,6 +127,7 @@ def upload(path):
     log.info("Uploading %s via SFTP", os.path.basename(path))
     sftpc = SftpClient()
     sftpc.put(path, os.path.basename(path))
+    sftpc.close()
 
 
 def encrypt_file(input_path, key):

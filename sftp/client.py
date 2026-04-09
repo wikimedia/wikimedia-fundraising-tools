@@ -15,9 +15,13 @@ class Client(object):
         self.config = process.globals.get_config()
         self.connect()
 
-    def __del__(self):
+    def close(self):
         if self.client:
             self.client.close()
+            self.client = None
+
+    def __del__(self):
+        self.close()
 
     def connect(self):
         log.info("Connecting to {host}".format(host=self.config.sftp.host))

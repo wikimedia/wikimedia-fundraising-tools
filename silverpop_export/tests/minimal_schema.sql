@@ -69,6 +69,7 @@ values
     ('USD', '$'),
     ('CAD', '$'),
     ('GBP', '£'),
+    ('EUR', '€'),
     ('DZD', NULL);
 
 drop table if exists civicrm_entity_tag;
@@ -103,7 +104,7 @@ CREATE TABLE `wmf_donor`
     `entity_id`                     int(10) unsigned,
     `donor_segment_id`              int(11)                              DEFAULT 1000,
     `donor_status_id`               int(11)                              DEFAULT NULL,
-    `last_donation_date`            datetime                             DEFAULT NULL,
+    `all_funds_last_donation_date`            datetime                             DEFAULT NULL,
     `last_donation_currency`        varchar(255)                         DEFAULT NULL,
     `last_donation_amount`          decimal(20, 2)                       DEFAULT '0.00',
     `last_donation_usd`             decimal(20, 2)                       DEFAULT '0.00',
@@ -114,7 +115,6 @@ CREATE TABLE `wmf_donor`
     `total_2021_2022`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2022_2023`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2023_2024`               decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_last_donation_date`  datetime                             DEFAULT NULL,
     `first_donation_date`           datetime                             DEFAULT NULL,
     `endowment_first_donation_date` datetime                             DEFAULT NULL,
     `first_donation_usd`            decimal(20, 2)                       DEFAULT '0.00',

@@ -23,8 +23,7 @@ FROM silverpop_email_map t
        LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
        LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
        LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
-WHERE c.receive_date = export.foundation_last_donation_date
-  AND c.financial_type_id <> 26
+WHERE c.receive_date = export.all_funds_latest_donation_date
   AND c.contribution_status_id = 1
   AND c.total_amount > 0
 GROUP BY t.email;
