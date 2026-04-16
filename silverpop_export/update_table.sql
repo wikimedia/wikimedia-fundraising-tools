@@ -5,6 +5,9 @@ SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE 
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
+SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal';
+SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec';
+
 -- Updates the silverpop_export table
 
 -- Explanation of tables (as of now, still being re-worked).
@@ -277,7 +280,7 @@ BEGIN;
 -- Query OK, 94904 rows affected (0.61 sec)
 DELETE recur FROM silverpop_update_world t INNER JOIN silverpop_has_recur recur ON t.email = recur.email;
 -- Add recent rows to has_recur table
--- Query OK, 134000 rows affected (38.378 sec)
+-- Query OK, 519373 rows (2 min 20.264 sec)
 INSERT INTO silverpop_has_recur (
   email,
   foundation_has_recurred_donation,
@@ -289,7 +292,8 @@ INSERT INTO silverpop_has_recur (
   most_recent_cancel_date,
   foundation_recurring_active_count,
   foundation_recurring_latest_contribution_recur_id,
-  recurring_has_upgrade_activity
+  recurring_has_upgrade_activity,
+  paypal_direct_recurring
 )
  SELECT DISTINCT email.email,
  1 as foundation_has_recurred_donation,
@@ -332,7 +336,10 @@ INSERT INTO silverpop_has_recur (
                   a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR))
             )
    WHERE ac.contact_id = recur.contact_id
- ) as recurring_has_upgrade_activity
+ ) as recurring_has_upgrade_activity,
+ MAX(CASE WHEN recur.contribution_status_id NOT IN (1, 3, 4) -- Completed,Cancelled,Failed
+   AND recur.payment_processor_id IN (@paypalProcessor, @paypal_ecProcessor)
+ THEN 1 ELSE 0 END) as paypal_direct_recurring
  FROM
    civicrm.civicrm_contribution_recur recur
  LEFT JOIN civicrm.civicrm_contribution contributions
@@ -467,7 +474,8 @@ INSERT INTO silverpop_export (
   all_funds_total_2022_2023,
   all_funds_total_2023_2024,
   all_funds_total_2024_2025,
-  all_funds_total_2025_2026
+  all_funds_total_2025_2026,
+  is_eligible_for_donor_portal
 )
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
@@ -504,7 +512,11 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
    stats.all_funds_total_2022_2023,
    stats.all_funds_total_2023_2024,
    stats.all_funds_total_2024_2025,
-   stats.all_funds_total_2025_2026
+   stats.all_funds_total_2025_2026,
+   -- is eligible for donor portal if segment not mid tier or major, lang english, no recurring with gateway = paypal or paypal_ec
+   IF((stats.donor_segment_id > 200 AND stats.donor_segment_id <> 1000)
+      AND SUBSTRING(COALESCE(ex.preferred_language, dedupe_table.preferred_language), 1, 2) = 'en'
+      AND IFNULL(recur.paypal_direct_recurring, 0) = 0, 1, 0) as is_eligible_for_donor_portal
 FROM silverpop_update_world t
 INNER JOIN silverpop_export_staging ex ON t.email = ex.email
 -- this inner join is restricting us to only one record per email.
@@ -758,7 +770,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(gift.matching_gifts_provider_info_url, '') as matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url,
-    IFNULL(most_recent_cancel_reason, '') most_recent_cancel_reason
+    IFNULL(most_recent_cancel_reason, '') most_recent_cancel_reason,
+    is_eligible_for_donor_portal
   FROM (
     SELECT *,
     CASE
@@ -858,6 +871,7 @@ endowment_highest_native_currency,
 endowment_highest_usd_amount,
 firstname,
 gender,
+is_eligible_for_donor_portal,
 lastname,
 latest_optin_response,
 most_recent_cancel_reason,

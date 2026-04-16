@@ -1037,6 +1037,71 @@ def test_opted_out_email_but_sms_consent_included(testdb):
     assert cursor.fetchone() == (1,)
 
 
+def test_is_eligible_for_donor_portal(testdb):
+    """
+    Requires segment > 200, not 1000 and not null
+    English language, and no active recurring with gateway = paypal or paypal_ec.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'nopaypal@localhost', 1, 0),
+            (2, 'oldpaypal@localhost', 1, 0),
+            (3, 'inactivepaypal@localhost', 1, 0),
+            (4, 'wronglang@localhost', 1, 0),
+            (5, '100segment@localhost', 1, 0),
+            (6, 'basecase@localhost', 1, 0),
+            (7, 'nondonor@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date, preferred_language) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_US'),
+            (2, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_GB'),
+            (3, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_CA'),
+            (4, DATE_SUB(NOW(), INTERVAL 1 DAY), 'fr_CA'),
+            (5, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_CA'),
+            (6, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_US'),
+            (7, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_US');
+        """, """
+        insert into wmf_donor (entity_id, donor_segment_id) values
+            (1, 400),
+            (2, 400),
+            (3, 400),
+            (4, 400),
+            (5, 100),
+            (6, 700),
+            (7, 1000);
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date, payment_processor_id) values
+            -- contact 1: single active recur, adyen
+            (1, 1, 1.00, 'USD', 5, NULL, 1),
+            -- contact 2: two active recurs, one gravy and one paypal_ec
+            (2, 2, 2.00, 'USD', 5, NULL, 19),
+            (3, 2, 2.00, 'USD', 5, NULL, 14),
+            -- contact 3: one active recur (gravy) + one cancelled recur (paypal)
+            (4, 3, 3.00, 'USD', 5, NULL, 19),
+            (5, 3, 3.00, 'USD', 3, '2023-06-01', 13),
+            -- contact 4: active adyen recur, wrong language
+            (6, 4, 1.00, 'USD', 5, NULL, 1);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'nopaypal@localhost'")
+    assert cursor.fetchone() == (1,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'oldpaypal@localhost'")
+    assert cursor.fetchone() == (0,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'inactivepaypal@localhost'")
+    assert cursor.fetchone() == (1,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'wronglang@localhost'")
+    assert cursor.fetchone() == (0,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = '100segment@localhost'")
+    assert cursor.fetchone() == (0,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'basecase@localhost'")
+    assert cursor.fetchone() == (1,)
+    cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'nondonor@localhost'")
+    assert cursor.fetchone() == (0,)
+
+
 def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None, rebuild_suppression=0):
     conn, db_name = testdb
 

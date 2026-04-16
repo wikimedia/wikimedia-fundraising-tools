@@ -192,6 +192,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 
   donor_segment_id INT(11),
   donor_status_bin INT(10) UNSIGNED,
+  is_eligible_for_donor_portal TINYINT(1),
 
   INDEX spex_modified_date (modified_date),
   CONSTRAINT sp_email UNIQUE (email),
@@ -217,7 +218,8 @@ CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `foundation_recurring_active_count` TINYINT UNSIGNED,
  `foundation_recurring_latest_contribution_recur_id` INT(10),
  `recurring_has_upgrade_activity` TINYINT(1),
- `most_recent_cancel_date` DATETIME
+ `most_recent_cancel_date` DATETIME,
+ `paypal_direct_recurring` TINYINT(1)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `cancel_reason` (
