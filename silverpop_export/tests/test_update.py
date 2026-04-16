@@ -1087,19 +1087,19 @@ def test_is_eligible_for_donor_portal(testdb):
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'nopaypal@localhost'")
-    assert cursor.fetchone() == (1,)
+    assert cursor.fetchone() == ("Yes",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'oldpaypal@localhost'")
-    assert cursor.fetchone() == (0,)
+    assert cursor.fetchone() == ("No",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'inactivepaypal@localhost'")
-    assert cursor.fetchone() == (1,)
+    assert cursor.fetchone() == ("Yes",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'wronglang@localhost'")
-    assert cursor.fetchone() == (0,)
+    assert cursor.fetchone() == ("No",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = '100segment@localhost'")
-    assert cursor.fetchone() == (0,)
+    assert cursor.fetchone() == ("No",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'basecase@localhost'")
-    assert cursor.fetchone() == (1,)
+    assert cursor.fetchone() == ("Yes",)
     cursor.execute("select is_eligible_for_donor_portal from silverpop_export_view where email = 'nondonor@localhost'")
-    assert cursor.fetchone() == (0,)
+    assert cursor.fetchone() == ("No",)
 
 
 def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None, rebuild_suppression=0):

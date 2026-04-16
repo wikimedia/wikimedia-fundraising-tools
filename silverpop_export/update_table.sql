@@ -771,7 +771,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url,
     IFNULL(most_recent_cancel_reason, '') most_recent_cancel_reason,
-    is_eligible_for_donor_portal
+    IF(is_eligible_for_donor_portal = 1, 'Yes', 'No') AS is_eligible_for_donor_portal
   FROM (
     SELECT *,
     CASE
