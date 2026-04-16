@@ -126,7 +126,7 @@ def upload(path):
     from sftp.client import Client as SftpClient
     log.info("Uploading %s via SFTP", os.path.basename(path))
     sftpc = SftpClient()
-    sftpc.put(path, os.path.basename(path))
+    sftpc.put_atomic(path, os.path.basename(path))
     sftpc.close()
 
 
