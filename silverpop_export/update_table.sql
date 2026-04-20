@@ -5,8 +5,8 @@ SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE 
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
-SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal';
-SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec';
+SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal' AND is_test = 0;
+SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec' AND is_test = 0;
 
 -- Updates the silverpop_export table
 

@@ -359,7 +359,8 @@ CREATE TABLE `civicrm_activity_contact` (
 DROP TABLE IF EXISTS civicrm_payment_processor;
 CREATE TABLE `civicrm_payment_processor` (
     `id` int(10) unsigned NOT NULL,
-    `name` varchar(64)
+    `name` varchar(64),
+    `is_test` tinyint(4) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE if EXISTS civicrm_value_1_gift_data_7;
@@ -406,5 +407,5 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direc
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
-INSERT INTO civicrm_payment_processor (id, name) VALUES(13, 'paypal');
-INSERT INTO civicrm_payment_processor (id, name) VALUES(14, 'paypal_ec');
+INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
+INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);
