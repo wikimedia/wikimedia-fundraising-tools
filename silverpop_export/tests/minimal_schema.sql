@@ -149,7 +149,6 @@ CREATE TABLE `wmf_donor`
     `all_funds_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
     `endowment_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
     `change_2025_2026`              decimal(20,2)                        DEFAULT 0.00,
-    `all_funds_total_2018_2019`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2019_2020`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2020_2021`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2021_2022`     decimal(20,2)                        DEFAULT 0.00,
@@ -157,7 +156,8 @@ CREATE TABLE `wmf_donor`
     `all_funds_total_2023_2024`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2024_2025`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
-    `all_funds_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00
+    `all_funds_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00,
+    `all_funds_total_2026_2027`     decimal(20,2)                        DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_value_1_communication_4;
