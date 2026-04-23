@@ -96,8 +96,8 @@ def export(days=None, limit=None):
 
         log.info("Wrote %d rows to %s", num_rows, output_path)
 
-        if 'encryption_key' in config:
-            output_path = encrypt_file(output_path, config.encryption_key)
+        if 'age_identity_file' in config:
+            output_path = encrypt_file(output_path, config.age_identity_file)
 
         if 'sftp' in config:
             upload(output_path)
@@ -130,24 +130,17 @@ def upload(path):
     sftpc.close()
 
 
-def encrypt_file(input_path, key):
-    enc_path = input_path + '.enc'
-    # Pass key via env var so it doesn't appear in the process argv
-    env = os.environ.copy()
-    env['OPENSSL_PASS'] = key
+def encrypt_file(input_path, identity_path):
+    enc_path = input_path + '.age'
     subprocess.run(
         [
-            'openssl',
-            'enc',
-            '-aes-256-cbc',
-            '-salt',
-            '-pbkdf2',
-            '-in', input_path,
-            '-out', enc_path,
-            '-pass', 'env:OPENSSL_PASS',
+            'age',
+            '-e',
+            '-i', identity_path,
+            '-o', enc_path,
+            input_path
         ],
         check=True,
-        env=env,
     )
     os.remove(input_path)
     log.info("Encrypted output: %s", enc_path)
