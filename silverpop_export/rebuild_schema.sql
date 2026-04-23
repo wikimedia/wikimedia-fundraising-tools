@@ -98,7 +98,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
   all_funds_latest_donation_date DATETIME,
-  all_funds_total_2018_2019 DECIMAL(20, 2),
   all_funds_total_2019_2020 DECIMAL(20, 2),
   all_funds_total_2020_2021 DECIMAL(20, 2),
   all_funds_total_2021_2022 DECIMAL(20, 2),
@@ -106,6 +105,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   all_funds_total_2023_2024 DECIMAL(20, 2),
   all_funds_total_2024_2025 DECIMAL(20, 2),
   all_funds_total_2025_2026 DECIMAL(20, 2),
+  all_funds_total_2026_2027 DECIMAL(20, 2),
   all_funds_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
@@ -163,7 +163,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
 -- aggregate contribution amounts
-  all_funds_total_2018_2019 DECIMAL(20, 2),
   all_funds_total_2019_2020 DECIMAL(20, 2),
   all_funds_total_2020_2021 DECIMAL(20, 2),
   all_funds_total_2021_2022 DECIMAL(20, 2),
@@ -171,6 +170,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   all_funds_total_2023_2024 DECIMAL(20, 2),
   all_funds_total_2024_2025 DECIMAL(20, 2),
   all_funds_total_2025_2026 DECIMAL(20, 2),
+  all_funds_total_2026_2027 DECIMAL(20, 2),
 
 -- Endowment stats ----
   endowment_first_donation_date DATETIME NULL,

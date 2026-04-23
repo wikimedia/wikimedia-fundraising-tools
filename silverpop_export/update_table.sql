@@ -55,14 +55,14 @@ BEGIN;
    endowment_number_donations,
    donor_segment_id,
    donor_status_bin,
-   all_funds_total_2018_2019,
    all_funds_total_2019_2020,
    all_funds_total_2020_2021,
    all_funds_total_2021_2022,
    all_funds_total_2022_2023,
    all_funds_total_2023_2024,
    all_funds_total_2024_2025,
-   all_funds_total_2025_2026
+   all_funds_total_2025_2026,
+   all_funds_total_2026_2027
   )
   SELECT
     e.email,
@@ -105,14 +105,14 @@ BEGIN;
         ELSE 0
       END
     ) as donor_status_bin,
-    COALESCE(SUM(donor.all_funds_total_2018_2019), 0) as all_funds_total_2018_2019,
     COALESCE(SUM(donor.all_funds_total_2019_2020), 0) as all_funds_total_2019_2020,
     COALESCE(SUM(donor.all_funds_total_2020_2021), 0) as all_funds_total_2020_2021,
     COALESCE(SUM(donor.all_funds_total_2021_2022), 0) as all_funds_total_2021_2022,
     COALESCE(SUM(donor.all_funds_total_2022_2023), 0) as all_funds_total_2022_2023,
     COALESCE(SUM(donor.all_funds_total_2023_2024), 0) as all_funds_total_2023_2024,
     COALESCE(SUM(donor.all_funds_total_2024_2025), 0) as all_funds_total_2024_2025,
-    COALESCE(SUM(donor.all_funds_total_2025_2026), 0) as all_funds_total_2025_2026
+    COALESCE(SUM(donor.all_funds_total_2025_2026), 0) as all_funds_total_2025_2026,
+    COALESCE(SUM(donor.all_funds_total_2026_2027), 0) as all_funds_total_2026_2027
   FROM silverpop_update_world t
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
@@ -467,7 +467,6 @@ INSERT INTO silverpop_export (
   donor_segment_id, donor_status_bin,
   endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount,
-  all_funds_total_2018_2019,
   all_funds_total_2019_2020,
   all_funds_total_2020_2021,
   all_funds_total_2021_2022,
@@ -475,6 +474,7 @@ INSERT INTO silverpop_export (
   all_funds_total_2023_2024,
   all_funds_total_2024_2025,
   all_funds_total_2025_2026,
+  all_funds_total_2026_2027,
   is_eligible_for_donor_portal
 )
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
@@ -505,7 +505,6 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
-   stats.all_funds_total_2018_2019,
    stats.all_funds_total_2019_2020,
    stats.all_funds_total_2020_2021,
    stats.all_funds_total_2021_2022,
@@ -513,6 +512,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
    stats.all_funds_total_2023_2024,
    stats.all_funds_total_2024_2025,
    stats.all_funds_total_2025_2026,
+   stats.all_funds_total_2026_2027,
    -- is eligible for donor portal if segment not mid tier or major, lang english, no recurring with gateway = paypal or paypal_ec
    IF((stats.donor_segment_id > 200 AND stats.donor_segment_id <> 1000)
       AND SUBSTRING(COALESCE(ex.preferred_language, dedupe_table.preferred_language), 1, 2) = 'en'
@@ -759,7 +759,6 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.modified_date,
     COALESCE(latest_donation_source, '') as both_funds_latest_donation_source,
     '' as both_funds_latest_payment_method,
-    all_funds_total_2018_2019 as both_funds_usd_total_fy1819,
     all_funds_total_2019_2020 as both_funds_usd_total_fy1920,
     all_funds_total_2020_2021 as both_funds_usd_total_fy2021,
     all_funds_total_2021_2022 as both_funds_usd_total_fy2122,
@@ -767,6 +766,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     all_funds_total_2023_2024 as both_funds_usd_total_fy2324,
     all_funds_total_2024_2025 as both_funds_usd_total_fy2425,
     all_funds_total_2025_2026 as both_funds_usd_total_fy2526,
+    all_funds_total_2026_2027 as both_funds_usd_total_fy2627,
     IFNULL(gift.matching_gifts_provider_info_url, '') as matching_gifts_provider_info_url,
     IFNULL(gift.guide_url, '') matching_gifts_guide_url,
     IFNULL(gift.online_form_url, '') matching_gifts_online_form_url,
@@ -839,7 +839,6 @@ both_funds_latest_donation_date,
 both_funds_latest_donation_source,
 both_funds_latest_native_amount,
 both_funds_latest_payment_method,
-both_funds_usd_total_fy1819,
 both_funds_usd_total_fy1920,
 both_funds_usd_total_fy2021,
 both_funds_usd_total_fy2122,
@@ -847,6 +846,7 @@ both_funds_usd_total_fy2223,
 both_funds_usd_total_fy2324,
 both_funds_usd_total_fy2425,
 both_funds_usd_total_fy2526,
+both_funds_usd_total_fy2627,
 contact_hash,
 country,
 dataaxle_is_grandparent,
