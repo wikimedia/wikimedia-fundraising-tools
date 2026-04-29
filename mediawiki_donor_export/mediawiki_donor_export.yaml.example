@@ -8,10 +8,11 @@ working_path: /tmp/mediawiki_donor_export/
 # Omit or set to null for a full export of all contacts.
 offset_in_days: 3
 
-# Optional: AES-256-CBC encryption key for the output file.
-# Any shared secret string. Share with anyone who needs to decrypt.
-# Decrypt with: OPENSSL_PASS=KEY openssl enc -d -aes-256-cbc -pbkdf2 -in FILE.enc -out FILE.csv -pass env:OPENSSL_PASS
-# encryption_key: "my-shared-secret"
+# Optional: path to an age identity file for encrypting the output.
+# The same file encrypts and decrypts (age -e -i derives the recipient
+# pubkey from the private key). Generate with: age-keygen -o identity.txt
+# Decrypt with: age -d -i identity.txt -o FILE.csv FILE.age
+# age_identity_file: /etc/fundraising/mediawiki_donor_export/age_identity
 
 # Optional: SFTP upload destination
 # sftp:

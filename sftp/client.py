@@ -56,6 +56,22 @@ class Client(object):
     def put(self, localpath, remotepath):
         self.client.put(localpath, os.path.join(self.config.sftp.remote_root, remotepath))
 
+    def put_atomic(self, localpath, remotepath):
+        """Upload to <remotepath>.part and rename into place once complete,
+        so consumers never open half-written files"""
+        final = os.path.join(self.config.sftp.remote_root, remotepath)
+        tmp = final + '.part'
+        try:
+            self.client.put(localpath, tmp)
+            self.client.rename(tmp, final)
+        except Exception:
+            log.warning("SFTP put_atomic failed: cleaning up %s", tmp)
+            try:
+                self.client.remove(tmp)
+            except Exception:
+                log.warning("Failed to remove partial upload: %s", tmp)
+            raise
+
 
 class Crawler(object):
     @staticmethod

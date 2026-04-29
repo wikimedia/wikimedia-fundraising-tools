@@ -107,51 +107,50 @@ def test_one_second_past_threshold_blocks_export():
         export.check_data_freshness(db, max_staleness_hours=36)
 
 
-def test_encrypt_file_calls_openssl_correctly():
-    """encrypt_file invokes openssl with key in env, not argv."""
-    key = 'my-test-secret'
+def test_encrypt_file_calls_age_correctly():
+    """encrypt_file invokes age with identity file path."""
+    identity_path = '/path/to/identity.txt'
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
 
     with mock.patch("mediawiki_donor_export.export.subprocess.run") as mock_run, \
          mock.patch("mediawiki_donor_export.export.os.remove") as mock_remove:
-        enc_path = export.encrypt_file(plaintext_path, key)
+        enc_path = export.encrypt_file(plaintext_path, identity_path)
 
-    assert enc_path == plaintext_path + '.enc'
+    assert enc_path == plaintext_path + '.age'
     call_args = mock_run.call_args
     assert call_args[0][0] == [
-        'openssl', 'enc', '-aes-256-cbc', '-salt', '-pbkdf2',
-        '-in', plaintext_path,
-        '-out', enc_path,
-        '-pass', 'env:OPENSSL_PASS',
+        'age',
+        '-e',
+        '-i', identity_path,
+        '-o', enc_path,
+        plaintext_path
     ]
     assert call_args[1]['check'] is True
-    assert call_args[1]['env']['OPENSSL_PASS'] == key
-    assert key not in call_args[0][0]
     mock_remove.assert_called_once_with(plaintext_path)
     os.unlink(plaintext_path)
 
 
 def test_encrypt_file_keeps_plaintext_on_failure():
-    """encrypt_file does not remove plaintext when openssl fails."""
-    key = 'my-test-secret'
+    """encrypt_file does not remove plaintext when age fails."""
+    identity_path = '/path/to/identity.txt'
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
 
     with mock.patch("mediawiki_donor_export.export.subprocess.run",
-                    side_effect=subprocess.CalledProcessError(1, 'openssl')):
+                    side_effect=subprocess.CalledProcessError(1, 'age')):
         with pytest.raises(subprocess.CalledProcessError):
-            export.encrypt_file(plaintext_path, key)
+            export.encrypt_file(plaintext_path, identity_path)
 
     assert os.path.exists(plaintext_path)
     os.unlink(plaintext_path)
 
 
 def test_export_with_encryption():
-    """Export with encryption_key calls encrypt_file."""
-    key = 'my-export-secret'
+    """Export with age_identity_file calls encrypt_file."""
+    identity_path = '/path/to/identity.txt'
     fake_rows = [
         {'email': 'enc@localhost', 'donor_status_id': 30}
     ]
@@ -162,41 +161,45 @@ def test_export_with_encryption():
              mock.patch("mediawiki_donor_export.export.DbConnection") as mock_db_cls, \
              mock.patch("mediawiki_donor_export.export.encrypt_file") as mock_encrypt:
             mock_db_cls.return_value.execute.return_value = iter(fake_rows)
-            mock_encrypt.side_effect = lambda path, k: path + '.enc'
+            mock_encrypt.side_effect = lambda path, k: path + '.age'
             mock_config.return_value = DictAsAttrDict(
                 silverpop_db={},
                 working_path=tmpdir,
-                encryption_key=key,
+                age_identity_file=identity_path,
             )
 
             output_path = export.export(days=None)
 
-        assert output_path.endswith('.enc')
+        assert output_path.endswith('.age')
         mock_encrypt.assert_called_once()
-        assert mock_encrypt.call_args[0][1] == key
+        assert mock_encrypt.call_args[0][1] == identity_path
 
 
-@pytest.mark.skipif(not shutil.which('openssl'), reason='openssl not on PATH')
+@pytest.mark.skipif(not shutil.which('age'), reason='age not on PATH')
 def test_encrypt_file_roundtrip_integration():
-    """Integration: encrypt then decrypt with openssl, verify contents."""
-    key = 'integration-test-key'
+    """Integration: encrypt then decrypt with age, verify contents."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        identity_path = f.name
+    os.unlink(identity_path)
+
+    subprocess.run(['age-keygen', '-o', identity_path],
+                   check=True, capture_output=True)
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
 
-    enc_path = export.encrypt_file(plaintext_path, key)
+    enc_path = export.encrypt_file(plaintext_path, identity_path)
 
-    env = os.environ.copy()
-    env['OPENSSL_PASS'] = key
     result = subprocess.run(
-        ['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2',
-         '-in', enc_path, '-pass', 'env:OPENSSL_PASS'],
+        ['age', '-d', '-i', identity_path, enc_path],
         capture_output=True,
-        env=env,
     )
+
     assert result.returncode == 0
     assert result.stdout == b'hello,world\n'
     os.unlink(enc_path)
+    os.unlink(identity_path)
 
 
 def test_export_without_encryption_key():
