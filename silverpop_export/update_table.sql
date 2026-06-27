@@ -49,12 +49,21 @@ BEGIN;
    all_funds_lifetime_usd_total,
    foundation_donation_count,
    foundation_first_donation_date,
+   all_funds_first_donation_date,
+   first_donation_was_recur,
    foundation_highest_usd_amount,
    endowment_highest_usd_amount,
    endowment_first_donation_date,
    endowment_number_donations,
    donor_segment_id,
+   donor_segment_overall,
+   years_consecutive,
    donor_status_bin,
+   donor_status_overall_bin,
+   donor_status_otg_bin,
+   donor_status_recur_overall_bin,
+   donor_status_recur_month_bin,
+   donor_status_recur_year_bin,
    all_funds_total_2019_2020,
    all_funds_total_2020_2021,
    all_funds_total_2021_2022,
@@ -70,17 +79,23 @@ BEGIN;
     COALESCE(SUM(donor.lifetime_including_endowment), 0) as all_funds_lifetime_usd_total,
     COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
     MIN(donor.first_donation_date) as foundation_first_donation_date,
+    MIN(donor.all_funds_first_donation_date) as all_funds_first_donation_date,
+    -- Bit of an ugly technique here to concatenate the date and the was_recur bool per row
+    -- then find the min of these and pull out the last character as the flag
+    RIGHT(MIN(CONCAT(
+      donor.all_funds_first_donation_date,
+      COALESCE(donor.first_donation_was_recur, 0)
+    )), 1) as first_donation_was_recur,
     MAX(donor.largest_donation) as foundation_highest_usd_amount,
     MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations,
     -- we use MIN because the higher priority values are lower - ie Major Donor is 100 and
     -- mid-tier is 200. If combining 2 merge-like donors we want to treat them as Major Donor
-    -- if choosing between 100 & 200. We need to be careful with field types here. At this stage
-    -- the code is pushing up the value (ie the 100) but it is likely we will be asked to
-    -- push up the field name (Major Donor) - hence the type is varchar. But, we need to do
-    -- any comparisons directly on the wmf_donor table, where it is an int.
-    MIN(donor.donor_segment_id) as donor_segment,
+    -- if choosing between 100 & 200.
+    MIN(donor.donor_segment_id) as donor_segment_id,
+    MIN(donor.donor_segment_overall) as donor_segment_overall,
+    MAX(donor.years_consecutive) as years_consecutive,
     -- Status values are trickier - if we want to combine one lybunt (35) record
     -- and one new (25) record, the correct answer is 'consecutive' (20). So
     -- we translate to bitwise flags for the merge, then check flags in the
@@ -105,6 +120,77 @@ BEGIN;
         ELSE 0
       END
     ) as donor_status_bin,
+    BIT_OR(
+      CASE
+        -- Bits are gave this year (16), gave last year (8), gave year before last (4), gave 2-5 years ago (2), gave > 5 years ago (1)
+        WHEN donor.donor_status_overall = 10 THEN 24 -- B'11000'
+        WHEN donor.donor_status_overall = 20 THEN 17 -- B'10001'
+        WHEN donor.donor_status_overall = 30 THEN 16 -- B'10000'
+        WHEN donor.donor_status_overall = 40 THEN 12 -- B'01100'
+        WHEN donor.donor_status_overall = 50 THEN  9 -- B'01001'
+        WHEN donor.donor_status_overall = 60 THEN  8 -- B'01000'
+        WHEN donor.donor_status_overall = 70 THEN  4 -- B'00100'
+        WHEN donor.donor_status_overall = 80 THEN  2 -- B'00010'
+        WHEN donor.donor_status_overall = 90 THEN  1 -- B'00001'
+        WHEN donor.donor_status_overall = 99 THEN  0
+        ELSE 0
+      END
+    ) as donor_status_overall_bin,
+    BIT_OR(
+      CASE
+        -- Bits are gave this year (16), gave last year (8), gave year before last (4), gave 2-5 years ago (2), gave > 5 years ago (1)
+        WHEN donor.donor_status_otg = 10 THEN 24 -- B'11000'
+        WHEN donor.donor_status_otg = 20 THEN 17 -- B'10001'
+        WHEN donor.donor_status_otg = 30 THEN 16 -- B'10000'
+        WHEN donor.donor_status_otg = 40 THEN 12 -- B'01100'
+        WHEN donor.donor_status_otg = 50 THEN  9 -- B'01001'
+        WHEN donor.donor_status_otg = 60 THEN  8 -- B'01000'
+        WHEN donor.donor_status_otg = 70 THEN  4 -- B'00100'
+        WHEN donor.donor_status_otg = 80 THEN  2 -- B'00010'
+        WHEN donor.donor_status_otg = 90 THEN  1 -- B'00001'
+        WHEN donor.donor_status_otg = 99 THEN  0
+        ELSE 0
+      END
+    ) as donor_status_otg_bin,
+    BIT_OR(
+      CASE
+        -- Bits are new (32), active (16), paused (8), failing (4), failed (2), cancelled (1)
+        WHEN donor.donor_status_recur_overall = 15 THEN 16 -- B'010000'
+        WHEN donor.donor_status_recur_overall = 25 THEN 32 -- B'100000'
+        WHEN donor.donor_status_recur_overall = 35 THEN  8 -- B'001000'
+        WHEN donor.donor_status_recur_overall = 45 THEN  4 -- B'000100'
+        WHEN donor.donor_status_recur_overall = 55 THEN  2 -- B'000010'
+        WHEN donor.donor_status_recur_overall = 65 THEN  1 -- B'000001'
+        WHEN donor.donor_status_recur_overall = 95 THEN  0
+        ELSE 0
+      END
+    ) as donor_status_recur_overall_bin,
+    BIT_OR(
+      CASE
+        -- Bits are new (32), active (16), paused (8), failing (4), failed (2), cancelled (1)
+        WHEN donor.donor_status_recur_month = 15 THEN 16 -- B'010000'
+        WHEN donor.donor_status_recur_month = 25 THEN 32 -- B'100000'
+        WHEN donor.donor_status_recur_month = 35 THEN  8 -- B'001000'
+        WHEN donor.donor_status_recur_month = 45 THEN  4 -- B'000100'
+        WHEN donor.donor_status_recur_month = 55 THEN  2 -- B'000010'
+        WHEN donor.donor_status_recur_month = 65 THEN  1 -- B'000001'
+        WHEN donor.donor_status_recur_month = 95 THEN  0
+        ELSE 0
+      END
+    ) as donor_status_recur_month_bin,
+    BIT_OR(
+      CASE
+        -- Bits are new (32), active (16), paused (8), failing (4), failed (2), cancelled (1)
+        WHEN donor.donor_status_recur_year = 15 THEN 16 -- B'010000'
+        WHEN donor.donor_status_recur_year = 25 THEN 32 -- B'100000'
+        WHEN donor.donor_status_recur_year = 35 THEN  8 -- B'001000'
+        WHEN donor.donor_status_recur_year = 45 THEN  4 -- B'000100'
+        WHEN donor.donor_status_recur_year = 55 THEN  2 -- B'000010'
+        WHEN donor.donor_status_recur_year = 65 THEN  1 -- B'000001'
+        WHEN donor.donor_status_recur_year = 95 THEN  0
+        ELSE 0
+      END
+    ) as donor_status_recur_year_bin,
     COALESCE(SUM(donor.all_funds_total_2019_2020), 0) as all_funds_total_2019_2020,
     COALESCE(SUM(donor.all_funds_total_2020_2021), 0) as all_funds_total_2020_2021,
     COALESCE(SUM(donor.all_funds_total_2021_2022), 0) as all_funds_total_2021_2022,
@@ -463,8 +549,11 @@ INSERT INTO silverpop_export (
   foundation_highest_native_currency,foundation_highest_donation_date,all_funds_lifetime_usd_total,donation_count,
   all_funds_latest_donation_date,latest_currency,latest_currency_symbol,latest_native_amount,
   foundation_first_donation_date,
+  all_funds_first_donation_date,
+  first_donation_was_recur,
   city,country,state,postal_code,
-  donor_segment_id, donor_status_bin,
+  donor_segment_id, donor_segment_overall, years_consecutive, donor_status_bin,
+  donor_status_otg_bin, donor_status_overall_bin, donor_status_recur_overall_bin, donor_status_recur_month_bin, donor_status_recur_year_bin,
   endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount,
   all_funds_total_2019_2020,
@@ -500,8 +589,11 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   lt.latest_currency_symbol as latest_currency_symbol,
   COALESCE(lt.latest_native_amount, 0) as latest_native_amount,
   foundation_first_donation_date,
+  all_funds_first_donation_date,
+  first_donation_was_recur,
   addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
-  stats.donor_segment_id, stats.donor_status_bin,
+  stats.donor_segment_id, stats.donor_segment_overall, stats.years_consecutive, stats.donor_status_bin,
+  stats.donor_status_otg_bin, stats.donor_status_overall_bin, stats.donor_status_recur_overall_bin, stats.donor_status_recur_month_bin, stats.donor_status_recur_year_bin,
   endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
@@ -610,37 +702,14 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     e.employer_id,
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     COALESCE(donor_segment_id, 1000) as donor_segment_id,
-    CASE
-        WHEN donor_segment_id = 100 THEN 'Major Donor'
-        WHEN donor_segment_id = 200 THEN 'Mid Tier'
-        WHEN donor_segment_id = 300 THEN 'Mid-Value Prospect'
-        WHEN donor_segment_id = 400 THEN 'Recurring donor'
-        WHEN donor_segment_id = 450 THEN 'Recurring Annual Donor'
-        WHEN donor_segment_id = 500 THEN 'Grassroots Plus Donor'
-        WHEN donor_segment_id = 600 THEN 'Grassroots Donor'
-        WHEN donor_segment_id = 900 THEN 'All other Donors'
-        WHEN donor_segment_id = 1000 THEN 'Non Donor'
-        ELSE 'Non Donor'
-        END as donor_segment,
+    COALESCE(donor_segment_overall, 990) as donor_segment_overall,
+    years_consecutive,
     donor_status_id,
-    CASE
-        WHEN donor_status_id = 2 THEN 'Active Recurring'
-        WHEN donor_status_id = 4 THEN 'Delinquent Recurring'
-        WHEN donor_status_id = 6 THEN 'Recent lapsed Recurring'
-        WHEN donor_status_id = 8 THEN 'Deep lapsed Recurring'
-        WHEN donor_status_id = 12 THEN 'Active Annual Recurring'
-        WHEN donor_status_id = 14 THEN 'Delinquent Annual Recurring'
-        WHEN donor_status_id = 16 THEN 'Lapsed Annual Recurring'
-        WHEN donor_status_id = 20 THEN 'Consecutive'
-        WHEN donor_status_id = 25 THEN 'New'
-        WHEN donor_status_id = 30 THEN 'Active'
-        WHEN donor_status_id = 35 THEN 'Lybunt'
-        WHEN donor_status_id = 50 THEN 'Lapsed'
-        WHEN donor_status_id = 60 THEN 'Deep Lapsed'
-        WHEN donor_status_id = 70 THEN 'Ultra lapsed'
-        WHEN donor_status_id = 1000 THEN 'Non Donor'
-        ELSE 'Non Donor'
-        END as donor_status,
+    donor_status_otg,
+    donor_status_overall,
+    donor_status_recur_overall,
+    donor_status_recur_month,
+    donor_status_recur_year,
     CASE WHEN opted_in IS NULL THEN '' ELSE IF(opted_in,'Yes','No') END AS latest_optin_response,
     IFNULL(DATE_FORMAT(birth_date, '%m/%d/%Y'), '') TS_birth_date,
     COALESCE(charitable_contributions_decile, '') as TS_charitable_contributions_decile,
@@ -720,8 +789,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     dm.appeal as direct_mail_latest_appeal,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
-    IFNULL(DATE_FORMAT(IF (endowment_first_donation_date IS NULL OR foundation_first_donation_date < endowment_first_donation_date , foundation_first_donation_date, endowment_first_donation_date), '%m/%d/%Y'), '')
-      as both_funds_first_donation_date,
+    IFNULL(DATE_FORMAT(all_funds_first_donation_date, '%m/%d/%Y'), '') as both_funds_first_donation_date,
+    IF(first_donation_was_recur = 1, 'Yes', 'No') as first_donation_was_recur,
     IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
     IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
@@ -796,7 +865,61 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN donor_status_bin &    2 /* B'000000000010' */ THEN 60
       WHEN donor_status_bin &    1 /* B'000000000001' */ THEN 70
       ELSE 1000
-  END as donor_status_id
+    END as donor_status_id,
+    CASE
+      WHEN donor_status_overall_bin & 24 = 24 THEN 10 -- this and last -> consecutive this year
+      WHEN donor_status_overall_bin      = 16 THEN 30 -- only this year -> new this year
+      WHEN donor_status_overall_bin & 16 = 16 THEN 20 -- this and any other -> reactivated this year
+      WHEN donor_status_overall_bin & 12 = 12 THEN 40 -- last year and the year before -> consecutive last year
+      WHEN donor_status_overall_bin      =  8 THEN 60 -- only last year -> new last year
+      WHEN donor_status_overall_bin &  8 =  8 THEN 50 -- last year and any other -> reactivated last year
+      WHEN donor_status_overall_bin &  4 =  4 THEN 70 -- lapsed
+      WHEN donor_status_overall_bin &  2 =  2 THEN 80 -- deep lapsed
+      WHEN donor_status_overall_bin &  1 =  1 THEN 90 -- ultra lapsed
+      ELSE 99
+    END as donor_status_overall,
+    CASE
+      WHEN donor_status_otg_bin & 24 = 24 THEN 10 -- this and last -> consecutive this year
+      WHEN donor_status_otg_bin      = 16 THEN 30 -- only this year -> new this year
+      WHEN donor_status_otg_bin & 16 = 16 THEN 20 -- this and any other -> reactivated this year
+      WHEN donor_status_otg_bin & 12 = 12 THEN 40 -- last year and the year before -> consecutive last year
+      WHEN donor_status_otg_bin      =  8 THEN 60 -- only last year -> new last year
+      WHEN donor_status_otg_bin &  8 =  8 THEN 50 -- last year and any other -> reactivated last year
+      WHEN donor_status_otg_bin &  4 =  4 THEN 70 -- lapsed
+      WHEN donor_status_otg_bin &  2 =  2 THEN 80 -- deep lapsed
+      WHEN donor_status_otg_bin &  1 =  1 THEN 90 -- ultra lapsed
+      ELSE 99
+    END as donor_status_otg,
+    CASE
+      WHEN donor_status_recur_overall_bin      = 32 THEN 25 -- new only -> new
+      WHEN donor_status_recur_overall_bin & 32 = 32 THEN 15 -- new & anything else -> active (could be new, but most likely active)
+      WHEN donor_status_recur_overall_bin & 16 = 16 THEN 15 -- any active
+      WHEN donor_status_recur_overall_bin &  8 =  8 THEN 35 -- paused
+      WHEN donor_status_recur_overall_bin &  4 =  4 THEN 45 -- failing
+      WHEN donor_status_recur_overall_bin &  2 =  2 THEN 55 -- failed
+      WHEN donor_status_recur_overall_bin &  1 =  1 THEN 65 -- cancelled
+      ELSE 95
+    END as donor_status_recur_overall,
+    CASE
+      WHEN donor_status_recur_month_bin      = 32 THEN 25 -- new only -> new
+      WHEN donor_status_recur_month_bin & 32 = 32 THEN 15 -- new & anything else -> active (could be new, but most likely active)
+      WHEN donor_status_recur_month_bin & 16 = 16 THEN 15 -- any active
+      WHEN donor_status_recur_month_bin &  8 =  8 THEN 35 -- paused
+      WHEN donor_status_recur_month_bin &  4 =  4 THEN 45 -- failing
+      WHEN donor_status_recur_month_bin &  2 =  2 THEN 55 -- failed
+      WHEN donor_status_recur_month_bin &  1 =  1 THEN 65 -- cancelled
+      ELSE 95
+    END as donor_status_recur_month,
+    CASE
+      WHEN donor_status_recur_year_bin      = 32 THEN 25 -- new only -> new
+      WHEN donor_status_recur_year_bin & 32 = 32 THEN 15 -- new & anything else -> active (could be new, but most likely active)
+      WHEN donor_status_recur_year_bin & 16 = 16 THEN 15 -- any active
+      WHEN donor_status_recur_year_bin &  8 =  8 THEN 35 -- paused
+      WHEN donor_status_recur_year_bin &  4 =  4 THEN 45 -- failing
+      WHEN donor_status_recur_year_bin &  2 =  2 THEN 55 -- failed
+      WHEN donor_status_recur_year_bin &  1 =  1 THEN 65 -- cancelled
+      ELSE 95
+    END as donor_status_recur_year
   FROM silverpop_export) AS e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
@@ -828,6 +951,7 @@ AF_recurring_eligible_for_upgrade,
 both_funds_lifetime_usd_total,
 both_funds_donation_count,
 both_funds_first_donation_date,
+first_donation_was_recur,
 both_funds_has_given_on_email,
 both_funds_highest_native_amount,
 both_funds_highest_native_currency,
@@ -851,10 +975,15 @@ contact_hash,
 country,
 dataaxle_is_grandparent,
 direct_mail_latest_appeal,
-donor_segment,
+donor_segment_overall,
+years_consecutive,
 donor_segment_id,
-donor_status,
 donor_status_id,
+donor_status_otg,
+donor_status_overall,
+donor_status_recur_overall,
+donor_status_recur_month,
+donor_status_recur_year,
 email,
 email_greeting,
 double_opt_in_activity,

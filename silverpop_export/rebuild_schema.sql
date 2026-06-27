@@ -109,10 +109,19 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   all_funds_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
+  all_funds_first_donation_date DATETIME,
+  first_donation_was_recur TINYINT,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
+  donor_segment_overall INT(11),
+  years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
+  donor_status_overall_bin INT(10) UNSIGNED,
+  donor_status_otg_bin INT(10) UNSIGNED,
+  donor_status_recur_overall_bin INT(11),
+  donor_status_recur_month_bin INT(11),
+  donor_status_recur_year_bin INT(11),
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
@@ -183,6 +192,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   latest_native_amount DECIMAL(20, 2),
   all_funds_latest_donation_date DATETIME,
   foundation_first_donation_date DATETIME,
+  all_funds_first_donation_date DATETIME,
+  first_donation_was_recur TINYINT,
 
 -- Address information
   city VARCHAR(128),
@@ -191,7 +202,14 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   postal_code VARCHAR(128),
 
   donor_segment_id INT(11),
+  donor_segment_overall INT(11),
+  years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
+  donor_status_overall_bin INT(10) UNSIGNED,
+  donor_status_otg_bin INT(10) UNSIGNED,
+  donor_status_recur_overall_bin INT(10) UNSIGNED,
+  donor_status_recur_month_bin INT(10) UNSIGNED,
+  donor_status_recur_year_bin INT(10) UNSIGNED,
   is_eligible_for_donor_portal TINYINT(1),
 
   INDEX spex_modified_date (modified_date),

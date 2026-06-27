@@ -196,6 +196,43 @@ def test_first_donation(testdb):
     assert cursor.fetchone() == expected
 
 
+def test_first_donation_was_recur(testdb):
+    """
+    first_donation_was_recur should come from the donor row with the earliest
+    all_funds_first_donation_date across all contacts sharing an email.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'merged@localhost', 1, 0),
+        (4, 'nonrecur@localhost', 1, 0),
+        (5, 'nonrecur@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, all_funds_first_donation_date, first_donation_was_recur) values
+        (1, '2016-05-05', 0),
+        (2, '2015-01-03', 1),
+        (3, '2019-05-05', 0),
+        (4, '2015-01-03', 0),
+        (5, '2016-05-05', 1);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select first_donation_was_recur from silverpop_export_view where email = 'merged@localhost'")
+    assert cursor.fetchone() == ("Yes",)
+    cursor.execute("select first_donation_was_recur from silverpop_export_view where email = 'nonrecur@localhost'")
+    assert cursor.fetchone() == ("No",)
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,
@@ -906,10 +943,129 @@ def test_merge_status(testdb):
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(*) from silverpop_export")
     assert cursor.fetchone() == (3,)
-    cursor.execute("select ContactID, donor_status_id, donor_status from silverpop_export_view order by ContactID")
-    assert cursor.fetchone() == (1, 20, 'Consecutive')
-    assert cursor.fetchone() == (3, 30, 'Active')
-    assert cursor.fetchone() == (5, 25, 'New')
+    cursor.execute("select ContactID, donor_status_id from silverpop_export_view order by ContactID")
+    assert cursor.fetchone() == (1, 20)
+    assert cursor.fetchone() == (3, 30)
+    assert cursor.fetchone() == (5, 25)
+
+
+def _run_status_merge_scenarios(testdb, donor_columns, result_columns, scenarios):
+    '''
+    Helper for the bitwise status-merge tests below. Each scenario is
+    (email, [source statuses for each contact], expected status after merge).
+    Each source status is written to both donor_status columns and checked on both outputs.
+    '''
+    conn, db_name = testdb
+
+    emails, contacts, donors = [], [], []
+    contact_id = 0
+    for email, sources, _expected in scenarios:
+        for source in sources:
+            contact_id += 1
+            emails.append(f"({contact_id}, '{email}@localhost', 1, 0)")
+            contacts.append(f"({contact_id}, DATE_SUB(NOW(), INTERVAL 1 DAY))")
+            # The same source status is written to every donor column.
+            status_values = ", ".join([str(source)] * len(donor_columns))
+            donors.append(f"({contact_id}, {status_values})")
+
+    run_update_with_fixtures(testdb, fixture_queries=[
+        "insert into civicrm_email (contact_id, email, is_primary, on_hold) values\n"
+        + ",\n".join(emails) + ";",
+        "insert into civicrm_contact (id, modified_date) values\n"
+        + ",\n".join(contacts) + ";",
+        f"insert into wmf_donor (entity_id, {', '.join(donor_columns)}) values\n"
+        + ",\n".join(donors) + ";",
+    ])
+
+    cursor = conn.db_conn.cursor()
+    for email, _sources, expected in scenarios:
+        cursor.execute(
+            f"select {', '.join(result_columns)} from silverpop_export_view"
+            f" where email = '{email}@localhost'")
+        assert cursor.fetchone() == tuple([expected] * len(result_columns)), email
+
+
+def test_merge_status_overall(testdb):
+    '''
+    Test the bitwise merge and decode of donor_status_overall and
+    donor_status_otg. The two fields share identical encode/decode logic, so
+    each contact sets the same source status on both and both are asserted.
+    '''
+    scenarios = [
+        # email, [source status per merged contact], expected decoded status
+        # consecutive this year + any lower -> consecutive this year
+        ('consec_this_plus_react_this', [10, 20], 10),
+        # reactivated this year + new this year -> reactivated this year
+        ('react_this_plus_new_this', [20, 30], 20),
+        # reactivated this year + any last year status -> consecutive this year
+        ('react_this_plus_consec_last', [20, 40], 10),
+        # reactivated this year + any lapsed status -> reactivated this year
+        ('react_this_plus_deep_lapsed', [20, 80], 20),
+        # new this year + any last year status -> consecutive this year
+        ('new_this_plus_new_last', [30, 60], 10),
+        # new this year + any lapsed status -> reactivated this year
+        ('new_this_plus_lapsed', [30, 70], 20),
+        # consecutive last year + any lower -> consecutive last year
+        ('consec_last_plus_lapsed', [40, 70], 40),
+        # reactivated last year + lapsed -> consecutive last year
+        ('react_last_plus_lapsed', [50, 70], 40),
+        # reactivated last year + new last year -> reactivated last year
+        ('react_last_plus_new_last', [50, 60], 50),
+        # reactivated last year + deep/ultra lapsed -> reactivated last year
+        ('react_last_plus_deep_lapsed', [50, 80], 50),
+        # new last year + lapsed -> consecutive last year
+        ('new_last_plus_lapsed', [60, 70], 40),
+        # new last year + deep/ultra lapsed -> reactivated last year
+        ('new_last_plus_deep_lapsed', [60, 80], 50),
+        # lapsed + any lower -> lapsed
+        ('lapsed_plus_deep', [70, 80], 70),
+        # deep lapsed + any lower -> deep lapsed
+        ('deep_plus_ultra', [80, 90], 80),
+        # ultra lapsed + any lower -> the same status
+        ('ultra_plus_non_donor', [90, 99], 90),
+        # new last year only -> new last year
+        ('new_last_only', [60], 60),
+    ]
+    _run_status_merge_scenarios(
+        testdb,
+        donor_columns=['donor_status_overall', 'donor_status_otg'],
+        result_columns=['donor_status_overall', 'donor_status_otg'],
+        scenarios=scenarios,
+    )
+
+
+def test_merge_status_recurring(testdb):
+    '''
+    Test the bitwise merge and decode of donor_status_recur_overall,
+    donor_status_recur_month and donor_status_recur_year. The three fields
+    share identical encode/decode logic, so each contact sets the same source
+    status on all of them and all are asserted.
+    '''
+    scenarios = [
+        # email, [source status per merged contact], expected decoded status
+        # active + any other status -> active
+        ('active_plus_cancelled', [15, 65], 15),
+        # new + a non-active status -> active
+        ('new_plus_paused', [25, 35], 15),
+        # new + active -> active
+        ('new_plus_active', [25, 15], 15),
+        # any status + never -> the same status
+        ('new_plus_never', [25, 95], 25),
+        # paused + any lower -> paused
+        ('paused_plus_failing', [35, 45], 35),
+        # failing + any lower -> failing
+        ('failing_plus_failed', [45, 55], 45),
+        # failed + cancelled -> failed
+        ('failed_plus_cancelled', [55, 65], 55),
+        # cancelled + never -> cancelled
+        ('cancelled_plus_never', [65, 95], 65),
+    ]
+    _run_status_merge_scenarios(
+        testdb,
+        donor_columns=['donor_status_recur_overall', 'donor_status_recur_month', 'donor_status_recur_year'],
+        result_columns=['donor_status_recur_overall', 'donor_status_recur_month', 'donor_status_recur_year'],
+        scenarios=scenarios,
+    )
 
 
 def test_direct_mail(testdb):
