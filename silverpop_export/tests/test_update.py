@@ -813,6 +813,53 @@ def test_multiple_only_inactive_recurring(testdb):
     assert cursor.fetchone() == (0, 5,)
 
 
+def test_recurring_latest_donation_date_by_frequency(testdb):
+    """
+    foundation_recurring_month/year_latest_donation_date should be the latest
+    receive_date of the contact's monthly / yearly recurring contributions, and
+    blank when there are none of that frequency.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'bothfreq@localhost', 1, 0),
+            (2, 'monthonly@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date, frequency_unit) values
+            (1, 1, 1.01, 'USD', 5, NULL, 'month'),
+            (2, 1, 2.02, 'USD', 5, NULL, 'year'),
+            (3, 2, 3.03, 'USD', 5, NULL, 'month');
+        """, """
+        insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+            (1, 1, 1, '2020-01-01', 1.01, 'xyz123', 1, 1),
+            (2, 1, 1, '2021-06-15', 1.01, 'abc456', 1, 1),
+            (3, 1, 2, '2019-03-03', 2.02, 'def789', 1, 1),
+            (4, 1, 2, '2022-12-25', 2.02, 'ghi012', 1, 1),
+            (5, 2, 3, '2018-07-07', 3.03, 'jkl345', 1, 1);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("""
+        select AF_recurring_month_latest_donation_date,
+               AF_recurring_year_latest_donation_date,
+               AF_recurring_latest_donation_date
+        from silverpop_export_view_full where email = 'bothfreq@localhost'
+    """)
+    assert cursor.fetchone() == ('06/15/2021', '12/25/2022', '12/25/2022')
+    cursor.execute("""
+        select AF_recurring_month_latest_donation_date,
+               AF_recurring_year_latest_donation_date,
+               AF_recurring_latest_donation_date
+        from silverpop_export_view_full where email = 'monthonly@localhost'
+    """)
+    assert cursor.fetchone() == ('07/07/2018', '', '07/07/2018')
+
+
 def test_recurring_upgrade_eligibility(testdb):
     """
     Test that we correctly calculate who is eligible for a recurring upgrade solicitation.

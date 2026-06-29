@@ -112,6 +112,7 @@ CREATE TABLE `wmf_donor`
     `donor_status_recur_month`      int(11)                              DEFAULT 95,
     `donor_status_recur_year`       int(11)                              DEFAULT 95,
     `all_funds_last_donation_date`  datetime                             DEFAULT NULL,
+    `last_otg_donation_date`      datetime                             DEFAULT NULL,
     `last_donation_currency`        varchar(255)                         DEFAULT NULL,
     `last_donation_amount`          decimal(20, 2)                       DEFAULT '0.00',
     `last_donation_usd`             decimal(20, 2)                       DEFAULT '0.00',
