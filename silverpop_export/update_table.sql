@@ -51,6 +51,7 @@ BEGIN;
    foundation_donation_count,
    foundation_first_donation_date,
    all_funds_first_donation_date,
+   first_donation_usd,
    first_donation_was_recur,
    foundation_highest_usd_amount,
    endowment_highest_usd_amount,
@@ -82,8 +83,12 @@ BEGIN;
     COALESCE(SUM(donor.number_donations), 0) as foundation_donation_count,
     MIN(donor.first_donation_date) as foundation_first_donation_date,
     MIN(donor.all_funds_first_donation_date) as all_funds_first_donation_date,
-    -- Bit of an ugly technique here to concatenate the date and the was_recur bool per row
-    -- then find the min of these and pull out the last character as the flag
+    -- Bit of an ugly technique here to concatenate the date and the value per row and
+    -- then find the min of these and pull out the value (after the | or just the last character)
+    CAST(SUBSTRING_INDEX(
+        MIN(CONCAT(donor.all_funds_first_donation_date, '|', donor.first_donation_usd)),
+        '|', -1
+      ) AS DECIMAL(20, 2)) as first_donation_usd,
     RIGHT(MIN(CONCAT(
       donor.all_funds_first_donation_date,
       COALESCE(donor.first_donation_was_recur, 0)
@@ -558,6 +563,7 @@ INSERT INTO silverpop_export (
   all_funds_latest_donation_date,all_funds_latest_otg_donation_date,latest_currency,latest_currency_symbol,latest_native_amount,
   foundation_first_donation_date,
   all_funds_first_donation_date,
+  first_donation_usd,
   first_donation_was_recur,
   city,country,state,postal_code,
   donor_segment_id, donor_segment_overall, years_consecutive, donor_status_bin,
@@ -601,6 +607,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(lt.latest_native_amount, 0) as latest_native_amount,
   foundation_first_donation_date,
   all_funds_first_donation_date,
+  first_donation_usd,
   first_donation_was_recur,
   addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
   stats.donor_segment_id, stats.donor_segment_overall, stats.years_consecutive, stats.donor_status_bin,
@@ -801,6 +808,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(all_funds_first_donation_date, '%m/%d/%Y'), '') as both_funds_first_donation_date,
+    COALESCE(first_donation_usd, 0) as first_donation_usd,
     IF(first_donation_was_recur = 1, 'Yes', 'No') as first_donation_was_recur,
     IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
@@ -967,6 +975,7 @@ AF_recurring_eligible_for_upgrade,
 both_funds_lifetime_usd_total,
 both_funds_donation_count,
 both_funds_first_donation_date,
+first_donation_usd,
 first_donation_was_recur,
 both_funds_has_given_on_email,
 both_funds_highest_native_amount,

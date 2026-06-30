@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
   all_funds_first_donation_date DATETIME,
+  first_donation_usd DECIMAL(20, 2),
   first_donation_was_recur TINYINT,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
@@ -197,6 +198,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   all_funds_latest_otg_donation_date DATETIME,
   foundation_first_donation_date DATETIME,
   all_funds_first_donation_date DATETIME,
+  first_donation_usd DECIMAL(20, 2),
   first_donation_was_recur TINYINT,
 
 -- Address information

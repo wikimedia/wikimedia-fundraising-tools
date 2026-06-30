@@ -196,10 +196,11 @@ def test_first_donation(testdb):
     assert cursor.fetchone() == expected
 
 
-def test_first_donation_was_recur(testdb):
+def test_first_donation_was_recur_and_usd(testdb):
     """
-    first_donation_was_recur should come from the donor row with the earliest
-    all_funds_first_donation_date across all contacts sharing an email.
+    first_donation_was_recur and first_donation_usd should both come from the
+    donor row with the earliest all_funds_first_donation_date across all
+    contacts sharing an email.
     """
     conn, db_name = testdb
 
@@ -218,19 +219,19 @@ def test_first_donation_was_recur(testdb):
         (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
         (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
-    insert into wmf_donor (entity_id, all_funds_first_donation_date, first_donation_was_recur) values
-        (1, '2016-05-05', 0),
-        (2, '2015-01-03', 1),
-        (3, '2019-05-05', 0),
-        (4, '2015-01-03', 0),
-        (5, '2016-05-05', 1);
+    insert into wmf_donor (entity_id, all_funds_first_donation_date, first_donation_was_recur, first_donation_usd) values
+        (1, '2016-05-05', 0, 5.00),
+        (2, '2015-01-03', 1, 1234.50),
+        (3, '2019-05-05', 0, 10.00),
+        (4, '2015-01-03', 0, 7.25),
+        (5, '2016-05-05', 1, 999.99);
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select first_donation_was_recur from silverpop_export_view where email = 'merged@localhost'")
-    assert cursor.fetchone() == ("Yes",)
-    cursor.execute("select first_donation_was_recur from silverpop_export_view where email = 'nonrecur@localhost'")
-    assert cursor.fetchone() == ("No",)
+    cursor.execute("select first_donation_was_recur, first_donation_usd from silverpop_export_view where email = 'merged@localhost'")
+    assert cursor.fetchone() == ("Yes", Decimal("1234.50"))
+    cursor.execute("select first_donation_was_recur, first_donation_usd from silverpop_export_view where email = 'nonrecur@localhost'")
+    assert cursor.fetchone() == ("No", Decimal("7.25"))
 
 
 def test_highest_donation_date(testdb):
