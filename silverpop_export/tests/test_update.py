@@ -234,6 +234,57 @@ def test_first_donation_was_recur_and_usd(testdb):
     assert cursor.fetchone() == ("No", Decimal("7.25"))
 
 
+def test_last_recurring_amount_change(testdb):
+    """
+    last_recurring_amount_change should come from the donor row with the most
+    recent last_recurring_amount_change_date across all contacts sharing an
+    email. The amount and its date are always both NULL or both populated.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'nochange@localhost', 1, 0),
+        (4, 'mixed@localhost', 1, 0),
+        (5, 'mixed@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, last_recurring_amount_change, last_recurring_amount_change_date) values
+        (1, 10.00, '2023-01-15'),
+        (2, 25.00, '2024-06-01'),
+        (3, NULL, NULL),
+        (4, 30.00, '2022-03-20'),
+        (5, NULL, NULL);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_stat where email = 'merged@localhost'"
+    )
+    assert cursor.fetchone() == (Decimal("25.00"), datetime.datetime(2024, 6, 1, 0, 0))
+
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_view where email = 'nochange@localhost'"
+    )
+    assert cursor.fetchone() == ("", "")
+
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_stat where email = 'mixed@localhost'"
+    )
+    assert cursor.fetchone() == (Decimal("30.00"), datetime.datetime(2022, 3, 20, 0, 0))
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,

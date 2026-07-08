@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   all_funds_first_donation_date DATETIME,
   first_donation_usd DECIMAL(20, 2),
   first_donation_was_recur TINYINT,
+  last_recurring_amount_change DECIMAL(20, 2),
+  last_recurring_amount_change_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
@@ -200,6 +202,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   all_funds_first_donation_date DATETIME,
   first_donation_usd DECIMAL(20, 2),
   first_donation_was_recur TINYINT,
+  last_recurring_amount_change DECIMAL(20, 2),
+  last_recurring_amount_change_date DATETIME,
 
 -- Address information
   city VARCHAR(128),
