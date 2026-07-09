@@ -170,6 +170,21 @@ CREATE TABLE `wmf_donor`
     `all_funds_total_2026_2027`     decimal(20,2)                        DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+drop table if exists wmf_donor_history;
+CREATE TABLE `wmf_donor_history`
+(
+    `entity_id`                     int(10) unsigned,
+    `donor_segment_overall`         int(11)                              DEFAULT 990,
+    `donor_status_overall`          int(11)                              DEFAULT 99,
+    `donor_status_otg`              int(11)                              DEFAULT 99,
+    `donor_status_recur_overall`    int(11)                              DEFAULT 95,
+    `donor_status_recur_month`      int(11)                              DEFAULT 95,
+    `donor_status_recur_year`       int(11)                              DEFAULT 95,
+    `changed_fields`                varchar(255),
+    `log_date`                      datetime                             DEFAULT NULL,
+    `log_id`                        int(10) unsigned
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 drop table if exists civicrm_value_1_communication_4;
 create table civicrm_value_1_communication_4 (
     id int(10) unsigned,
@@ -417,5 +432,6 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direc
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_segment_overall', 7);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

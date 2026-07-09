@@ -285,6 +285,93 @@ def test_last_recurring_amount_change(testdb):
     assert cursor.fetchone() == (Decimal("30.00"), datetime.datetime(2022, 3, 20, 0, 0))
 
 
+def test_previous_segment(testdb):
+    """
+    For merged emails the values come from the contact with the
+    lowest id / highest giving current segment.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'nohistory@localhost', 1, 0),
+        (4, 'statusonly@localhost', 1, 0),
+        (5, 'backfill@localhost', 1, 0),
+        (6, 'multichange@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (6, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, donor_segment_overall) values
+        (1, 200),
+        (2, 700),
+        (3, 400),
+        (4, 500),
+        (5, 600),
+        (6, 100);
+    """, """
+    insert into wmf_donor_history (entity_id, donor_segment_overall, changed_fields, log_date, log_id) values
+        -- contact 1 moved 300 -> 200, contact 2 moved 800 -> 700. Contact 1 has
+        -- the lower current segment so its history is used for the merged email.
+        (1, 300, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 1),
+        (1, 200, CONCAT(CHAR(1), '1', CHAR(1)), '2024-03-01', 2),
+        (2, 800, CONCAT(CHAR(1), '1', CHAR(1)), '2023-05-01', 3),
+        (2, 700, CONCAT(CHAR(1), '1', CHAR(1)), '2024-06-01', 4),
+        -- contact 3 only has its insert row so has no previous segment.
+        (3, 400, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 5),
+        -- contact 4's only change since its insert row (which changed segment &
+        -- status, field 2) is a status-only change, so no previous segment.
+        (4, 500, CONCAT(CHAR(1), '1', CHAR(1), '2', CHAR(1)), '2023-01-15', 6),
+        (4, 500, CONCAT(CHAR(1), '2', CHAR(1)), '2024-01-15', 7),
+        -- contact 5's insert row was backfilled with a later log_id but an
+        -- earlier log_date - log_date ordering should prevail.
+        (5, 600, CONCAT(CHAR(1), '1', CHAR(1)), '2024-01-15', 10),
+        (5, 900, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 11),
+        -- contact 6 moved 300 -> 200 -> 100: previous is the middle value
+        (6, 300, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 12),
+        (6, 200, CONCAT(CHAR(1), '1', CHAR(1)), '2023-06-15', 13),
+        (6, 100, CONCAT(CHAR(1), '1', CHAR(1)), '2024-02-15', 14);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'merged@localhost'"
+    )
+    assert cursor.fetchone() == ('300', '03/01/2024')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'nohistory@localhost'"
+    )
+    assert cursor.fetchone() == ('', '')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'statusonly@localhost'"
+    )
+    assert cursor.fetchone() == ('', '')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'backfill@localhost'"
+    )
+    assert cursor.fetchone() == ('900', '01/15/2024')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'multichange@localhost'"
+    )
+    assert cursor.fetchone() == ('200', '02/15/2024')
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,

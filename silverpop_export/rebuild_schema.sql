@@ -94,6 +94,13 @@ CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
   appeal VARCHAR(255)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
+(
+  entity_id INT UNSIGNED PRIMARY KEY,
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
@@ -119,6 +126,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
   donor_segment_overall INT(11),
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME,
   years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
   donor_status_overall_bin INT(10) UNSIGNED,
@@ -213,6 +222,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 
   donor_segment_id INT(11),
   donor_segment_overall INT(11),
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME,
   years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
   donor_status_overall_bin INT(10) UNSIGNED,

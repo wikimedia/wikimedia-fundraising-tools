@@ -5,6 +5,7 @@ SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE 
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
+SELECT @segmentChangedField := value FROM civicrm.civicrm_option_value WHERE name = 'donor_segment_overall';
 SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal' AND is_test = 0;
 SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec' AND is_test = 0;
 
@@ -40,6 +41,42 @@ BEGIN;
   -- Query OK, 776384 rows affected (47.62 sec)
   DELETE stat FROM silverpop_update_world t INNER JOIN silverpop_export_stat stat ON t.email = stat.email;
 
+  -- Rebuild previous-segment data
+  -- wmf_donor_history rows hold the new segment value, written on every insert & update,
+  -- with changed_fields recording which fields changed. So the most recent row has the
+  -- log_date for the change to the current segment and the row before it is the previous segment.
+  -- Contacts whose only segment-change row is their insert row have no previous segment & get no row here.
+  -- 9763 rows across all contacts took 2min, but may be more with more data in the future
+  DELETE sc FROM silverpop_update_world t
+    INNER JOIN civicrm.civicrm_email e ON e.email = t.email AND e.is_primary = 1
+    INNER JOIN silverpop_export_segment_change sc ON sc.entity_id = e.contact_id;
+
+  INSERT INTO silverpop_export_segment_change (
+    entity_id,
+    previous_segment,
+    previous_segment_change_date
+  )
+  SELECT
+    entity_id,
+    previous_segment,
+    log_date as previous_segment_change_date
+  FROM (
+    SELECT
+      ROW_NUMBER() OVER w as rank,
+      -- the next-older segment-change row holds the segment the donor changed from
+      LEAD(h.donor_segment_overall) OVER w as previous_segment,
+      h.log_date,
+      h.entity_id
+    FROM civicrm.wmf_donor_history h
+    INNER JOIN civicrm.civicrm_email e ON e.contact_id = h.entity_id AND e.is_primary = 1
+    INNER JOIN silverpop_update_world t ON t.email = e.email
+    -- changed_fields is serialized with CHAR(1) separator-bookends
+    WHERE h.changed_fields LIKE CONCAT('%', CHAR(1), @segmentChangedField, CHAR(1), '%')
+    WINDOW w AS (PARTITION BY h.entity_id ORDER BY h.log_date DESC, h.log_id DESC)
+  ) segment_changes
+  -- this IS NOT NULL prevents insert only histories from being added
+  WHERE segment_changes.rank = 1 AND segment_changes.previous_segment IS NOT NULL;
+
   -- INSERT new contact rows into export stats table
   -- following timing on staging with 7 days - likely similar to peak volume with a shorter period.
   -- Query OK, 776383 rows affected (1 min 25.41 sec)
@@ -61,6 +98,8 @@ BEGIN;
    endowment_number_donations,
    donor_segment_id,
    donor_segment_overall,
+   previous_segment,
+   previous_segment_change_date,
    years_consecutive,
    donor_status_bin,
    donor_status_overall_bin,
@@ -109,6 +148,13 @@ BEGIN;
     -- if choosing between 100 & 200.
     MIN(donor.donor_segment_id) as donor_segment_id,
     MIN(donor.donor_segment_overall) as donor_segment_overall,
+    -- We take the previous segment from the contact with the lower current segment, i.e. the one who gave more.
+    NULLIF(SUBSTRING_INDEX(
+        MIN(CONCAT(donor.donor_segment_overall, '|', COALESCE(seg.previous_segment, ''))),
+        '|', -1), '') as previous_segment,
+    NULLIF(SUBSTRING_INDEX(
+        MIN(CONCAT(donor.donor_segment_overall, '|', COALESCE(seg.previous_segment_change_date, ''))),
+        '|', -1), '') as previous_segment_change_date,
     MAX(donor.years_consecutive) as years_consecutive,
     -- Status values are trickier - if we want to combine one lybunt (35) record
     -- and one new (25) record, the correct answer is 'consecutive' (20). So
@@ -217,6 +263,7 @@ BEGIN;
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
+    LEFT JOIN silverpop_export_segment_change seg ON seg.entity_id = e.contact_id
     # We need to be careful with this group by. We want the sum by email but we do not want
     # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
@@ -585,8 +632,9 @@ INSERT INTO silverpop_export (
   last_recurring_amount_change,
   last_recurring_amount_change_date,
   city,country,state,postal_code,
-  donor_segment_id, donor_segment_overall, years_consecutive, donor_status_bin,
-  donor_status_otg_bin, donor_status_overall_bin, donor_status_recur_overall_bin, donor_status_recur_month_bin, donor_status_recur_year_bin,
+  donor_segment_id, donor_segment_overall, previous_segment, previous_segment_change_date,
+  years_consecutive, donor_status_bin, donor_status_otg_bin, donor_status_overall_bin,
+  donor_status_recur_overall_bin, donor_status_recur_month_bin, donor_status_recur_year_bin,
   endowment_first_donation_date,
   endowment_number_donations, endowment_highest_usd_amount,
   all_funds_total_2019_2020,
@@ -631,8 +679,9 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   last_recurring_amount_change,
   last_recurring_amount_change_date,
   addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
-  stats.donor_segment_id, stats.donor_segment_overall, stats.years_consecutive, stats.donor_status_bin,
-  stats.donor_status_otg_bin, stats.donor_status_overall_bin, stats.donor_status_recur_overall_bin, stats.donor_status_recur_month_bin, stats.donor_status_recur_year_bin,
+  stats.donor_segment_id, stats.donor_segment_overall, stats.previous_segment, stats.previous_segment_change_date,
+  stats.years_consecutive, stats.donor_status_bin, stats.donor_status_otg_bin, stats.donor_status_overall_bin,
+  stats.donor_status_recur_overall_bin, stats.donor_status_recur_month_bin, stats.donor_status_recur_year_bin,
   endowment_first_donation_date,
   endowment_number_donations,
   COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
@@ -742,6 +791,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     SUBSTRING(e.preferred_language, 1, 2) IsoLang,
     COALESCE(donor_segment_id, 1000) as donor_segment_id,
     COALESCE(donor_segment_overall, 990) as donor_segment_overall,
+    COALESCE(previous_segment, '') as previous_segment,
+    IFNULL(DATE_FORMAT(previous_segment_change_date, '%m/%d/%Y'), '') as previous_segment_change_date,
     years_consecutive,
     donor_status_id,
     donor_status_otg,
@@ -1027,6 +1078,8 @@ country,
 dataaxle_is_grandparent,
 direct_mail_latest_appeal,
 donor_segment_overall,
+previous_segment,
+previous_segment_change_date,
 years_consecutive,
 donor_segment_id,
 donor_status_id,
