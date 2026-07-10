@@ -119,7 +119,7 @@ def test_no_donations(testdb):
             AF_highest_native_amount, AF_highest_native_currency,
             AF_highest_donation_date, both_funds_lifetime_usd_total,
             AF_donation_count, both_funds_latest_currency, both_funds_latest_native_amount,
-            both_funds_latest_donation_date
+            both_funds_latest_donation_date, years_consecutive
         from silverpop_export_view
     """)
     actual = cursor.fetchone()
@@ -127,7 +127,7 @@ def test_no_donations(testdb):
                 Decimal('0.00'), '',
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
-                '')
+                '', 0)
     assert actual == expected
 
 

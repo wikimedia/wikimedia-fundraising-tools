@@ -793,7 +793,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(donor_segment_overall, 990) as donor_segment_overall,
     COALESCE(previous_segment, '') as previous_segment,
     IFNULL(DATE_FORMAT(previous_segment_change_date, '%m/%d/%Y'), '') as previous_segment_change_date,
-    years_consecutive,
+    COALESCE(years_consecutive, 0) as years_consecutive,
     donor_status_id,
     donor_status_otg,
     donor_status_overall,
