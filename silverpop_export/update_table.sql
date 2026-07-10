@@ -275,6 +275,29 @@ WHERE c.total_amount = export.endowment_highest_usd_amount
 GROUP BY email.email;
 COMMIT;
 
+-- Pre-compute the contacts with a recent recurring upgrade/downgrade activity
+-- (last 2 years) or upgrade-decline activity (last year).
+-- This prevents doing a subquery for each row below before grouping,
+-- which is one per contribution associated with each recur for contacts in update_world
+-- This is very quick, so we don't need the joins to civicrm_email and update_world
+-- Query OK, 22373 rows affected (1.460 sec)
+DROP TEMPORARY TABLE IF EXISTS recurring_upgrade_activity_contact;
+CREATE TEMPORARY TABLE recurring_upgrade_activity_contact (
+  contact_id INT UNSIGNED PRIMARY KEY
+) COLLATE 'utf8mb4_unicode_ci'
+AS SELECT DISTINCT ac.contact_id
+FROM civicrm.civicrm_activity a
+INNER JOIN civicrm.civicrm_activity_contact ac ON ac.activity_id = a.id
+WHERE (
+    -- Either upgraded or downgraded in the last 2 years
+    a.activity_type_id IN (@recurringUpgradeType, @recurringDowngradeType)
+    AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 2 YEAR)
+  ) OR (
+    -- Or declined to upgrade in the past year
+    a.activity_type_id = @recurringUpgradeTypeDecline
+    AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR)
+  );
+
 BEGIN;
 -- Delete recent rows from has_recur table (make way for updated version).
 -- Query OK, 94904 rows affected (0.61 sec)
@@ -295,7 +318,7 @@ INSERT INTO silverpop_has_recur (
   recurring_has_upgrade_activity,
   paypal_direct_recurring
 )
- SELECT DISTINCT email.email,
+ SELECT email.email,
  1 as foundation_has_recurred_donation,
  MAX(IF(
    ((end_date IS NULL OR end_date > NOW())
@@ -314,29 +337,13 @@ INSERT INTO silverpop_has_recur (
  (-- latest active recur id if any or latest inactive recur id
  CASE WHEN COUNT(DISTINCT CASE WHEN (end_date IS NULL OR end_date > NOW())
  AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
- AND recur.cancel_date IS NULL > 0 THEN recur.id ELSE NULL END) > 0
+ AND recur.cancel_date IS NULL THEN recur.id ELSE NULL END) > 0
  THEN MAX(IF(((end_date IS NULL OR end_date > NOW())
   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
   AND recur.cancel_date IS NULL
   ), recur.id, 0)) ELSE MAX(recur.id)
   END) as foundation_recurring_latest_contribution_recur_id,
- ( -- Hat tip to Eileen
-   SELECT count(*) > 0
-   FROM civicrm.civicrm_activity_contact ac
-     INNER JOIN civicrm.civicrm_activity a
-         ON a.id = ac.activity_id
-            AND (
-                  -- Either upgraded or downgraded in the last 2 years
-                  ((a.activity_type_id = @recurringUpgradeType OR
-                  a.activity_type_id = @recurringDowngradeType)
-                  AND a.activity_date_time > DATE_SUB(NOW(), INTERVAL 2 YEAR))
-                OR
-                  -- Or declined to upgrade in the past year
-                  (a.activity_type_id = @recurringUpgradeTypeDecline AND
-                  a.activity_date_time > DATE_SUB(NOW(), INTERVAL 1 YEAR))
-            )
-   WHERE ac.contact_id = recur.contact_id
- ) as recurring_has_upgrade_activity,
+ MAX(upgrade_activity.contact_id IS NOT NULL) as recurring_has_upgrade_activity,
  MAX(CASE WHEN recur.contribution_status_id NOT IN (1, 3, 4) -- Completed,Cancelled,Failed
    AND recur.payment_processor_id IN (@paypalProcessor, @paypal_ecProcessor)
  THEN 1 ELSE 0 END) as paypal_direct_recurring
@@ -349,8 +356,11 @@ INSERT INTO silverpop_has_recur (
    AND contributions.total_amount > 0
  INNER JOIN civicrm.civicrm_email email ON recur.contact_id = email.contact_id AND is_primary = 1
  INNER JOIN silverpop_update_world t ON t.email = email.email
+ LEFT JOIN recurring_upgrade_activity_contact upgrade_activity ON upgrade_activity.contact_id = recur.contact_id
  GROUP BY email;
 COMMIT;
+
+DROP TEMPORARY TABLE recurring_upgrade_activity_contact;
 
 DELETE cancel FROM silverpop_update_world t INNER JOIN cancel_reason cancel ON t.email = cancel.email;
 INSERT INTO cancel_reason
