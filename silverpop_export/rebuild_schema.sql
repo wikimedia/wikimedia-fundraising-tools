@@ -94,10 +94,18 @@ CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
   appeal VARCHAR(255)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
+(
+  entity_id INT UNSIGNED PRIMARY KEY,
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
 (
   email VARCHAR(255) PRIMARY KEY,
   all_funds_latest_donation_date DATETIME,
+  all_funds_latest_otg_donation_date DATETIME,
   all_funds_total_2019_2020 DECIMAL(20, 2),
   all_funds_total_2020_2021 DECIMAL(20, 2),
   all_funds_total_2021_2022 DECIMAL(20, 2),
@@ -109,10 +117,24 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   all_funds_lifetime_usd_total DECIMAL(20, 2),
   foundation_donation_count INT UNSIGNED NOT NULL DEFAULT 0,
   foundation_first_donation_date DATETIME,
+  all_funds_first_donation_date DATETIME,
+  first_donation_usd DECIMAL(20, 2),
+  first_donation_was_recur TINYINT,
+  last_recurring_amount_change DECIMAL(20, 2),
+  last_recurring_amount_change_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
+  donor_segment_overall INT(11),
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME,
+  years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
+  donor_status_overall_bin INT(10) UNSIGNED,
+  donor_status_otg_bin INT(10) UNSIGNED,
+  donor_status_recur_overall_bin INT(11),
+  donor_status_recur_month_bin INT(11),
+  donor_status_recur_year_bin INT(11),
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
@@ -150,6 +172,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_has_active_recurring_donation TINYINT(1),
   foundation_recurring_first_donation_date DATETIME,
   foundation_recurring_latest_donation_date DATETIME,
+  foundation_recurring_month_latest_donation_date DATETIME,
+  foundation_recurring_year_latest_donation_date DATETIME,
   foundation_recurring_active_count TINYINT UNSIGNED, -- First donor with 256 active recurrings wins a prize
   foundation_recurring_latest_contribution_recur_id INT(10),
   recurring_has_upgrade_activity TINYINT(1),
@@ -182,7 +206,13 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2),
   all_funds_latest_donation_date DATETIME,
+  all_funds_latest_otg_donation_date DATETIME,
   foundation_first_donation_date DATETIME,
+  all_funds_first_donation_date DATETIME,
+  first_donation_usd DECIMAL(20, 2),
+  first_donation_was_recur TINYINT,
+  last_recurring_amount_change DECIMAL(20, 2),
+  last_recurring_amount_change_date DATETIME,
 
 -- Address information
   city VARCHAR(128),
@@ -191,7 +221,16 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   postal_code VARCHAR(128),
 
   donor_segment_id INT(11),
+  donor_segment_overall INT(11),
+  previous_segment INT(11),
+  previous_segment_change_date DATETIME,
+  years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
+  donor_status_overall_bin INT(10) UNSIGNED,
+  donor_status_otg_bin INT(10) UNSIGNED,
+  donor_status_recur_overall_bin INT(10) UNSIGNED,
+  donor_status_recur_month_bin INT(10) UNSIGNED,
+  donor_status_recur_year_bin INT(10) UNSIGNED,
   is_eligible_for_donor_portal TINYINT(1),
 
   INDEX spex_modified_date (modified_date),
@@ -214,6 +253,8 @@ CREATE TABLE IF NOT EXISTS `silverpop_has_recur` (
  `foundation_has_recurred_donation` int(1) NOT NULL,
  `foundation_has_active_recurring_donation` TINYINT(1),
  `foundation_recurring_latest_donation_date` DATETIME,
+ `foundation_recurring_month_latest_donation_date` DATETIME,
+ `foundation_recurring_year_latest_donation_date` DATETIME,
  `foundation_recurring_first_donation_date` DATETIME,
  `foundation_recurring_active_count` TINYINT UNSIGNED,
  `foundation_recurring_latest_contribution_recur_id` INT(10),

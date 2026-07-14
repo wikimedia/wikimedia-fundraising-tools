@@ -103,12 +103,19 @@ CREATE TABLE `wmf_donor`
     `id`                            int(10) unsigned,
     `entity_id`                     int(10) unsigned,
     `donor_segment_id`              int(11)                              DEFAULT 1000,
+    `donor_segment_overall`         int(11)                              DEFAULT 990,
+    `years_consecutive`             int(11)                              DEFAULT 0,
     `donor_status_id`               int(11)                              DEFAULT NULL,
-    `all_funds_last_donation_date`            datetime                             DEFAULT NULL,
+    `donor_status_otg`              int(11)                              DEFAULT 99,
+    `donor_status_overall`          int(11)                              DEFAULT 99,
+    `donor_status_recur_overall`    int(11)                              DEFAULT 95,
+    `donor_status_recur_month`      int(11)                              DEFAULT 95,
+    `donor_status_recur_year`       int(11)                              DEFAULT 95,
+    `all_funds_last_donation_date`  datetime                             DEFAULT NULL,
+    `last_otg_donation_date`        datetime                             DEFAULT NULL,
     `last_donation_currency`        varchar(255)                         DEFAULT NULL,
     `last_donation_amount`          decimal(20, 2)                       DEFAULT '0.00',
     `last_donation_usd`             decimal(20, 2)                       DEFAULT '0.00',
-    `lifetime_usd_total`            decimal(20, 2)                       DEFAULT '0.00',
     `total_2018_2019`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2019_2020`               decimal(20, 2)                       DEFAULT '0.00',
     `total_2020_2021`               decimal(20, 2)                       DEFAULT '0.00',
@@ -117,9 +124,12 @@ CREATE TABLE `wmf_donor`
     `total_2023_2024`               decimal(20, 2)                       DEFAULT '0.00',
     `first_donation_date`           datetime                             DEFAULT NULL,
     `endowment_first_donation_date` datetime                             DEFAULT NULL,
+    `all_funds_first_donation_date` datetime                             DEFAULT NULL,
     `first_donation_usd`            decimal(20, 2)                       DEFAULT '0.00',
+    `first_donation_was_recur`      TINYINT(4)                           DEFAULT NULL,
+    `last_recurring_amount_change`  decimal(20, 2)                       DEFAULT NULL,
+    `last_recurring_amount_change_date` datetime                         DEFAULT NULL,
     `lifetime_including_endowment`  decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_lifetime_usd_total`  decimal(20, 2)                       DEFAULT '0.00',
     `number_donations`              int(11)                              DEFAULT '0',
     `endowment_number_donations`    int(11)                              DEFAULT '0',
     `largest_donation`              decimal(20, 2)                       DEFAULT '0.00',
@@ -158,6 +168,21 @@ CREATE TABLE `wmf_donor`
     `all_funds_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2026_2027`     decimal(20,2)                        DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+drop table if exists wmf_donor_history;
+CREATE TABLE `wmf_donor_history`
+(
+    `entity_id`                     int(10) unsigned,
+    `donor_segment_overall`         int(11)                              DEFAULT 990,
+    `donor_status_overall`          int(11)                              DEFAULT 99,
+    `donor_status_otg`              int(11)                              DEFAULT 99,
+    `donor_status_recur_overall`    int(11)                              DEFAULT 95,
+    `donor_status_recur_month`      int(11)                              DEFAULT 95,
+    `donor_status_recur_year`       int(11)                              DEFAULT 95,
+    `changed_fields`                varchar(255),
+    `log_date`                      datetime                             DEFAULT NULL,
+    `log_id`                        int(10) unsigned
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_value_1_communication_4;
@@ -407,5 +432,6 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direc
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activity Targets', 4);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_segment_overall', 7);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

@@ -119,7 +119,7 @@ def test_no_donations(testdb):
             AF_highest_native_amount, AF_highest_native_currency,
             AF_highest_donation_date, both_funds_lifetime_usd_total,
             AF_donation_count, both_funds_latest_currency, both_funds_latest_native_amount,
-            both_funds_latest_donation_date
+            both_funds_latest_donation_date, years_consecutive
         from silverpop_export_view
     """)
     actual = cursor.fetchone()
@@ -127,7 +127,7 @@ def test_no_donations(testdb):
                 Decimal('0.00'), '',
                 '', Decimal('0.00'),
                 0, '', Decimal('0.00'),
-                '')
+                '', 0)
     assert actual == expected
 
 
@@ -194,6 +194,182 @@ def test_first_donation(testdb):
     cursor.execute("select foundation_first_donation_date from silverpop_export")
     expected = (datetime.datetime(2016, 5, 5),)
     assert cursor.fetchone() == expected
+
+
+def test_first_donation_was_recur_and_usd(testdb):
+    """
+    first_donation_was_recur and first_donation_usd should both come from the
+    donor row with the earliest all_funds_first_donation_date across all
+    contacts sharing an email.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'merged@localhost', 1, 0),
+        (4, 'nonrecur@localhost', 1, 0),
+        (5, 'nonrecur@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, all_funds_first_donation_date, first_donation_was_recur, first_donation_usd) values
+        (1, '2016-05-05', 0, 5.00),
+        (2, '2015-01-03', 1, 1234.50),
+        (3, '2019-05-05', 0, 10.00),
+        (4, '2015-01-03', 0, 7.25),
+        (5, '2016-05-05', 1, 999.99);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select first_donation_was_recur, first_donation_usd from silverpop_export_view where email = 'merged@localhost'")
+    assert cursor.fetchone() == ("Yes", Decimal("1234.50"))
+    cursor.execute("select first_donation_was_recur, first_donation_usd from silverpop_export_view where email = 'nonrecur@localhost'")
+    assert cursor.fetchone() == ("No", Decimal("7.25"))
+
+
+def test_last_recurring_amount_change(testdb):
+    """
+    last_recurring_amount_change should come from the donor row with the most
+    recent last_recurring_amount_change_date across all contacts sharing an
+    email. The amount and its date are always both NULL or both populated.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'nochange@localhost', 1, 0),
+        (4, 'mixed@localhost', 1, 0),
+        (5, 'mixed@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, last_recurring_amount_change, last_recurring_amount_change_date) values
+        (1, 10.00, '2023-01-15'),
+        (2, 25.00, '2024-06-01'),
+        (3, NULL, NULL),
+        (4, 30.00, '2022-03-20'),
+        (5, NULL, NULL);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_stat where email = 'merged@localhost'"
+    )
+    assert cursor.fetchone() == (Decimal("25.00"), datetime.datetime(2024, 6, 1, 0, 0))
+
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_view where email = 'nochange@localhost'"
+    )
+    assert cursor.fetchone() == ("", "")
+
+    cursor.execute(
+        "select last_recurring_amount_change, last_recurring_amount_change_date "
+        "from silverpop_export_stat where email = 'mixed@localhost'"
+    )
+    assert cursor.fetchone() == (Decimal("30.00"), datetime.datetime(2022, 3, 20, 0, 0))
+
+
+def test_previous_segment(testdb):
+    """
+    For merged emails the values come from the contact with the
+    lowest id / highest giving current segment.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'nohistory@localhost', 1, 0),
+        (4, 'statusonly@localhost', 1, 0),
+        (5, 'backfill@localhost', 1, 0),
+        (6, 'multichange@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (6, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into wmf_donor (entity_id, donor_segment_overall) values
+        (1, 200),
+        (2, 700),
+        (3, 400),
+        (4, 500),
+        (5, 600),
+        (6, 100);
+    """, """
+    insert into wmf_donor_history (entity_id, donor_segment_overall, changed_fields, log_date, log_id) values
+        -- contact 1 moved 300 -> 200, contact 2 moved 800 -> 700. Contact 1 has
+        -- the lower current segment so its history is used for the merged email.
+        (1, 300, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 1),
+        (1, 200, CONCAT(CHAR(1), '1', CHAR(1)), '2024-03-01', 2),
+        (2, 800, CONCAT(CHAR(1), '1', CHAR(1)), '2023-05-01', 3),
+        (2, 700, CONCAT(CHAR(1), '1', CHAR(1)), '2024-06-01', 4),
+        -- contact 3 only has its insert row so has no previous segment.
+        (3, 400, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 5),
+        -- contact 4's only change since its insert row (which changed segment &
+        -- status, field 2) is a status-only change, so no previous segment.
+        (4, 500, CONCAT(CHAR(1), '1', CHAR(1), '2', CHAR(1)), '2023-01-15', 6),
+        (4, 500, CONCAT(CHAR(1), '2', CHAR(1)), '2024-01-15', 7),
+        -- contact 5's insert row was backfilled with a later log_id but an
+        -- earlier log_date - log_date ordering should prevail.
+        (5, 600, CONCAT(CHAR(1), '1', CHAR(1)), '2024-01-15', 10),
+        (5, 900, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 11),
+        -- contact 6 moved 300 -> 200 -> 100: previous is the middle value
+        (6, 300, CONCAT(CHAR(1), '1', CHAR(1)), '2023-01-15', 12),
+        (6, 200, CONCAT(CHAR(1), '1', CHAR(1)), '2023-06-15', 13),
+        (6, 100, CONCAT(CHAR(1), '1', CHAR(1)), '2024-02-15', 14);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'merged@localhost'"
+    )
+    assert cursor.fetchone() == ('300', '03/01/2024')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'nohistory@localhost'"
+    )
+    assert cursor.fetchone() == ('', '')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'statusonly@localhost'"
+    )
+    assert cursor.fetchone() == ('', '')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'backfill@localhost'"
+    )
+    assert cursor.fetchone() == ('900', '01/15/2024')
+
+    cursor.execute(
+        "select previous_segment, previous_segment_change_date "
+        "from silverpop_export_view where email = 'multichange@localhost'"
+    )
+    assert cursor.fetchone() == ('200', '02/15/2024')
 
 
 def test_highest_donation_date(testdb):
@@ -776,6 +952,53 @@ def test_multiple_only_inactive_recurring(testdb):
     assert cursor.fetchone() == (0, 5,)
 
 
+def test_recurring_latest_donation_date_by_frequency(testdb):
+    """
+    foundation_recurring_month/year_latest_donation_date should be the latest
+    receive_date of the contact's monthly / yearly recurring contributions, and
+    blank when there are none of that frequency.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'bothfreq@localhost', 1, 0),
+            (2, 'monthonly@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date) values
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date, frequency_unit) values
+            (1, 1, 1.01, 'USD', 5, NULL, 'month'),
+            (2, 1, 2.02, 'USD', 5, NULL, 'year'),
+            (3, 2, 3.03, 'USD', 5, NULL, 'month');
+        """, """
+        insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+            (1, 1, 1, '2020-01-01', 1.01, 'xyz123', 1, 1),
+            (2, 1, 1, '2021-06-15', 1.01, 'abc456', 1, 1),
+            (3, 1, 2, '2019-03-03', 2.02, 'def789', 1, 1),
+            (4, 1, 2, '2022-12-25', 2.02, 'ghi012', 1, 1),
+            (5, 2, 3, '2018-07-07', 3.03, 'jkl345', 1, 1);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("""
+        select AF_recurring_month_latest_donation_date,
+               AF_recurring_year_latest_donation_date,
+               AF_recurring_latest_donation_date
+        from silverpop_export_view_full where email = 'bothfreq@localhost'
+    """)
+    assert cursor.fetchone() == ('06/15/2021', '12/25/2022', '12/25/2022')
+    cursor.execute("""
+        select AF_recurring_month_latest_donation_date,
+               AF_recurring_year_latest_donation_date,
+               AF_recurring_latest_donation_date
+        from silverpop_export_view_full where email = 'monthonly@localhost'
+    """)
+    assert cursor.fetchone() == ('07/07/2018', '', '07/07/2018')
+
+
 def test_recurring_upgrade_eligibility(testdb):
     """
     Test that we correctly calculate who is eligible for a recurring upgrade solicitation.
@@ -906,10 +1129,129 @@ def test_merge_status(testdb):
     cursor = conn.db_conn.cursor()
     cursor.execute("select count(*) from silverpop_export")
     assert cursor.fetchone() == (3,)
-    cursor.execute("select ContactID, donor_status_id, donor_status from silverpop_export_view order by ContactID")
-    assert cursor.fetchone() == (1, 20, 'Consecutive')
-    assert cursor.fetchone() == (3, 30, 'Active')
-    assert cursor.fetchone() == (5, 25, 'New')
+    cursor.execute("select ContactID, donor_status_id from silverpop_export_view order by ContactID")
+    assert cursor.fetchone() == (1, 20)
+    assert cursor.fetchone() == (3, 30)
+    assert cursor.fetchone() == (5, 25)
+
+
+def _run_status_merge_scenarios(testdb, donor_columns, result_columns, scenarios):
+    '''
+    Helper for the bitwise status-merge tests below. Each scenario is
+    (email, [source statuses for each contact], expected status after merge).
+    Each source status is written to both donor_status columns and checked on both outputs.
+    '''
+    conn, db_name = testdb
+
+    emails, contacts, donors = [], [], []
+    contact_id = 0
+    for email, sources, _expected in scenarios:
+        for source in sources:
+            contact_id += 1
+            emails.append(f"({contact_id}, '{email}@localhost', 1, 0)")
+            contacts.append(f"({contact_id}, DATE_SUB(NOW(), INTERVAL 1 DAY))")
+            # The same source status is written to every donor column.
+            status_values = ", ".join([str(source)] * len(donor_columns))
+            donors.append(f"({contact_id}, {status_values})")
+
+    run_update_with_fixtures(testdb, fixture_queries=[
+        "insert into civicrm_email (contact_id, email, is_primary, on_hold) values\n"
+        + ",\n".join(emails) + ";",
+        "insert into civicrm_contact (id, modified_date) values\n"
+        + ",\n".join(contacts) + ";",
+        f"insert into wmf_donor (entity_id, {', '.join(donor_columns)}) values\n"
+        + ",\n".join(donors) + ";",
+    ])
+
+    cursor = conn.db_conn.cursor()
+    for email, _sources, expected in scenarios:
+        cursor.execute(
+            f"select {', '.join(result_columns)} from silverpop_export_view"
+            f" where email = '{email}@localhost'")
+        assert cursor.fetchone() == tuple([expected] * len(result_columns)), email
+
+
+def test_merge_status_overall(testdb):
+    '''
+    Test the bitwise merge and decode of donor_status_overall and
+    donor_status_otg. The two fields share identical encode/decode logic, so
+    each contact sets the same source status on both and both are asserted.
+    '''
+    scenarios = [
+        # email, [source status per merged contact], expected decoded status
+        # consecutive this year + any lower -> consecutive this year
+        ('consec_this_plus_react_this', [10, 20], 10),
+        # reactivated this year + new this year -> reactivated this year
+        ('react_this_plus_new_this', [20, 30], 20),
+        # reactivated this year + any last year status -> consecutive this year
+        ('react_this_plus_consec_last', [20, 40], 10),
+        # reactivated this year + any lapsed status -> reactivated this year
+        ('react_this_plus_deep_lapsed', [20, 80], 20),
+        # new this year + any last year status -> consecutive this year
+        ('new_this_plus_new_last', [30, 60], 10),
+        # new this year + any lapsed status -> reactivated this year
+        ('new_this_plus_lapsed', [30, 70], 20),
+        # consecutive last year + any lower -> consecutive last year
+        ('consec_last_plus_lapsed', [40, 70], 40),
+        # reactivated last year + lapsed -> consecutive last year
+        ('react_last_plus_lapsed', [50, 70], 40),
+        # reactivated last year + new last year -> reactivated last year
+        ('react_last_plus_new_last', [50, 60], 50),
+        # reactivated last year + deep/ultra lapsed -> reactivated last year
+        ('react_last_plus_deep_lapsed', [50, 80], 50),
+        # new last year + lapsed -> consecutive last year
+        ('new_last_plus_lapsed', [60, 70], 40),
+        # new last year + deep/ultra lapsed -> reactivated last year
+        ('new_last_plus_deep_lapsed', [60, 80], 50),
+        # lapsed + any lower -> lapsed
+        ('lapsed_plus_deep', [70, 80], 70),
+        # deep lapsed + any lower -> deep lapsed
+        ('deep_plus_ultra', [80, 90], 80),
+        # ultra lapsed + any lower -> the same status
+        ('ultra_plus_non_donor', [90, 99], 90),
+        # new last year only -> new last year
+        ('new_last_only', [60], 60),
+    ]
+    _run_status_merge_scenarios(
+        testdb,
+        donor_columns=['donor_status_overall', 'donor_status_otg'],
+        result_columns=['donor_status_overall', 'donor_status_otg'],
+        scenarios=scenarios,
+    )
+
+
+def test_merge_status_recurring(testdb):
+    '''
+    Test the bitwise merge and decode of donor_status_recur_overall,
+    donor_status_recur_month and donor_status_recur_year. The three fields
+    share identical encode/decode logic, so each contact sets the same source
+    status on all of them and all are asserted.
+    '''
+    scenarios = [
+        # email, [source status per merged contact], expected decoded status
+        # active + any other status -> active
+        ('active_plus_cancelled', [15, 65], 15),
+        # new + a non-active status -> active
+        ('new_plus_paused', [25, 35], 15),
+        # new + active -> active
+        ('new_plus_active', [25, 15], 15),
+        # any status + never -> the same status
+        ('new_plus_never', [25, 95], 25),
+        # paused + any lower -> paused
+        ('paused_plus_failing', [35, 45], 35),
+        # failing + any lower -> failing
+        ('failing_plus_failed', [45, 55], 45),
+        # failed + cancelled -> failed
+        ('failed_plus_cancelled', [55, 65], 55),
+        # cancelled + never -> cancelled
+        ('cancelled_plus_never', [65, 95], 65),
+    ]
+    _run_status_merge_scenarios(
+        testdb,
+        donor_columns=['donor_status_recur_overall', 'donor_status_recur_month', 'donor_status_recur_year'],
+        result_columns=['donor_status_recur_overall', 'donor_status_recur_month', 'donor_status_recur_year'],
+        scenarios=scenarios,
+    )
 
 
 def test_direct_mail(testdb):
