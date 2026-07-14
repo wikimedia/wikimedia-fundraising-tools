@@ -139,7 +139,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   last_recurring_amount_change_date DATETIME,
   last_otg_amount_change DECIMAL(20, 2),
   last_otg_amount_change_date DATETIME,
-  foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
   donor_segment_overall INT(11),
@@ -155,9 +154,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   donor_status_recur_year_bin INT(11),
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
-  endowment_highest_usd_amount  DECIMAL(20, 2),
-  INDEX(all_funds_latest_otg_donation_date),
-  INDEX(endowment_highest_usd_amount)
+  INDEX(all_funds_latest_otg_donation_date)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export
@@ -197,10 +194,10 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   recurring_has_upgrade_activity TINYINT(1),
 
 -- Lifetime contribution statistics
-  foundation_highest_usd_amount DECIMAL(20, 2),
-  foundation_highest_native_amount DECIMAL(20, 2),
-  foundation_highest_native_currency VARCHAR(3),
-  foundation_highest_donation_date DATETIME,
+  highest_usd_amount DECIMAL(20, 2),
+  highest_native_amount DECIMAL(20, 2),
+  highest_native_currency VARCHAR(3),
+  highest_donation_date DATETIME,
   all_funds_lifetime_usd_total DECIMAL(20, 2),
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
@@ -217,7 +214,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 -- Endowment stats ----
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
-  endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics
   latest_currency VARCHAR(3),

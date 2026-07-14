@@ -115,9 +115,9 @@ def test_no_donations(testdb):
     cursor.execute("""
         select AF_has_active_recurring_donation,
             AF_recurring_latest_donation_date,
-            AF_recurring_first_donation_date, AF_highest_usd_amount,
-            AF_highest_native_amount, AF_highest_native_currency,
-            AF_highest_donation_date, both_funds_lifetime_usd_total,
+            AF_recurring_first_donation_date, both_funds_highest_usd_amount,
+            both_funds_highest_native_amount, both_funds_highest_native_currency,
+            both_funds_highest_donation_date, both_funds_lifetime_usd_total,
             AF_donation_count, both_funds_latest_currency, both_funds_latest_native_amount,
             both_funds_latest_donation_date, years_consecutive
         from silverpop_export_view
@@ -157,7 +157,7 @@ def test_refund_history(testdb):
      """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, all_funds_lifetime_usd_total, donation_count, latest_currency, latest_native_amount, all_funds_latest_otg_donation_date from silverpop_export")
+    cursor.execute("select highest_usd_amount, all_funds_lifetime_usd_total, donation_count, latest_currency, latest_native_amount, all_funds_latest_otg_donation_date from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
 
@@ -716,11 +716,6 @@ def test_highest_donation_date(testdb):
         (5, 22.25, 'USD'),
         (6, 13.25, 'USD'),
         (7, 33.25, 'USD');
-    """, """
-       insert into wmf_donor (entity_id, endowment_largest_donation, largest_donation) values
-       (1, 21.25, 21.25),
-       (2, 22.25, 32.25),
-       (3, 33.25, 13.25);
     """])
 
     cursor = conn.db_conn.cursor()
@@ -758,10 +753,10 @@ def test_native_amount(testdb):
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, foundation_highest_native_amount, foundation_highest_native_currency from silverpop_export")
+    cursor.execute("select highest_usd_amount, highest_native_amount, highest_native_currency from silverpop_export")
     expected = (Decimal('10.95'), Decimal('9'), 'GBP')
+    assert cursor.fetchone() == expected
     cursor.execute("select both_funds_highest_usd_amount, both_funds_highest_native_amount, both_funds_highest_native_currency from silverpop_export_view_full")
-    expected = (Decimal('10.95'), Decimal('9'), 'GBP')
     actual = cursor.fetchone()
     assert actual == expected
 

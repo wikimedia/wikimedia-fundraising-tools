@@ -5,22 +5,26 @@ CREATE TABLE silverpop_export_latest
   email VARCHAR(255) PRIMARY KEY,
   latest_currency VARCHAR(3),
   latest_currency_symbol VARCHAR(8),
-  latest_native_amount DECIMAL(20, 2)
+  latest_native_amount DECIMAL(20, 2),
+  latest_payment_method VARCHAR(64),
+  latest_donation_source VARCHAR(64)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 INSERT INTO silverpop_export_latest
   -- temporarily specify the fields here as we no longer use latest_donation from this table
   -- and it may not be dropped on the target db yet.
-(email, latest_currency, latest_currency_symbol, latest_native_amount)
+(email, latest_currency, latest_currency_symbol, latest_native_amount, latest_donation_source)
 SELECT
   t.email,
   MAX(extra.original_currency) as latest_currency,
   MAX(cur.symbol) as latest_currency_symbol,
-  MAX(extra.original_amount) as latest_native_amount
+  MAX(extra.original_amount) as latest_native_amount,
+  MAX(gift.channel) as latest_donation_source
 FROM silverpop_email_map t
        INNER JOIN silverpop_export_stat export ON t.email = export.email
        LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
        LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
+       LEFT JOIN civicrm.civicrm_value_1_gift_data_7 gift ON gift.entity_id = c.id
        LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
        LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
 WHERE c.receive_date = export.all_funds_latest_otg_donation_date

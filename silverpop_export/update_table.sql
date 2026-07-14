@@ -26,8 +26,7 @@ SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 
 --    for later filtering.
 -- silverpop_export_stat aggregate data about contact's contibutions
 -- silverpop_export_latest - data about contact's most recent donation
--- silverpop_export_highest - data about contact's highest foundation donation
--- silverpop_endowment_highest - data about contact's highest endowment donation
+-- silverpop_export_highest - data about contact's highest donation
 -- silverpop_export - collation of data from above tables
 -- silverpop_export_view - collation of data from above tables + formatting.
 -- silverpop_update_world - table of emails updated in our update timeframe. Only emails from this table
@@ -159,8 +158,6 @@ BEGIN;
    last_recurring_amount_change_date,
    last_otg_amount_change,
    last_otg_amount_change_date,
-   foundation_highest_usd_amount,
-   endowment_highest_usd_amount,
    endowment_first_donation_date,
    endowment_number_donations,
    donor_segment_id,
@@ -214,8 +211,6 @@ BEGIN;
     NULLIF(SUBSTRING_INDEX(
         MAX(CONCAT(donor.last_otg_donation_date, '|', COALESCE(otg.last_otg_amount_change_date, ''))),
         '|', -1), '') as last_otg_amount_change_date,
-    MAX(donor.largest_donation) as foundation_highest_usd_amount,
-    MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
     COALESCE(SUM(donor.endowment_number_donations), 0) as endowment_number_donations,
     -- we use MIN because the higher priority values are lower - ie Major Donor is 100 and
@@ -470,45 +465,11 @@ INSERT INTO silverpop_export_highest (
     ex.entity_id = ct.id AND
     ct.receive_date IS NOT NULL AND
     ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 AND-- 'Completed'
-    ct.financial_type_id <> 26 -- endowments
+    ct.contribution_status_id = 1 -- 'Completed'
   ORDER BY
     ct.total_amount DESC,
     ct.receive_date DESC
 ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
-COMMIT;
-
-BEGIN;
--- Delete recent rows from endowment_highest table (make way for updated version).
--- Query OK, 73565 rows affected (0.51 sec)
-DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_endowment_highest highest ON t.email = highest.email;
--- Add recent rows to endowment_highest table
--- Query OK, 73565 rows affected (47.86 sec)
-INSERT INTO silverpop_endowment_highest (
-  email,
-  endowment_highest_donation_date,
-  endowment_highest_native_currency,
-  endowment_highest_native_amount
-)
-SELECT
-  email.email,
-  MAX(c.receive_date) as endowment_highest_donation_date,
-  -- really we want the currency/amount associated with the highest amount on
-  -- the highest date but the chances of 2 concurrent donations
-  -- with different currencies are negligible
-  -- so the value of handling currency better here is low.
-  MAX(extra.original_currency) as endowment_highest_native_currency,
-  MAX(extra.original_amount) as endowment_highest_native_amount
-FROM silverpop_update_world t
-  INNER JOIN silverpop_export_stat export ON t.email = export.email
-  LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
-  LEFT JOIN civicrm.civicrm_contribution c ON  c.contact_id = email.contact_id
-  LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
-WHERE c.total_amount = export.endowment_highest_usd_amount
-  AND export.endowment_highest_usd_amount > 0
-  AND c.financial_type_id = 26
-  AND c.contribution_status_id = 1
-GROUP BY email.email;
 COMMIT;
 
 -- Populate table of QCD (Retirement Fund), stock donation and matched gift dates.
@@ -585,7 +546,7 @@ BEGIN;
 -- Query OK, 94904 rows affected (0.61 sec)
 DELETE recur FROM silverpop_update_world t INNER JOIN silverpop_has_recur recur ON t.email = recur.email;
 -- Add recent rows to has_recur table
--- Query OK, 519373 rows (2 min 20.264 sec)
+-- 8min for all contacts
 INSERT INTO silverpop_has_recur (
   email,
   foundation_has_recurred_donation,
@@ -757,8 +718,8 @@ INSERT INTO silverpop_export (
   foundation_recurring_active_count,
   recurring_has_upgrade_activity,
   foundation_recurring_latest_contribution_recur_id,
-  foundation_highest_usd_amount,foundation_highest_native_amount,
-  foundation_highest_native_currency,foundation_highest_donation_date,all_funds_lifetime_usd_total,donation_count,
+  highest_usd_amount,highest_native_amount,
+  highest_native_currency,highest_donation_date,all_funds_lifetime_usd_total,donation_count,
   all_funds_latest_donation_date,all_funds_latest_otg_donation_date,latest_currency,latest_currency_symbol,latest_native_amount,
   foundation_first_donation_date,
   all_funds_first_donation_date,
@@ -773,7 +734,7 @@ INSERT INTO silverpop_export (
   years_consecutive, donor_status_bin, donor_status_otg_bin, donor_status_overall_bin,
   donor_status_recur_overall_bin, donor_status_recur_month_bin, donor_status_recur_year_bin,
   endowment_first_donation_date,
-  endowment_number_donations, endowment_highest_usd_amount,
+  endowment_number_donations,
   all_funds_total_2019_2020,
   all_funds_total_2020_2021,
   all_funds_total_2021_2022,
@@ -798,10 +759,10 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   foundation_recurring_active_count,
   recurring_has_upgrade_activity,
   foundation_recurring_latest_contribution_recur_id,
-  COALESCE(hg.highest_usd_amount, 0) as foundation_highest_usd_amount,
-  COALESCE(hg.highest_native_amount, 0) as foundation_highest_native_amount,
-  COALESCE(hg.highest_native_currency, '') as foundation_highest_native_currency,
-  hg.highest_donation_date as foundation_highest_donation_date,
+  COALESCE(hg.highest_usd_amount, 0) as highest_usd_amount,
+  COALESCE(hg.highest_native_amount, 0) as highest_native_amount,
+  COALESCE(hg.highest_native_currency, '') as highest_native_currency,
+  hg.highest_donation_date as highest_donation_date,
   COALESCE(all_funds_lifetime_usd_total, 0) as all_funds_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
   stats.all_funds_latest_donation_date as all_funds_latest_donation_date,
@@ -823,15 +784,14 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   stats.donor_status_recur_overall_bin, stats.donor_status_recur_month_bin, stats.donor_status_recur_year_bin,
   endowment_first_donation_date,
   endowment_number_donations,
-  COALESCE(endowment_highest_usd_amount,0) as endowment_highest_usd_amount,
-   stats.all_funds_total_2019_2020,
-   stats.all_funds_total_2020_2021,
-   stats.all_funds_total_2021_2022,
-   stats.all_funds_total_2022_2023,
-   stats.all_funds_total_2023_2024,
-   stats.all_funds_total_2024_2025,
-   stats.all_funds_total_2025_2026,
-   stats.all_funds_total_2026_2027,
+  stats.all_funds_total_2019_2020,
+  stats.all_funds_total_2020_2021,
+  stats.all_funds_total_2021_2022,
+  stats.all_funds_total_2022_2023,
+  stats.all_funds_total_2023_2024,
+  stats.all_funds_total_2024_2025,
+  stats.all_funds_total_2025_2026,
+  stats.all_funds_total_2026_2027,
    -- is eligible for donor portal if segment not mid tier or major, lang english, no recurring with gateway = paypal or paypal_ec
    IF((stats.donor_segment_id > 200 AND stats.donor_segment_id <> 1000)
       AND SUBSTRING(COALESCE(ex.preferred_language, dedupe_table.preferred_language), 1, 2) = 'en'
@@ -1074,33 +1034,21 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(DATE_FORMAT(last_recurring_amount_change_date, '%m/%d/%Y'), '') as last_recurring_amount_change_date,
     COALESCE(last_otg_amount_change, '') as last_otg_amount_change,
     IFNULL(DATE_FORMAT(last_otg_amount_change_date, '%m/%d/%Y'), '') as last_otg_amount_change_date,
-    IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
-      as both_funds_highest_donation_date,
-    IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
-        as both_funds_highest_native_amount,
-    IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_currency, foundation_highest_native_currency)
-        as both_funds_highest_native_currency,
-    IF (endowment_highest_usd_amount > foundation_highest_usd_amount, endowment_highest_usd_amount, foundation_highest_usd_amount)
-      as both_funds_highest_usd_amount,
+    IFNULL(DATE_FORMAT(highest_donation_date, '%m/%d/%Y'), '') as both_funds_highest_donation_date,
+    highest_native_amount as both_funds_highest_native_amount,
+    highest_native_currency as both_funds_highest_native_currency,
+    highest_usd_amount as both_funds_highest_usd_amount,
     IFNULL(DATE_FORMAT(endowment_first_donation_date, '%m/%d/%Y'), '') as endowment_first_donation_date,
     endowment_number_donations as endowment_donation_count,
-    IFNULL(DATE_FORMAT(endowment_highest_donation_date, '%m/%d/%Y'), '') as endowment_highest_donation_date,
-    COALESCE(endowment_highest_native_amount, 0) as endowment_highest_native_amount,
-    COALESCE(endowment_highest_native_currency, '') as endowment_highest_native_currency,
-    COALESCE(endowment_highest_usd_amount, 0) as endowment_highest_usd_amount,
     IFNULL(DATE_FORMAT(mggd.first_qcd_date, '%m/%d/%Y'), '') as first_qcd_date,
     IFNULL(DATE_FORMAT(mggd.last_qcd_date, '%m/%d/%Y'), '') as last_qcd_date,
     IFNULL(DATE_FORMAT(mggd.last_stock_date, '%m/%d/%Y'), '') as last_stock_date,
     IFNULL(DATE_FORMAT(mggd.last_matched_gift_date, '%m/%d/%Y'), '') as last_matched_gift_date,
     donation_count as AF_donation_count,
     IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') as AF_first_donation_date,
-    IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') as AF_highest_donation_date,
-    foundation_highest_usd_amount as AF_highest_usd_amount,
     IFNULL(DATE_FORMAT(all_funds_latest_donation_date, '%m/%d/%Y'), '') as both_funds_overall_latest_donation_date,
     IFNULL(DATE_FORMAT(all_funds_latest_otg_donation_date, '%m/%d/%Y'), '') as both_funds_latest_donation_date,
     COALESCE(latest.latest_native_amount, 0) as both_funds_latest_native_amount,
-    foundation_highest_native_amount as AF_highest_native_amount,
-    foundation_highest_native_currency as AF_highest_native_currency,
     all_funds_lifetime_usd_total as both_funds_lifetime_usd_total,
     COALESCE(latest.latest_currency, '') as both_funds_latest_currency,
     COALESCE(latest.latest_currency_symbol, '') as both_funds_latest_currency_symbol,
@@ -1217,7 +1165,6 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
-  LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
   LEFT JOIN silverpop_mg_gift_date mggd ON mggd.email = e.email
   LEFT JOIN preference_tags pt ON pt.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
@@ -1232,10 +1179,6 @@ IsoLang,
 AF_donation_count,
 AF_first_donation_date,
 AF_has_active_recurring_donation,
-AF_highest_donation_date,
-AF_highest_native_amount,
-AF_highest_native_currency,
-AF_highest_usd_amount,
 AF_recurring_first_donation_date,
 AF_recurring_latest_donation_date,
 AF_recurring_month_latest_donation_date,
@@ -1298,10 +1241,6 @@ matching_gifts_guide_url,
 matching_gifts_online_form_url,
 endowment_donation_count,
 endowment_first_donation_date,
-endowment_highest_donation_date,
-endowment_highest_native_amount,
-endowment_highest_native_currency,
-endowment_highest_usd_amount,
 first_qcd_date,
 last_qcd_date,
 last_stock_date,
