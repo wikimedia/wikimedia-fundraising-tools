@@ -100,6 +100,7 @@ BEGIN;
    donor_segment_overall,
    previous_segment,
    previous_segment_change_date,
+   daf_contact_id,
    years_consecutive,
    donor_status_bin,
    donor_status_overall_bin,
@@ -155,6 +156,16 @@ BEGIN;
     NULLIF(SUBSTRING_INDEX(
         MIN(CONCAT(donor.donor_segment_overall, '|', COALESCE(seg.previous_segment_change_date, ''))),
         '|', -1), '') as previous_segment_change_date,
+    -- The contact id of a DAF, if the contact has one.
+    -- Subquery rather than a join so contacts with more than one DAF relationship
+    -- don't mess up the aggregate.
+    MIN((
+      SELECT MIN(rel.far_contact_id)
+      FROM civicrm.civicrm_relationship_cache rel
+      WHERE rel.near_contact_id = e.contact_id
+        AND rel.far_relation = 'Holds a Donor Advised Fund of'
+        AND is_active = 1
+    )) as daf_contact_id,
     MAX(donor.years_consecutive) as years_consecutive,
     -- Status values are trickier - if we want to combine one lybunt (35) record
     -- and one new (25) record, the correct answer is 'consecutive' (20). So
@@ -632,7 +643,7 @@ INSERT INTO silverpop_export (
   last_recurring_amount_change,
   last_recurring_amount_change_date,
   city,country,state,postal_code,
-  donor_segment_id, donor_segment_overall, previous_segment, previous_segment_change_date,
+  donor_segment_id, donor_segment_overall, previous_segment, previous_segment_change_date, daf_contact_id,
   years_consecutive, donor_status_bin, donor_status_otg_bin, donor_status_overall_bin,
   donor_status_recur_overall_bin, donor_status_recur_month_bin, donor_status_recur_year_bin,
   endowment_first_donation_date,
@@ -679,7 +690,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   last_recurring_amount_change,
   last_recurring_amount_change_date,
   addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
-  stats.donor_segment_id, stats.donor_segment_overall, stats.previous_segment, stats.previous_segment_change_date,
+  stats.donor_segment_id, stats.donor_segment_overall, stats.previous_segment, stats.previous_segment_change_date, stats.daf_contact_id,
   stats.years_consecutive, stats.donor_status_bin, stats.donor_status_otg_bin, stats.donor_status_overall_bin,
   stats.donor_status_recur_overall_bin, stats.donor_status_recur_month_bin, stats.donor_status_recur_year_bin,
   endowment_first_donation_date,
@@ -793,6 +804,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(donor_segment_overall, 990) as donor_segment_overall,
     COALESCE(previous_segment, '') as previous_segment,
     IFNULL(DATE_FORMAT(previous_segment_change_date, '%m/%d/%Y'), '') as previous_segment_change_date,
+    COALESCE(daf_contact_id, '') as daf_contact_id,
     COALESCE(years_consecutive, 0) as years_consecutive,
     donor_status_id,
     donor_status_otg,
@@ -1080,6 +1092,7 @@ direct_mail_latest_appeal,
 donor_segment_overall,
 previous_segment,
 previous_segment_change_date,
+daf_contact_id,
 years_consecutive,
 donor_segment_id,
 donor_status_id,

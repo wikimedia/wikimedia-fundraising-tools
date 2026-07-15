@@ -337,6 +337,17 @@ CREATE TABLE `civicrm_relationship` (
   KEY `FK_civicrm_relationship_case_id` (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_relationship_cache;
+CREATE TABLE `civicrm_relationship_cache` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `near_contact_id` int(10) unsigned NOT NULL,
+  `far_contact_id` int(10) unsigned NOT NULL,
+  `far_relation` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_active` tinyint(4) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `index_nearid_farrelation` (`near_contact_id`,`far_relation`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `civicrm_relationship_type`;
 CREATE TABLE `civicrm_relationship_type` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,

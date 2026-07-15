@@ -372,6 +372,61 @@ def test_previous_segment(testdb):
     assert cursor.fetchone() == ('200', '02/15/2024')
 
 
+def test_daf_contact_id(testdb):
+    """
+    daf_contact_id is the contact id of the contact's DAF, taking the lowest id
+    across merged contacts and multiple DAF relationships.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'merged@localhost', 1, 0),
+        (2, 'merged@localhost', 1, 0),
+        (3, 'multidaf@localhost', 1, 0),
+        (4, 'inactivedaf@localhost', 1, 0),
+        (5, 'nodaf@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_relationship_cache (near_contact_id, far_contact_id, far_relation, is_active) values
+        (1, 105, 'Holds a Donor Advised Fund of', 1),
+        (2, 103, 'Holds a Donor Advised Fund of', 1),
+        -- contact 3 has two DAF relationships plus an unrelated relationship.
+        (3, 104, 'Holds a Donor Advised Fund of', 1),
+        (3, 102, 'Holds a Donor Advised Fund of', 1),
+        (3, 101, 'Employer of', 1),
+        -- contact 4's only DAF relationship is inactive.
+        (4, 106, 'Holds a Donor Advised Fund of', 0);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select daf_contact_id from silverpop_export_view where email = 'merged@localhost'"
+    )
+    assert cursor.fetchone() == ('103',)
+
+    cursor.execute(
+        "select daf_contact_id from silverpop_export_view where email = 'multidaf@localhost'"
+    )
+    assert cursor.fetchone() == ('102',)
+
+    cursor.execute(
+        "select daf_contact_id from silverpop_export_view where email = 'inactivedaf@localhost'"
+    )
+    assert cursor.fetchone() == ('',)
+
+    cursor.execute(
+        "select daf_contact_id from silverpop_export_view where email = 'nodaf@localhost'"
+    )
+    assert cursor.fetchone() == ('',)
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,
