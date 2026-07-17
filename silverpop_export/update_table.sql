@@ -10,6 +10,7 @@ SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name 
 SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec' AND is_test = 0;
 SELECT @pgStageOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'pg_stage';
 SELECT @relationshipManagerOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'relationship_manager';
+SELECT @pgCommitmentType := value FROM civicrm.civicrm_option_value WHERE name = 'PG - Pledge Confirmed';
 
 -- Updates the silverpop_export table
 
@@ -782,6 +783,27 @@ FROM civicrm.civicrm_value_1_prospect_5 prospect
 WHERE prospect.pg_stage_177 IS NOT NULL OR prospect.relationship_manager_284 IS NOT NULL OR prospect.exceptional_upgrade_prospect = 1
 GROUP BY email.email;
 
+-- Emails of contacts in the Wikipedia Legacy Society:
+-- those with a confirmed Planned Giving commitment activity with a commitment date.
+-- Only hundreds, very quick.
+DROP TABLE IF EXISTS silverpop_legacy_society;
+
+CREATE TABLE silverpop_legacy_society
+(email VARCHAR(255) NOT NULL, PRIMARY KEY (email))
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SELECT DISTINCT email.email
+FROM civicrm.civicrm_value_pg_commitment_25 commitment
+  INNER JOIN civicrm.civicrm_activity activity
+    ON activity.id = commitment.entity_id
+    AND activity.activity_type_id = @pgCommitmentType
+  INNER JOIN civicrm.civicrm_activity_contact activity_contact
+    ON activity_contact.activity_id = activity.id
+    AND activity_contact.record_type_id = @activityTargets
+  INNER JOIN civicrm.civicrm_email email
+    ON email.contact_id = activity_contact.contact_id AND email.is_primary = 1
+WHERE commitment.commitment_confirmed__298 = 1
+  AND commitment.commitment_confirmation_date_299 IS NOT NULL;
+
 -- Create a nice view to export from
 -- There are two possibilities for limiting this view to only include newly modified contacts
 -- add a where statement or join on an already-limited table.
@@ -915,6 +937,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(prospect.pg_stage, '') as pg_stage,
     COALESCE(prospect.relationship_manager, '') as relationship_manager,
     IF(COALESCE(prospect.exceptional_upgrade_prospect, 0) = 1, 'Yes', 'No') as exceptional_upgrade_prospect,
+    IF(legacy_society.email IS NOT NULL, 'Yes', 'No') as wikipedia_legacy_society,
     '' as dataaxle_is_grandparent,
     dm.appeal as direct_mail_latest_appeal,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
@@ -1059,6 +1082,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   FROM silverpop_export) AS e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
   LEFT JOIN silverpop_prospect prospect ON prospect.email = e.email
+  LEFT JOIN silverpop_legacy_society legacy_society ON legacy_society.email = e.email
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
@@ -1162,7 +1186,8 @@ TS_disc_income_decile,
 TS_estimated_net_worth,
 TS_family_composition,
 TS_income_range,
-TS_occupation
+TS_occupation,
+wikipedia_legacy_society
 FROM silverpop_export_view_full
 WHERE ((opted_out = 0
   AND (opted_in IS NULL OR opted_in = 1)

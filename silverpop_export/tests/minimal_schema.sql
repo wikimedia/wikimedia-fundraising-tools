@@ -405,6 +405,14 @@ CREATE TABLE `civicrm_activity_contact` (
     `record_type_id` int(10) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_value_pg_commitment_25;
+CREATE TABLE `civicrm_value_pg_commitment_25` (
+    `id` int(10) unsigned NOT NULL,
+    `entity_id` int(10) unsigned NOT NULL,
+    `commitment_confirmed__298` tinyint(4) DEFAULT NULL,
+    `commitment_confirmation_date_299` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS civicrm_payment_processor;
 CREATE TABLE `civicrm_payment_processor` (
     `id` int(10) unsigned NOT NULL,
@@ -459,5 +467,6 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recur
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_segment_overall', 7);
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(8, 100, 'Qualification', 'qualification', 'Qualification', 8);
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(9, 101, 3, 'jane_manager', 'Jane Manager', 9);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(10, 146, 'PG - Pledge Confirmed', 10);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

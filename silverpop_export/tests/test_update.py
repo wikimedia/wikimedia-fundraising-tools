@@ -475,6 +475,51 @@ def test_pg_stage_and_relationship_manager(testdb):
     assert cursor.fetchone() == ('', '', 'No')
 
 
+def test_wikipedia_legacy_society(testdb):
+    """
+    wikipedia_legacy_society is Yes only for contacts with a PG Commitment
+    activity that is both confirmed and has a commitment date.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'member@localhost', 1, 0),
+        (2, 2, 'member@localhost', 1, 0),
+        (3, 3, 'unconfirmed@localhost', 1, 0),
+        (4, 4, 'none@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_activity (id, activity_type_id) values
+        (1, 146),
+        (3, 146);
+    """, """
+    insert into civicrm_activity_contact (contact_id, activity_id, record_type_id) values
+        (1, 1, 3),
+        (3, 3, 3);
+    """, """
+    insert into civicrm_value_pg_commitment_25 (id, entity_id, commitment_confirmed__298, commitment_confirmation_date_299) values
+        (1, 1, 1, '2026-01-01'),
+        (3, 3, 0, '2026-01-01');
+    """])
+
+    cursor = conn.db_conn.cursor()
+
+    cursor.execute("select wikipedia_legacy_society from silverpop_export_view where email = 'member@localhost'")
+    assert cursor.fetchone() == ('Yes',)
+
+    cursor.execute("select wikipedia_legacy_society from silverpop_export_view where email = 'unconfirmed@localhost'")
+    assert cursor.fetchone() == ('No',)
+
+    cursor.execute("select wikipedia_legacy_society from silverpop_export_view where email = 'none@localhost'")
+    assert cursor.fetchone() == ('No',)
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,
