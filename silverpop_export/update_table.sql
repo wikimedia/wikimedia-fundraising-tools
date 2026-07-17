@@ -8,6 +8,8 @@ SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 
 SELECT @segmentChangedField := value FROM civicrm.civicrm_option_value WHERE name = 'donor_segment_overall';
 SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal' AND is_test = 0;
 SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec' AND is_test = 0;
+SELECT @pgStageOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'pg_stage';
+SELECT @relationshipManagerOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'relationship_manager';
 
 -- Updates the silverpop_export table
 
@@ -757,6 +759,29 @@ FROM civicrm.civicrm_entity_tag e
     AND email.is_primary = 1
 GROUP BY email.email;
 
+-- Resolve prospect option values to their labels to join later.
+-- Only tens of thousands of contacts, so very fast.
+DROP TABLE IF EXISTS silverpop_prospect;
+
+CREATE TABLE silverpop_prospect
+(email VARCHAR(255) NOT NULL, PRIMARY KEY (email), pg_stage VARCHAR(255) NOT NULL, relationship_manager VARCHAR(255) NOT NULL, exceptional_upgrade_prospect TINYINT NOT NULL)
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SELECT email.email,
+  MAX(COALESCE(pg_stage_option.label, '')) as pg_stage,
+  MAX(COALESCE(relationship_manager_option.label, '')) as relationship_manager,
+  MAX(COALESCE(prospect.exceptional_upgrade_prospect, 0)) as exceptional_upgrade_prospect
+FROM civicrm.civicrm_value_1_prospect_5 prospect
+  INNER JOIN civicrm.civicrm_email email
+    ON email.contact_id = prospect.entity_id AND email.is_primary = 1
+  LEFT JOIN civicrm.civicrm_option_value pg_stage_option
+    ON pg_stage_option.value = prospect.pg_stage_177
+    AND pg_stage_option.option_group_id = @pgStageOptionGroup
+  LEFT JOIN civicrm.civicrm_option_value relationship_manager_option
+    ON relationship_manager_option.value = prospect.relationship_manager_284
+    AND relationship_manager_option.option_group_id = @relationshipManagerOptionGroup
+WHERE prospect.pg_stage_177 IS NOT NULL OR prospect.relationship_manager_284 IS NOT NULL OR prospect.exceptional_upgrade_prospect = 1
+GROUP BY email.email;
+
 -- Create a nice view to export from
 -- There are two possibilities for limiting this view to only include newly modified contacts
 -- add a where statement or join on an already-limited table.
@@ -887,6 +912,9 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       WHEN occupation_175 = '15' THEN 'Religious'
       ELSE ''
     END as TS_occupation,
+    COALESCE(prospect.pg_stage, '') as pg_stage,
+    COALESCE(prospect.relationship_manager, '') as relationship_manager,
+    IF(COALESCE(prospect.exceptional_upgrade_prospect, 0) = 1, 'Yes', 'No') as exceptional_upgrade_prospect,
     '' as dataaxle_is_grandparent,
     dm.appeal as direct_mail_latest_appeal,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
@@ -1030,6 +1058,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     END as donor_status_recur_year
   FROM silverpop_export) AS e
   LEFT JOIN civicrm.civicrm_value_1_prospect_5 v ON v.entity_id = contact_id
+  LEFT JOIN silverpop_prospect prospect ON prospect.email = e.email
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
@@ -1117,12 +1146,15 @@ endowment_highest_native_currency,
 endowment_highest_usd_amount,
 firstname,
 gender,
+exceptional_upgrade_prospect,
 is_eligible_for_donor_portal,
 lastname,
 latest_optin_response,
 most_recent_cancel_reason,
+pg_stage,
 postal_code,
 preferences_tags,
+relationship_manager,
 state,
 TS_birth_date,
 TS_charitable_contributions_decile,

@@ -291,8 +291,21 @@ create table civicrm_value_1_prospect_5
     `net_worth_170`                   varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `family_composition_173`          varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `occupation_175`                  varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `data_axle_is_grandparent`        int(3) unsigned DEFAULT NULL
+    `data_axle_is_grandparent`        int(3) unsigned DEFAULT NULL,
+    `pg_stage_177`                    varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `relationship_manager_284`        varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `exceptional_upgrade_prospect`   tinyint(4) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_custom_field;
+CREATE TABLE `civicrm_custom_field` (
+    `id` int(10) unsigned NOT NULL,
+    `name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `option_group_id` int(10) unsigned DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(177, 'pg_stage', 100);
+INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(284, 'relationship_manager', 101);
 
 DROP TABLE IF EXISTS civicrm_value_matching_gift;
 CREATE TABLE `civicrm_value_matching_gift` (
@@ -444,5 +457,7 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activit
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_segment_overall', 7);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(8, 100, 'Qualification', 'qualification', 'Qualification', 8);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(9, 101, 3, 'jane_manager', 'Jane Manager', 9);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

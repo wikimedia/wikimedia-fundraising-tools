@@ -427,6 +427,54 @@ def test_daf_contact_id(testdb):
     assert cursor.fetchone() == ('',)
 
 
+def test_pg_stage_and_relationship_manager(testdb):
+    """
+    pg_stage & relationship_manager are exported as the labels of the option
+    values stored on the prospect record, empty when unset or no prospect row.
+    Exceptional Upgrade Prospect is exported as a Yes/No flag, defaulting to No when there is no prospect row.
+
+    Contacts 1 and 2 share an email, which the export collapses to a single row
+    keyed by whichever contact wins deduplication (here the higher email id, so
+    the non-prospect contact 2). The prospect flags on the losing contact (1)
+    must still surface for that shared email.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'prospect@localhost', 1, 0),
+        (2, 2, 'prospect@localhost', 1, 0),
+        (3, 3, 'stageonly@localhost', 1, 0),
+        (4, 4, 'noprospect@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_value_1_prospect_5 (id, entity_id, pg_stage_177, relationship_manager_284, exceptional_upgrade_prospect) values
+        (1, 1, 'Qualification', 3, 1),
+        (2, 3, 'Qualification', NULL, 0);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select pg_stage, relationship_manager, exceptional_upgrade_prospect from silverpop_export_view where email = 'prospect@localhost'"
+    )
+    assert cursor.fetchone() == ('Qualification', 'Jane Manager', 'Yes')
+
+    cursor.execute(
+        "select pg_stage, relationship_manager, exceptional_upgrade_prospect from silverpop_export_view where email = 'stageonly@localhost'"
+    )
+    assert cursor.fetchone() == ('Qualification', '', 'No')
+
+    cursor.execute(
+        "select pg_stage, relationship_manager, exceptional_upgrade_prospect from silverpop_export_view where email = 'noprospect@localhost'"
+    )
+    assert cursor.fetchone() == ('', '', 'No')
+
+
 def test_highest_donation_date(testdb):
     """
     Test that we correctly calculate the highest donation date,
