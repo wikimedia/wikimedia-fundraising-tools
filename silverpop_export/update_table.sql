@@ -11,6 +11,11 @@ SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE na
 SELECT @pgStageOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'pg_stage';
 SELECT @relationshipManagerOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'relationship_manager';
 SELECT @pgCommitmentType := value FROM civicrm.civicrm_option_value WHERE name = 'PG - Pledge Confirmed';
+SELECT @stockInstrument := ov.value
+  FROM civicrm.civicrm_option_value ov
+  INNER JOIN civicrm.civicrm_option_group og ON og.id = ov.option_group_id
+  WHERE og.name = 'payment_instrument' AND ov.name = 'Stock';
+SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 'matched_gift';
 
 -- Updates the silverpop_export table
 
@@ -434,6 +439,52 @@ WHERE c.total_amount = export.endowment_highest_usd_amount
   AND c.financial_type_id = 26
   AND c.contribution_status_id = 1
 GROUP BY email.email;
+COMMIT;
+
+-- Populate table of QCD (Retirement Fund), stock donation and matched gift dates.
+-- This is quite low volume and take < 1s per, so simplest just to recalculate every time.
+-- Group by email so we can join in directly to view.
+BEGIN;
+DELETE FROM silverpop_mg_gift_date;
+
+INSERT INTO silverpop_mg_gift_date (email, first_qcd_date, last_qcd_date)
+SELECT
+  email.email,
+  MIN(c.receive_date) as first_qcd_date,
+  MAX(c.receive_date) as last_qcd_date
+FROM civicrm.civicrm_value_1_gift_data_7 gift
+  INNER JOIN civicrm.civicrm_contribution c ON c.id = gift.entity_id
+  INNER JOIN civicrm.civicrm_email email ON email.contact_id = c.contact_id AND email.is_primary = 1
+WHERE gift.campaign = 'Retirement Fund'
+  AND c.contribution_status_id = 1
+  AND c.total_amount > 0
+GROUP BY email.email;
+
+INSERT INTO silverpop_mg_gift_date (email, last_stock_date)
+SELECT
+  email.email,
+  MAX(c.receive_date) as last_stock_date
+FROM civicrm.civicrm_contribution c
+  INNER JOIN civicrm.civicrm_email email ON email.contact_id = c.contact_id AND email.is_primary = 1
+WHERE c.payment_instrument_id = @stockInstrument
+  AND c.contribution_status_id = 1
+  AND c.total_amount > 0
+GROUP BY email.email
+ON DUPLICATE KEY UPDATE last_stock_date = VALUES(last_stock_date);
+
+-- A donor's matched gifts are contributions that the donor is soft credited on.
+INSERT INTO silverpop_mg_gift_date (email, last_matched_gift_date)
+SELECT
+  email.email,
+  MAX(c.receive_date) as last_matched_gift_date
+FROM civicrm.civicrm_contribution_soft soft
+  INNER JOIN civicrm.civicrm_contribution c ON c.id = soft.contribution_id
+  INNER JOIN civicrm.civicrm_email email ON email.contact_id = soft.contact_id AND email.is_primary = 1
+WHERE soft.soft_credit_type_id = @matchedGiftType
+  AND c.contribution_status_id = 1
+  AND c.total_amount > 0
+GROUP BY email.email
+ON DUPLICATE KEY UPDATE last_matched_gift_date = VALUES(last_matched_gift_date);
 COMMIT;
 
 -- Pre-compute the contacts with a recent recurring upgrade/downgrade activity
@@ -961,6 +1012,10 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     COALESCE(endowment_highest_native_amount, 0) as endowment_highest_native_amount,
     COALESCE(endowment_highest_native_currency, '') as endowment_highest_native_currency,
     COALESCE(endowment_highest_usd_amount, 0) as endowment_highest_usd_amount,
+    IFNULL(DATE_FORMAT(mggd.first_qcd_date, '%m/%d/%Y'), '') as first_qcd_date,
+    IFNULL(DATE_FORMAT(mggd.last_qcd_date, '%m/%d/%Y'), '') as last_qcd_date,
+    IFNULL(DATE_FORMAT(mggd.last_stock_date, '%m/%d/%Y'), '') as last_stock_date,
+    IFNULL(DATE_FORMAT(mggd.last_matched_gift_date, '%m/%d/%Y'), '') as last_matched_gift_date,
     donation_count as AF_donation_count,
     IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') as AF_first_donation_date,
     IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') as AF_highest_donation_date,
@@ -1087,6 +1142,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
   LEFT JOIN silverpop_endowment_highest endow_high ON endow_high.email = e.email
+  LEFT JOIN silverpop_mg_gift_date mggd ON mggd.email = e.email
   LEFT JOIN preference_tags pt ON pt.email = e.email
   LEFT JOIN civicrm.civicrm_value_matching_gift gift ON gift.entity_id = e.employer_id
   LEFT JOIN civicrm.civicrm_contribution_recur cr ON e.foundation_recurring_latest_contribution_recur_id = cr.id
@@ -1168,6 +1224,10 @@ endowment_highest_donation_date,
 endowment_highest_native_amount,
 endowment_highest_native_currency,
 endowment_highest_usd_amount,
+first_qcd_date,
+last_qcd_date,
+last_stock_date,
+last_matched_gift_date,
 firstname,
 gender,
 exceptional_upgrade_prospect,

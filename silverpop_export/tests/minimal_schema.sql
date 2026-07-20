@@ -203,8 +203,17 @@ create table civicrm_contribution (
     trxn_id varchar(255) COLLATE utf8mb4_unicode_ci,
     contribution_status_id int(10) unsigned,
     financial_type_id int(10) unsigned,
-    payment_method_id int(10) unsigned,
+    payment_instrument_id int(10) unsigned,
     KEY `received_date` (`receive_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+drop table if exists civicrm_contribution_soft;
+create table civicrm_contribution_soft (
+    id int(10) unsigned,
+    contribution_id int(10) unsigned,
+    contact_id int(10) unsigned,
+    soft_credit_type_id int(10) unsigned,
+    KEY `contribution_id` (`contribution_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_contribution_recur;
@@ -435,8 +444,14 @@ CREATE TABLE `civicrm_value_1_gift_data_7` (
 PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-DROP TABLE IF EXISTS civicrm_option_value;
+DROP TABLE IF EXISTS civicrm_option_group;
+CREATE TABLE `civicrm_option_group` (
+`id` int(10) unsigned NOT NULL,
+`name` varchar(255) DEFAULT NULL,
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_option_value;
 CREATE TABLE `civicrm_option_value` (
 `id` int(10) unsigned NOT NULL,
 `option_group_id` int(10) unsigned COMMENT 'Group which this option belongs to.',
@@ -458,6 +473,7 @@ CREATE TABLE `civicrm_option_value` (
 `color` varchar(255) DEFAULT NULL COMMENT 'Hex color value e.g. #ffffff'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO civicrm_option_group (id, name) VALUES(10, 'payment_instrument');
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(1, 165, 'Recurring Upgrade', 1);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(2, 166, 'Recurring Upgrade Decline', 2);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direct Mail', 3);
@@ -468,5 +484,7 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_s
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(8, 100, 'Qualification', 'qualification', 'Qualification', 8);
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(9, 101, 3, 'jane_manager', 'Jane Manager', 9);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(10, 146, 'PG - Pledge Confirmed', 10);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(11, 10, 188, 'Stock', 'Stock', 11);
+INSERT INTO civicrm_option_value (id, value, name, label, weight) VALUES(12, 9, 'matched_gift', 'Matched Gift', 12);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

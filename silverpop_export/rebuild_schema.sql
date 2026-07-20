@@ -69,6 +69,14 @@ CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
  `endowment_highest_native_amount` DECIMAL(20, 2)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS `silverpop_mg_gift_date` (
+ `email` varchar(255) PRIMARY KEY,
+ `first_qcd_date` DATETIME,
+ `last_qcd_date` DATETIME,
+ `last_stock_date` DATETIME,
+ `last_matched_gift_date` DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_excluded
 (
   id INT AUTO_INCREMENT PRIMARY KEY,

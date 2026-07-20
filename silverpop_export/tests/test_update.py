@@ -427,6 +427,90 @@ def test_daf_contact_id(testdb):
     assert cursor.fetchone() == ('',)
 
 
+def test_mg_dates(testdb):
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'qcd@localhost', 1, 0),
+        (2, 2, 'qcd@localhost', 1, 0),
+        (3, 3, 'stock@localhost', 1, 0),
+        (4, 4, 'both@localhost', 1, 0),
+        (5, 5, 'neither@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, contribution_status_id, payment_instrument_id) values
+        -- QCD gifts for the merged contacts 1 & 2: earliest & latest span both contacts.
+        (101, 1, '2022-03-15', 100, 1, NULL),
+        (102, 2, '2024-06-20', 100, 1, NULL),
+        (103, 1, '2020-01-10', 100, 1, NULL),
+        -- Pending QCD gift: excluded despite being the earliest.
+        (104, 1, '2019-01-01', 100, 2, NULL),
+        -- Completed gift for contact 1 but not a Retirement Fund campaign: excluded.
+        (105, 1, '2025-12-31', 100, 1, NULL),
+        -- Zero-amount QCD gift: excluded despite being the latest.
+        (106, 1, '2026-01-01', 0, 1, NULL),
+        -- Stock donations for contact 3.
+        (201, 3, '2021-05-05', 100, 1, 188),
+        (202, 3, '2023-08-08', 100, 1, 188),
+        -- Pending stock donation: excluded despite being the latest.
+        (203, 3, '2025-01-01', 100, 3, 188),
+        -- Stock refund (negative amount): excluded despite being the latest.
+        (204, 3, '2025-02-02', -100, 1, 188),
+        -- Contact 4 has a QCD gift, a stock donation and (below) a matched gift.
+        (301, 4, '2023-02-02', 100, 1, NULL),
+        (302, 4, '2024-04-04', 100, 1, 188),
+        -- Contributions for soft credits
+        (401, 90, '2021-07-07', 100, 1, NULL),
+        (402, 90, '2023-09-09', 100, 1, NULL),
+        -- Pending matched gift: excluded despite being the latest.
+        (403, 90, '2025-05-05', 100, 2, NULL),
+        -- Zero-amount matched gift: excluded despite being the latest.
+        (404, 90, '2025-06-06', 0, 1, NULL),
+        -- Matching gift for contact 4.
+        (405, 90, '2022-08-08', 100, 1, NULL),
+        -- Completed contribution crediting contact 5, but not a matched_gift soft credit.
+        (406, 90, '2024-01-01', 100, 1, NULL);
+    """, """
+    insert into civicrm_value_1_gift_data_7 (id, entity_id, campaign) values
+        (1, 101, 'Retirement Fund'),
+        (2, 102, 'Retirement Fund'),
+        (3, 103, 'Retirement Fund'),
+        (4, 104, 'Retirement Fund'),
+        (5, 105, 'Something Else'),
+        (6, 301, 'Retirement Fund'),
+        (7, 106, 'Retirement Fund');
+    """, """
+    insert into civicrm_contribution_soft (id, contribution_id, contact_id, soft_credit_type_id) values
+        (1, 401, 1, 9),
+        (2, 402, 2, 9),
+        (3, 403, 1, 9),
+        (4, 404, 1, 9),
+        (5, 405, 4, 9),
+        -- A non-matched-gift soft credit.
+        (6, 406, 5, 10);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select first_qcd_date, last_qcd_date, last_stock_date, last_matched_gift_date from silverpop_export_view where email = 'qcd@localhost'")
+    assert cursor.fetchone() == ('01/10/2020', '06/20/2024', '', '09/09/2023')
+
+    cursor.execute("select first_qcd_date, last_qcd_date, last_stock_date, last_matched_gift_date from silverpop_export_view where email = 'stock@localhost'")
+    assert cursor.fetchone() == ('', '', '08/08/2023', '')
+
+    cursor.execute("select first_qcd_date, last_qcd_date, last_stock_date, last_matched_gift_date from silverpop_export_view where email = 'both@localhost'")
+    assert cursor.fetchone() == ('02/02/2023', '02/02/2023', '04/04/2024', '08/08/2022')
+
+    cursor.execute("select first_qcd_date, last_qcd_date, last_stock_date, last_matched_gift_date from silverpop_export_view where email = 'neither@localhost'")
+    assert cursor.fetchone() == ('', '', '', '')
+
+
 def test_pg_stage_and_relationship_manager(testdb):
     """
     pg_stage & relationship_manager are exported as the labels of the option
