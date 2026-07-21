@@ -152,12 +152,12 @@ def test_refund_history(testdb):
         (1, 20.15, 'CAD'),
         (2, 35.15, 'CAD');
      """, """
-        insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date, number_donations) values
-            (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', '2015-01-03', 1);
+        insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date, last_otg_donation_date, number_donations) values
+            (1, 15.25, 20.15, 15.25, 'CAD', '2015-01-03', '2015-01-03', '2015-01-03', 1);
      """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_highest_usd_amount, all_funds_lifetime_usd_total, donation_count, latest_currency, latest_native_amount, all_funds_latest_donation_date from silverpop_export")
+    cursor.execute("select foundation_highest_usd_amount, all_funds_lifetime_usd_total, donation_count, latest_currency, latest_native_amount, all_funds_latest_otg_donation_date from silverpop_export")
     expected = (Decimal('15.25'), Decimal('15.25'), 1, 'CAD', Decimal('20.15'), datetime.datetime(2015, 1, 3))
     assert cursor.fetchone() == expected
 
@@ -712,8 +712,8 @@ def test_currency_symbol(testdb):
         (2, 9.00, 'GBP'),
         (3, 10.00, 'USD');
             """, """
-    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date) values
-        (1, 30.45, 10.00, 10.00, 'GBP', '2015-01-03', '2017-07-07');
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date, last_otg_donation_date) values
+        (1, 30.45, 10.00, 10.00, 'GBP', '2015-01-03', '2017-07-07', '2017-07-07');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -726,7 +726,8 @@ def test_currency_symbol(testdb):
 def test_latest_donation(testdb):
     '''
     Test that latest fields are correctly populated when the latest donation
-    is endowment or foundation.
+    is endowment or foundation, and that both_funds_latest_donation_date is
+    distinct from both_funds_overall_latest_donation_date (includes recurring).
     '''
     conn, db_name = testdb
 
@@ -739,27 +740,39 @@ def test_latest_donation(testdb):
         (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
         (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
-    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
-        (1, 1, '2016-03-01', 5.00, 'aaa001', 1, 1),
-        (2, 1, '2018-09-15', 20.00, 'bbb002', 1, 26),
-        (3, 2, '2016-06-01', 12.00, 'ccc003', 1, 26),
-        (4, 2, '2019-02-20', 8.00, 'ddd004', 1, 1);
+    insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
+        (1, 1, 15.00, 'GBP', 5, NULL);
+    """, """
+    insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, NULL, '2016-03-01', 5.00, 'aaa001', 1, 1),
+        (2, 1, NULL, '2018-09-15', 20.00, 'bbb002', 1, 26),
+        (3, 1, 1, '2020-01-10', 15.00, 'rec001', 1, 1),
+        (4, 2, NULL, '2016-06-01', 12.00, 'ccc003', 1, 26),
+        (5, 2, NULL, '2019-02-20', 8.00, 'ddd004', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 5.00, 'USD'),
         (2, 18.00, 'EUR'),
-        (3, 12.00, 'USD'),
-        (4, 7.00, 'GBP');
+        (3, 15.00, 'GBP'),
+        (4, 12.00, 'USD'),
+        (5, 7.00, 'GBP');
     """, """
-    insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date) values
-        (1, 18.00, 20.00, 'EUR', '2018-09-15'),
-        (2, 7.00, 8.00, 'GBP', '2019-02-20');
+    insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date, last_otg_donation_date) values
+        (1, 18.00, 20.00, 'EUR', '2020-01-10', '2018-09-15'),
+        (2, 7.00, 8.00, 'GBP', '2019-02-20', '2019-02-20');
     """])
 
     cursor = conn.db_conn.cursor()
     cursor.execute("select latest_currency, latest_currency_symbol, latest_native_amount, all_funds_latest_donation_date from silverpop_export order by contact_id")
-    assert cursor.fetchone() == ('EUR', '€', Decimal('18.00'), datetime.datetime(2018, 9, 15))
+    assert cursor.fetchone() == ('EUR', '€', Decimal('18.00'), datetime.datetime(2020, 1, 10))
     assert cursor.fetchone() == ('GBP', '£', Decimal('7.00'), datetime.datetime(2019, 2, 20))
+
+    cursor.execute("""
+        select both_funds_latest_donation_date, both_funds_overall_latest_donation_date
+        from silverpop_export_view order by ContactID
+    """)
+    assert cursor.fetchone() == ('09/15/2018', '01/10/2020')
+    assert cursor.fetchone() == ('02/20/2019', '02/20/2019')
 
 
 def test_export_hash(testdb):
@@ -1349,13 +1362,13 @@ def test_merge_status(testdb):
         (4, 9, 'USD'),
         (5, 10, 'USD');
     """, """
-    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date, donor_status_id) values
-        (1, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
-        (2, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2024-01-01', 35),
-        (3, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
-        (4, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2018-01-01', 70),
-        (5, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', 25),
-        (6, 0.00, 0.00, 0.00, NULL, NULL, NULL, 1000);
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date, all_funds_last_donation_date, last_otg_donation_date, donor_status_id) values
+        (1, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', '2025-01-01', 25),
+        (2, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2024-01-01', '2024-01-01', 35),
+        (3, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', '2025-01-01', 25),
+        (4, 9.00, 9.00, 9.00, 'USD', '2024-01-01', '2018-01-01', '2018-01-01', 70),
+        (5, 10.00, 10.00, 10.00, 'USD', '2025-01-01', '2025-01-01', '2025-01-01', 25),
+        (6, 0.00, 0.00, 0.00, NULL, NULL, NULL, NULL, 1000);
     """])
 
     cursor = conn.db_conn.cursor()

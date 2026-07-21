@@ -303,8 +303,10 @@ INSERT INTO silverpop_email_map (
   double_opt_in_activity
 )
   SELECT ex.email,
-    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
-    COALESCE(MAX(if(ex.all_funds_latest_donation_date = stat.all_funds_latest_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
+    -- ex.all_funds_latest_otg_donation_date is this single contact row's own OTG date
+    -- stat.all_funds_latest_otg_donation_date is the MAX OTG date across every contact sharing this email
+    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
+    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
     # Use MAX to prefer non-blank
     MAX(ex.preferred_language) as preferred_language,
     # Use MAX as any opted out IS opted out.
@@ -331,9 +333,9 @@ INSERT INTO silverpop_email_map (
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
   GROUP BY ex.email;
 
--- Find the latest donation for each email address. Ordering by
+-- Find the latest OTG donation for each email address. Ordering by
 -- receive_date and total_amount descending should always insert
--- the latest donation first, with the larger prevailing for an
+-- the latest OTG donation first, with the larger prevailing for an
 -- email with multiple simultaneous donations. All the rest for
 -- that email will be ignored due to the unique constraint. We
 -- use 'ON DUPLICATE KEY UPDATE' instead of 'INSERT IGNORE' as
@@ -364,9 +366,10 @@ INSERT INTO silverpop_export_latest (
     LEFT JOIN civicrm.civicrm_value_1_gift_data_7 gift ON gift.entity_id = c.id
     LEFT JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
     LEFT JOIN civicrm.civicrm_currency cur ON cur.name = extra.original_currency
-    WHERE c.receive_date = export.all_funds_latest_donation_date
+    WHERE c.receive_date = export.all_funds_latest_otg_donation_date
     AND c.contribution_status_id = 1
     AND c.total_amount > 0
+    AND c.contribution_recur_id IS NULL
     GROUP BY t.email;
 COMMIT;
 
@@ -732,8 +735,8 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   hg.highest_donation_date as foundation_highest_donation_date,
   COALESCE(all_funds_lifetime_usd_total, 0) as all_funds_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
-  ex.all_funds_latest_donation_date,
-  stats.all_funds_latest_otg_donation_date,
+  stats.all_funds_latest_donation_date as all_funds_latest_donation_date,
+  ex.all_funds_latest_otg_donation_date as all_funds_latest_otg_donation_date,
   lt.latest_currency as latest_currency,
   lt.latest_currency_symbol as latest_currency_symbol,
   COALESCE(lt.latest_native_amount, 0) as latest_native_amount,
@@ -1020,8 +1023,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IFNULL(DATE_FORMAT(foundation_first_donation_date, '%m/%d/%Y'), '') as AF_first_donation_date,
     IFNULL(DATE_FORMAT(foundation_highest_donation_date, '%m/%d/%Y'), '') as AF_highest_donation_date,
     foundation_highest_usd_amount as AF_highest_usd_amount,
-    IFNULL(DATE_FORMAT(all_funds_latest_donation_date, '%m/%d/%Y'), '') as both_funds_latest_donation_date,
-    IFNULL(DATE_FORMAT(all_funds_latest_otg_donation_date, '%m/%d/%Y'), '') as both_funds_latest_otg_donation_date,
+    IFNULL(DATE_FORMAT(all_funds_latest_donation_date, '%m/%d/%Y'), '') as both_funds_overall_latest_donation_date,
+    IFNULL(DATE_FORMAT(all_funds_latest_otg_donation_date, '%m/%d/%Y'), '') as both_funds_latest_donation_date,
     COALESCE(latest.latest_native_amount, 0) as both_funds_latest_native_amount,
     foundation_highest_native_amount as AF_highest_native_amount,
     foundation_highest_native_currency as AF_highest_native_currency,
@@ -1182,7 +1185,7 @@ both_funds_highest_usd_amount,
 both_funds_latest_currency,
 both_funds_latest_currency_symbol,
 both_funds_latest_donation_date,
-both_funds_latest_otg_donation_date,
+both_funds_overall_latest_donation_date,
 both_funds_latest_donation_source,
 both_funds_latest_native_amount,
 both_funds_latest_payment_method,

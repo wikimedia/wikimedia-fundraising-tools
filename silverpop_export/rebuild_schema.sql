@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
 -- This is not used in the final output, but it is used in determining if the row is the most recent
-  all_funds_latest_donation_date DATETIME NULL,
+  all_funds_latest_otg_donation_date DATETIME NULL,
 
 -- Address information
   address_id INT(16),
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX spex_modified_date (modified_date),
   INDEX spex_id (id),
   INDEX address_id (address_id),
-  INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
+  INDEX(email,all_funds_latest_otg_donation_date, id, address_id, preferred_language, opted_out, opted_in)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_email_map`
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
   endowment_highest_usd_amount  DECIMAL(20, 2),
-  INDEX(all_funds_latest_donation_date),
+  INDEX(all_funds_latest_otg_donation_date),
   INDEX(endowment_highest_usd_amount)
 ) COLLATE 'utf8mb4_unicode_ci';
 
