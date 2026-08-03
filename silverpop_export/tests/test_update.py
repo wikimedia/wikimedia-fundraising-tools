@@ -212,12 +212,9 @@ def test_first_donation_was_recur_and_usd(testdb):
         (4, 'nonrecur@localhost', 1, 0),
         (5, 'nonrecur@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into wmf_donor (entity_id, all_funds_first_donation_date, first_donation_was_recur, first_donation_usd) values
         (1, '2016-05-05', 0, 5.00),
@@ -250,12 +247,9 @@ def test_last_recurring_amount_change(testdb):
         (4, 'mixed@localhost', 1, 0),
         (5, 'mixed@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into wmf_donor (entity_id, last_recurring_amount_change, last_recurring_amount_change_date) values
         (1, 10.00, '2023-01-15'),
@@ -285,6 +279,104 @@ def test_last_recurring_amount_change(testdb):
     assert cursor.fetchone() == (Decimal("30.00"), datetime.datetime(2022, 3, 20, 0, 0))
 
 
+def test_last_otg_amount_change(testdb):
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'run@localhost', 1, 0),
+        (2, 'negative@localhost', 1, 0),
+        (3, 'currencyskip@localhost', 1, 0),
+        (4, 'nochange@localhost', 1, 0),
+        (5, 'recurignored@localhost', 1, 0),
+        (6, 'merged@localhost', 1, 0),
+        (7, 'merged@localhost', 1, 0),
+        (8, 'mergechange@localhost', 1, 0),
+        (9, 'mergechange@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
+    """, """
+    insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, contribution_status_id) values
+        -- run: amount changed on the middle gift, latest just repeats it
+        (101, 1, NULL, '2022-01-01', 8.00, 1),
+        (102, 1, NULL, '2023-03-15', 12.00, 1),
+        (103, 1, NULL, '2024-05-01', 12.00, 1),
+        -- negative: downgraded amount
+        (201, 2, NULL, '2023-01-01', 20.00, 1),
+        (202, 2, NULL, '2024-01-01', 16.00, 1),
+        -- currencyskip: intervening USD gift is ignored entirely
+        (301, 3, NULL, '2022-01-01', 12.00, 1),
+        (302, 3, NULL, '2023-01-01', 99.00, 1),
+        (303, 3, NULL, '2024-01-01', 16.00, 1),
+        -- nochange: same amount both times
+        (401, 4, NULL, '2023-01-01', 16.00, 1),
+        (402, 4, NULL, '2024-01-01', 16.00, 1),
+        -- recurignored: recurring gift between the one-time gifts doesn't count
+        (501, 5, NULL, '2022-06-01', 12.00, 1),
+        (502, 5, 1, '2023-06-01', 80.00, 1),
+        (503, 5, NULL, '2024-01-01', 16.00, 1),
+        -- merged: contact 6 has a change but contact 7 (no change) gave more recently
+        (601, 6, NULL, '2023-01-01', 8.00, 1),
+        (602, 6, NULL, '2023-06-01', 16.00, 1),
+        (701, 7, NULL, '2024-06-01', 30.00, 1),
+        -- mergechange: contact 9 has the change and the latest gift
+        (801, 8, NULL, '2022-01-01', 8.00, 1),
+        (901, 9, NULL, '2023-01-01', 12.00, 1),
+        (902, 9, NULL, '2024-02-01', 20.00, 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (101, 10.00, 'CAD'),
+        (102, 15.00, 'CAD'),
+        (103, 15.00, 'CAD'),
+        (201, 25.00, 'CAD'),
+        (202, 20.00, 'CAD'),
+        (301, 15.00, 'CAD'),
+        (302, 99.00, 'USD'),
+        (303, 20.00, 'CAD'),
+        (401, 20.00, 'CAD'),
+        (402, 20.00, 'CAD'),
+        (501, 15.00, 'CAD'),
+        (502, 100.00, 'CAD'),
+        (503, 20.00, 'CAD'),
+        (601, 10.00, 'CAD'),
+        (602, 20.00, 'CAD'),
+        (701, 30.00, 'CAD'),
+        (801, 10.00, 'CAD'),
+        (901, 15.00, 'CAD'),
+        (902, 25.00, 'CAD');
+    """, """
+    insert into wmf_donor (entity_id, last_otg_donation_date, last_donation_amount, last_donation_currency) values
+        (1, '2024-05-01', 15.00, 'CAD'),
+        (2, '2024-01-01', 20.00, 'CAD'),
+        (3, '2024-01-01', 20.00, 'CAD'),
+        (4, '2024-01-01', 20.00, 'CAD'),
+        (5, '2024-01-01', 20.00, 'CAD'),
+        (6, '2023-06-01', 20.00, 'CAD'),
+        (7, '2024-06-01', 30.00, 'CAD'),
+        (8, '2022-01-01', 10.00, 'CAD'),
+        (9, '2024-02-01', 25.00, 'CAD');
+    """])
+
+    expected = sorted([
+        ('currencyskip@localhost', '5.00', '01/01/2024'),
+        ('mergechange@localhost', '10.00', '02/01/2024'),
+        ('merged@localhost', '', ''),
+        ('negative@localhost', '-5.00', '01/01/2024'),
+        ('nochange@localhost', '', ''),
+        ('recurignored@localhost', '5.00', '01/01/2024'),
+        ('run@localhost', '5.00', '03/15/2023'),
+    ])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute(
+        "select email, last_otg_amount_change, last_otg_amount_change_date "
+        "from silverpop_export_view where email like '%@localhost' order by email"
+    )
+    assert sorted(cursor.fetchall()) == expected
+
+
 def test_previous_segment(testdb):
     """
     For merged emails the values come from the contact with the
@@ -301,13 +393,9 @@ def test_previous_segment(testdb):
         (5, 'backfill@localhost', 1, 0),
         (6, 'multichange@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (6, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into wmf_donor (entity_id, donor_segment_overall) values
         (1, 200),
@@ -387,12 +475,9 @@ def test_daf_contact_id(testdb):
         (4, 'inactivedaf@localhost', 1, 0),
         (5, 'nodaf@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_relationship_cache (near_contact_id, far_contact_id, far_relation, is_active) values
         (1, 105, 'Holds a Donor Advised Fund of', 1),
@@ -438,12 +523,9 @@ def test_mg_dates(testdb):
         (4, 4, 'both@localhost', 1, 0),
         (5, 5, 'neither@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, contribution_status_id, payment_instrument_id) values
         -- QCD gifts for the merged contacts 1 & 2: earliest & latest span both contacts.
@@ -531,11 +613,9 @@ def test_pg_stage_and_relationship_manager(testdb):
         (3, 3, 'stageonly@localhost', 1, 0),
         (4, 4, 'noprospect@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_value_1_prospect_5 (id, entity_id, pg_stage_177, relationship_manager_284, exceptional_upgrade_prospect) values
         (1, 1, 'Qualification', 3, 1),
@@ -573,11 +653,9 @@ def test_wikipedia_legacy_society(testdb):
         (3, 3, 'unconfirmed@localhost', 1, 0),
         (4, 4, 'none@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_activity (id, activity_type_id) values
         (1, 146),
@@ -617,10 +695,9 @@ def test_highest_donation_date(testdb):
         (2, 'person2@localhost', 1, 0),
         (3, 'person3@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2015-01-03', 21.25, 'xyz123', 1, 1),
@@ -1071,10 +1148,9 @@ def test_optin_negative_exclusion(testdb):
         (2, 'optinone@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY)),
         (3, 'optinzero@localhost', DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_value_1_communication_4 (entity_id, opt_in) values
         (2, 1),
@@ -1210,9 +1286,9 @@ def test_recurring_latest_donation_date_by_frequency(testdb):
             (1, 'bothfreq@localhost', 1, 0),
             (2, 'monthonly@localhost', 1, 0);
         """, """
-        insert into civicrm_contact (id, modified_date) values
-            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        insert into civicrm_contact (id, modified_date)
+        select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+        from civicrm_email;
         """, """
         insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date, frequency_unit) values
             (1, 1, 1.01, 'USD', 5, NULL, 'month'),
@@ -1266,15 +1342,9 @@ def test_recurring_upgrade_eligibility(testdb):
             (7, 'declinedupgrade@localhost', 1, 0),
             (8, 'upgradedlongago@localhost', 1, 0);
         """, """
-        insert into civicrm_contact (id, modified_date) values
-            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (6, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (7, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (8, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        insert into civicrm_contact (id, modified_date)
+        select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+        from civicrm_email;
         """, """
         insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, frequency_unit, payment_processor_id ) values
             (1, 1, 1.01, 'USD', 5, 'month', 2),
@@ -1340,13 +1410,9 @@ def test_merge_status(testdb):
         (5, 'newornondonor@localhost', 1, 0),
         (6, 'newornondonor@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (4, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (5, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (6, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, '2025-01-01', 10, 'xyz123', 1, 1),
@@ -1511,10 +1577,9 @@ def test_direct_mail(testdb):
         (2, 'person2@localhost', 1, 0),
         (3, 'person3@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
         (1, 1, 3),

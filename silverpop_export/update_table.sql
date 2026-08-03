@@ -57,10 +57,10 @@ BEGIN;
   -- 9763 rows across all contacts took 2min, but may be more with more data in the future
   DELETE sc FROM silverpop_update_world t
     INNER JOIN civicrm.civicrm_email e ON e.email = t.email AND e.is_primary = 1
-    INNER JOIN silverpop_export_segment_change sc ON sc.entity_id = e.contact_id;
+    INNER JOIN silverpop_export_segment_change sc ON sc.contact_id = e.contact_id;
 
   INSERT INTO silverpop_export_segment_change (
-    entity_id,
+    contact_id,
     previous_segment,
     previous_segment_change_date
   )
@@ -85,6 +85,57 @@ BEGIN;
   -- this IS NOT NULL prevents insert only histories from being added
   WHERE segment_changes.rank = 1 AND segment_changes.previous_segment IS NOT NULL;
 
+  -- Rebuild last one-time-gift amount change data.
+  -- For each contact we get the most recent otg along with the most recent earlier otg
+  -- of a different amount, in original currency, skipping gifts in a different currency.
+  -- Contacts whose one-time gifts are all the same amount (or with no same-currency history)
+  -- get no row here.
+  -- 1m40s with 400k contacts in update_world
+  DELETE oc FROM silverpop_update_world t
+    INNER JOIN civicrm.civicrm_email e ON e.email = t.email AND e.is_primary = 1
+    INNER JOIN silverpop_export_otg_change oc ON oc.contact_id = e.contact_id;
+
+  INSERT INTO silverpop_export_otg_change (
+    contact_id,
+    last_otg_amount_change,
+    last_otg_amount_change_date
+  )
+  WITH otg AS (
+    SELECT c.contact_id as contact_id, c.receive_date, extra.original_amount, extra.original_currency
+    FROM silverpop_update_world t
+    INNER JOIN civicrm.civicrm_email e ON e.email = t.email AND e.is_primary = 1
+    INNER JOIN civicrm.civicrm_contribution c ON c.contact_id = e.contact_id
+    INNER JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+    WHERE c.contribution_recur_id IS NULL
+      AND c.contribution_status_id = 1
+      AND c.total_amount > 0
+  )
+  SELECT
+    before_change.contact_id,
+    before_change.last_otg_amount_change,
+    -- the change took effect at the first donation after the changed amount donation
+    MIN(after_change.receive_date) as last_otg_amount_change_date
+  FROM (
+    SELECT
+      donor.entity_id as contact_id,
+      donor.last_donation_currency as last_donation_currency,
+      MAX(otg.receive_date) as receive_date,
+      -- get the amount at the max date, i.e. the latest donation that differs from current
+      donor.last_donation_amount - CAST(SUBSTRING_INDEX(
+          MAX(CONCAT(otg.receive_date, '|', otg.original_amount)),
+          '|', -1) AS DECIMAL(20, 2)) as last_otg_amount_change
+    FROM civicrm.wmf_donor donor
+    INNER JOIN otg ON otg.contact_id = donor.entity_id
+      AND otg.original_currency = donor.last_donation_currency
+      AND otg.original_amount <> donor.last_donation_amount
+    WHERE donor.last_otg_donation_date IS NOT NULL
+    GROUP BY donor.entity_id
+  ) before_change
+  INNER JOIN otg after_change ON after_change.contact_id = before_change.contact_id
+    AND after_change.original_currency = before_change.last_donation_currency
+    AND after_change.receive_date > before_change.receive_date
+  GROUP BY before_change.contact_id;
+
   -- INSERT new contact rows into export stats table
   -- following timing on staging with 7 days - likely similar to peak volume with a shorter period.
   -- Query OK, 776383 rows affected (1 min 25.41 sec)
@@ -100,6 +151,8 @@ BEGIN;
    first_donation_was_recur,
    last_recurring_amount_change,
    last_recurring_amount_change_date,
+   last_otg_amount_change,
+   last_otg_amount_change_date,
    foundation_highest_usd_amount,
    endowment_highest_usd_amount,
    endowment_first_donation_date,
@@ -148,6 +201,13 @@ BEGIN;
         '|', -1
       ) AS DECIMAL(20, 2)) as last_recurring_amount_change,
     MAX(donor.last_recurring_amount_change_date) as last_recurring_amount_change_date,
+    -- Both values come from the contact with the most recent last_otg_donation_date
+    CAST(NULLIF(SUBSTRING_INDEX(
+        MAX(CONCAT(donor.last_otg_donation_date, '|', COALESCE(otg.last_otg_amount_change, ''))),
+        '|', -1), '') AS DECIMAL(20, 2)) as last_otg_amount_change,
+    NULLIF(SUBSTRING_INDEX(
+        MAX(CONCAT(donor.last_otg_donation_date, '|', COALESCE(otg.last_otg_amount_change_date, ''))),
+        '|', -1), '') as last_otg_amount_change_date,
     MAX(donor.largest_donation) as foundation_highest_usd_amount,
     MAX(donor.endowment_largest_donation) as endowment_highest_usd_amount,
     MIN(donor.endowment_first_donation_date) as endowment_first_donation_date,
@@ -282,7 +342,8 @@ BEGIN;
     INNER JOIN civicrm.civicrm_email e FORCE INDEX(UI_email) ON e.email = t.email
       AND e.is_primary = 1
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
-    LEFT JOIN silverpop_export_segment_change seg ON seg.entity_id = e.contact_id
+    LEFT JOIN silverpop_export_segment_change seg ON seg.contact_id = e.contact_id
+    LEFT JOIN silverpop_export_otg_change otg ON otg.contact_id = e.contact_id
     # We need to be careful with this group by. We want the sum by email but we do not want
     # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
@@ -699,6 +760,8 @@ INSERT INTO silverpop_export (
   first_donation_was_recur,
   last_recurring_amount_change,
   last_recurring_amount_change_date,
+  last_otg_amount_change,
+  last_otg_amount_change_date,
   city,country,state,postal_code,
   donor_segment_id, donor_segment_overall, previous_segment, previous_segment_change_date, daf_contact_id,
   years_consecutive, donor_status_bin, donor_status_otg_bin, donor_status_overall_bin,
@@ -746,6 +809,8 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   first_donation_was_recur,
   last_recurring_amount_change,
   last_recurring_amount_change_date,
+  last_otg_amount_change,
+  last_otg_amount_change_date,
   addr.city,COALESCE(addr.country, ex.country) as country,addr.state,addr.postal_code,
   stats.donor_segment_id, stats.donor_segment_overall, stats.previous_segment, stats.previous_segment_change_date, stats.daf_contact_id,
   stats.years_consecutive, stats.donor_status_bin, stats.donor_status_otg_bin, stats.donor_status_overall_bin,
@@ -1001,6 +1066,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IF(first_donation_was_recur = 1, 'Yes', 'No') as first_donation_was_recur,
     COALESCE(last_recurring_amount_change, '') as last_recurring_amount_change,
     IFNULL(DATE_FORMAT(last_recurring_amount_change_date, '%m/%d/%Y'), '') as last_recurring_amount_change_date,
+    COALESCE(last_otg_amount_change, '') as last_otg_amount_change,
+    IFNULL(DATE_FORMAT(last_otg_amount_change_date, '%m/%d/%Y'), '') as last_otg_amount_change_date,
     IFNULL(DATE_FORMAT(IF (foundation_highest_usd_amount > endowment_highest_usd_amount, foundation_highest_donation_date, IF (endowment_highest_usd_amount = foundation_highest_usd_amount, GREATEST(foundation_highest_donation_date, endowment_highest_donation_date), endowment_highest_donation_date)), '%m/%d/%Y'), '')
       as both_funds_highest_donation_date,
     IF (endowment_highest_native_amount > foundation_highest_native_amount, endowment_highest_native_amount, foundation_highest_native_amount)
@@ -1177,6 +1244,8 @@ first_donation_usd,
 first_donation_was_recur,
 last_recurring_amount_change,
 last_recurring_amount_change_date,
+last_otg_amount_change,
+last_otg_amount_change_date,
 both_funds_has_given_on_email,
 both_funds_highest_native_amount,
 both_funds_highest_native_currency,

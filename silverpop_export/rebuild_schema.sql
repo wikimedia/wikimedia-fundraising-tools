@@ -104,9 +104,16 @@ CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
 
 CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
 (
-  entity_id INT UNSIGNED PRIMARY KEY,
+  contact_id INT UNSIGNED PRIMARY KEY,
   previous_segment INT(11),
   previous_segment_change_date DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS silverpop_export_otg_change
+(
+  contact_id INT UNSIGNED PRIMARY KEY,
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
@@ -130,6 +137,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   first_donation_was_recur TINYINT,
   last_recurring_amount_change DECIMAL(20, 2),
   last_recurring_amount_change_date DATETIME,
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME,
   foundation_highest_usd_amount  DECIMAL(20, 2),
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
@@ -222,6 +231,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   first_donation_was_recur TINYINT,
   last_recurring_amount_change DECIMAL(20, 2),
   last_recurring_amount_change_date DATETIME,
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME,
 
 -- Address information
   city VARCHAR(128),
