@@ -121,12 +121,18 @@ BEGIN;
       donor.last_donation_currency as last_donation_currency,
       MAX(otg.receive_date) as receive_date,
       -- get the amount at the max date, i.e. the latest donation that differs from current
+      -- and calculate the difference between this amount and the last one time gift (otg)
+      -- amount - note this is held in last_donation_amount - if the amount is not
+      -- different to the amount held in this field is is filtered by the INNER JOIN, so
+      -- this sql is a trick to order by receive date (within the join criteria, and then
+      -- extract the amount for the contribution on the highest date).
       donor.last_donation_amount - CAST(SUBSTRING_INDEX(
           MAX(CONCAT(otg.receive_date, '|', otg.original_amount)),
           '|', -1) AS DECIMAL(20, 2)) as last_otg_amount_change
     FROM civicrm.wmf_donor donor
     INNER JOIN otg ON otg.contact_id = donor.entity_id
       AND otg.original_currency = donor.last_donation_currency
+      -- Note that last_donation_amount here is the last otg (one time gift) amount (despite the name).
       AND otg.original_amount <> donor.last_donation_amount
     WHERE donor.last_otg_donation_date IS NOT NULL
     GROUP BY donor.entity_id
