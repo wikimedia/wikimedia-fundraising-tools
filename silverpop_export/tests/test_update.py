@@ -473,7 +473,8 @@ def test_daf_contact_id(testdb):
         (2, 'merged@localhost', 1, 0),
         (3, 'multidaf@localhost', 1, 0),
         (4, 'inactivedaf@localhost', 1, 0),
-        (5, 'nodaf@localhost', 1, 0);
+        (5, 'nodaf@localhost', 1, 0),
+        (6, 'gift@localhost', 1, 0);
     """, """
     insert into civicrm_contact (id, modified_date)
     select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
@@ -488,6 +489,13 @@ def test_daf_contact_id(testdb):
         (3, 101, 'Employer of', 1),
         -- contact 4's only DAF relationship is inactive.
         (4, 106, 'Holds a Donor Advised Fund of', 0);
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, contribution_status_id) values
+        -- contact 6 has no DAF relationship but has given a Donor Advised Fund gift.
+        (601, 6, '2024-01-01', 100, 1);
+    """, """
+    insert into civicrm_value_1_gift_data_7 (id, entity_id, campaign) values
+        (101, 601, 'Donor Advised Fund');
     """])
 
     cursor = conn.db_conn.cursor()
@@ -510,6 +518,11 @@ def test_daf_contact_id(testdb):
         "select daf_contact_id from silverpop_export_view where email = 'nodaf@localhost'"
     )
     assert cursor.fetchone() == ('',)
+
+    cursor.execute(
+        "select daf_contact_id from silverpop_export_view where email = 'gift@localhost'"
+    )
+    assert cursor.fetchone() == ('6',)
 
 
 def test_mg_dates(testdb):

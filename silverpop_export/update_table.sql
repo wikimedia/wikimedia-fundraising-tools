@@ -228,12 +228,17 @@ BEGIN;
     -- The contact id of a DAF, if the contact has one.
     -- Subquery rather than a join so contacts with more than one DAF relationship
     -- don't mess up the aggregate.
-    MIN((
-      SELECT MIN(rel.far_contact_id)
-      FROM civicrm.civicrm_relationship_cache rel
-      WHERE rel.near_contact_id = e.contact_id
-        AND rel.far_relation = 'Holds a Donor Advised Fund of'
-        AND is_active = 1
+    -- As a lower-priority fallback (when there's no DAF relationship), a contact
+    -- who has given a Donor Advised Fund gift is treated as their own DAF contact.
+    MIN(COALESCE(
+      (
+        SELECT MIN(rel.far_contact_id)
+        FROM civicrm.civicrm_relationship_cache rel
+        WHERE rel.near_contact_id = e.contact_id
+          AND rel.far_relation = 'Holds a Donor Advised Fund of'
+          AND is_active = 1
+      ),
+      CASE WHEN daf_gift.contact_id IS NOT NULL THEN e.contact_id END
     )) as daf_contact_id,
     MAX(donor.years_consecutive) as years_consecutive,
     -- Status values are trickier - if we want to combine one lybunt (35) record
@@ -345,6 +350,15 @@ BEGIN;
     LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = e.contact_id
     LEFT JOIN silverpop_export_segment_change seg ON seg.contact_id = e.contact_id
     LEFT JOIN silverpop_export_otg_change otg ON otg.contact_id = e.contact_id
+    -- Contacts who have given a Donor Advised Fund gift, faster to join this here.
+    LEFT JOIN (
+      SELECT DISTINCT c.contact_id
+      FROM civicrm.civicrm_value_1_gift_data_7 gift
+      INNER JOIN civicrm.civicrm_contribution c ON c.id = gift.entity_id
+      WHERE gift.campaign = 'Donor Advised Fund'
+        AND c.contribution_status_id = 1
+        AND c.total_amount > 0
+    ) daf_gift ON daf_gift.contact_id = e.contact_id
     # We need to be careful with this group by. We want the sum by email but we do not want
     # any other left joins that could be 1 to many & inflate the aggregates.
   GROUP BY e.email;
