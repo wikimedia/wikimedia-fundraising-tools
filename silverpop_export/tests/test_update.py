@@ -1699,7 +1699,7 @@ def test_opted_out_email_but_sms_consent_included(testdb):
 
 def test_is_eligible_for_donor_portal(testdb):
     """
-    Requires segment > 200, not 1000 and not null
+    Requires segment > 300, not 990 and not null
     English language, and no active recurring with gateway = paypal or paypal_ec.
     """
     conn, db_name = testdb
@@ -1723,14 +1723,14 @@ def test_is_eligible_for_donor_portal(testdb):
             (6, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_US'),
             (7, DATE_SUB(NOW(), INTERVAL 1 DAY), 'en_US');
         """, """
-        insert into wmf_donor (entity_id, donor_segment_id) values
+        insert into wmf_donor (entity_id, donor_segment_overall) values
             (1, 400),
             (2, 400),
             (3, 400),
             (4, 400),
             (5, 100),
             (6, 700),
-            (7, 1000);
+            (7, 990);
         """, """
         insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date, payment_processor_id) values
             -- contact 1: single active recur, adyen

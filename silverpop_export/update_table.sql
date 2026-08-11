@@ -806,8 +806,8 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   stats.all_funds_total_2024_2025,
   stats.all_funds_total_2025_2026,
   stats.all_funds_total_2026_2027,
-   -- is eligible for donor portal if segment not mid tier or major, lang english, no recurring with gateway = paypal or paypal_ec
-   IF((stats.donor_segment_id > 200 AND stats.donor_segment_id <> 1000)
+   -- is eligible for donor portal if segment not major or mid value plus / mid value, lang english, no recurring with gateway = paypal or paypal_ec
+   IF((stats.donor_segment_overall > 300 AND stats.donor_segment_overall <> 990)
       AND SUBSTRING(COALESCE(ex.preferred_language, dedupe_table.preferred_language), 1, 2) = 'en'
       AND IFNULL(recur.paypal_direct_recurring, 0) = 0, 1, 0) as is_eligible_for_donor_portal
 FROM silverpop_update_world t
