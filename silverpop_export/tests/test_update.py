@@ -1773,7 +1773,6 @@ def run_update_with_fixtures(testdb, fixture_path=None, fixture_queries=None, re
         with mock.patch("process.globals.get_config") as MockConfig:
             # Point all config at our test database.
             MockConfig().civicrm_db.db = db_name
-            MockConfig().drupal_db.db = db_name
             MockConfig().silverpop_db.db = db_name
             MockConfig().log_civicrm_db.db = db_name
             MockConfig().offset_in_days = 7

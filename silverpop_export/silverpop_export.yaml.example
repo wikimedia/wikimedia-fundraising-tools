@@ -29,9 +29,6 @@ civicrm_db:
 log_civicrm_db:
     db: civicrm
 
-drupal_db:
-    db: drupal
-
 silverpop_db:
     host: database
     user: root
