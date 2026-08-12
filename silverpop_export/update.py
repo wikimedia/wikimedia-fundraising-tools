@@ -36,7 +36,6 @@ def load_queries(file):
                 query = "\n".join(qbuf)
                 # Do some database renaming
                 query = re.sub(r"\scivicrm\.", " %s." % config.civicrm_db.db, query)
-                query = re.sub(r"\sdrupal\.", " %s." % config.drupal_db.db, query)
                 query = re.sub(r"\slog_civicrm\.", " %s." % config.log_civicrm_db.db, query)
                 query = query.replace("__OFFSET_IN_DAYS__", str(offset_in_days))
                 queries.append(query)
