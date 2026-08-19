@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   employer_id INT UNSIGNED,
   employer_name VARCHAR(255),
 -- This is not used in the final output, but it is used in determining if the row is the most recent
-  all_funds_latest_donation_date DATETIME NULL,
+  all_funds_latest_otg_donation_date DATETIME NULL,
 
 -- Address information
   address_id INT(16),
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_staging
   INDEX spex_modified_date (modified_date),
   INDEX spex_id (id),
   INDEX address_id (address_id),
-  INDEX(email,all_funds_latest_donation_date, id, address_id, preferred_language, opted_out, opted_in)
+  INDEX(email,all_funds_latest_otg_donation_date, id, address_id, preferred_language, opted_out, opted_in)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_email_map`
@@ -69,6 +69,14 @@ CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
  `endowment_highest_native_amount` DECIMAL(20, 2)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS `silverpop_mg_gift_date` (
+ `email` varchar(255) PRIMARY KEY,
+ `first_qcd_date` DATETIME,
+ `last_qcd_date` DATETIME,
+ `last_stock_date` DATETIME,
+ `last_matched_gift_date` DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_excluded
 (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -96,9 +104,16 @@ CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
 
 CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
 (
-  entity_id INT UNSIGNED PRIMARY KEY,
+  contact_id INT UNSIGNED PRIMARY KEY,
   previous_segment INT(11),
   previous_segment_change_date DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS silverpop_export_otg_change
+(
+  contact_id INT UNSIGNED PRIMARY KEY,
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_stat
@@ -122,12 +137,14 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   first_donation_was_recur TINYINT,
   last_recurring_amount_change DECIMAL(20, 2),
   last_recurring_amount_change_date DATETIME,
-  foundation_highest_usd_amount  DECIMAL(20, 2),
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME,
 -- Aggregate contribution statistics
   donor_segment_id DECIMAL(20, 2),
   donor_segment_overall INT(11),
   previous_segment INT(11),
   previous_segment_change_date DATETIME,
+  daf_contact_id INT UNSIGNED,
   years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
   donor_status_overall_bin INT(10) UNSIGNED,
@@ -137,9 +154,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export_stat
   donor_status_recur_year_bin INT(11),
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
-  endowment_highest_usd_amount  DECIMAL(20, 2),
-  INDEX(all_funds_latest_donation_date),
-  INDEX(endowment_highest_usd_amount)
+  INDEX(all_funds_latest_otg_donation_date)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export
@@ -179,10 +194,10 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   recurring_has_upgrade_activity TINYINT(1),
 
 -- Lifetime contribution statistics
-  foundation_highest_usd_amount DECIMAL(20, 2),
-  foundation_highest_native_amount DECIMAL(20, 2),
-  foundation_highest_native_currency VARCHAR(3),
-  foundation_highest_donation_date DATETIME,
+  highest_usd_amount DECIMAL(20, 2),
+  highest_native_amount DECIMAL(20, 2),
+  highest_native_currency VARCHAR(3),
+  highest_donation_date DATETIME,
   all_funds_lifetime_usd_total DECIMAL(20, 2),
   donation_count INT UNSIGNED NOT NULL DEFAULT 0,
 
@@ -199,7 +214,6 @@ CREATE TABLE IF NOT EXISTS silverpop_export
 -- Endowment stats ----
   endowment_first_donation_date DATETIME NULL,
   endowment_number_donations INT UNSIGNED NOT NULL DEFAULT 0,
-  endowment_highest_usd_amount  DECIMAL(20, 2),
 
 -- Latest contribution statistics
   latest_currency VARCHAR(3),
@@ -213,6 +227,8 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   first_donation_was_recur TINYINT,
   last_recurring_amount_change DECIMAL(20, 2),
   last_recurring_amount_change_date DATETIME,
+  last_otg_amount_change DECIMAL(20, 2),
+  last_otg_amount_change_date DATETIME,
 
 -- Address information
   city VARCHAR(128),
@@ -224,6 +240,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   donor_segment_overall INT(11),
   previous_segment INT(11),
   previous_segment_change_date DATETIME,
+  daf_contact_id INT UNSIGNED,
   years_consecutive INT(11),
   donor_status_bin INT(10) UNSIGNED,
   donor_status_overall_bin INT(10) UNSIGNED,

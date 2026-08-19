@@ -116,12 +116,6 @@ CREATE TABLE `wmf_donor`
     `last_donation_currency`        varchar(255)                         DEFAULT NULL,
     `last_donation_amount`          decimal(20, 2)                       DEFAULT '0.00',
     `last_donation_usd`             decimal(20, 2)                       DEFAULT '0.00',
-    `total_2018_2019`               decimal(20, 2)                       DEFAULT '0.00',
-    `total_2019_2020`               decimal(20, 2)                       DEFAULT '0.00',
-    `total_2020_2021`               decimal(20, 2)                       DEFAULT '0.00',
-    `total_2021_2022`               decimal(20, 2)                       DEFAULT '0.00',
-    `total_2022_2023`               decimal(20, 2)                       DEFAULT '0.00',
-    `total_2023_2024`               decimal(20, 2)                       DEFAULT '0.00',
     `first_donation_date`           datetime                             DEFAULT NULL,
     `endowment_first_donation_date` datetime                             DEFAULT NULL,
     `all_funds_first_donation_date` datetime                             DEFAULT NULL,
@@ -132,40 +126,12 @@ CREATE TABLE `wmf_donor`
     `lifetime_including_endowment`  decimal(20, 2)                       DEFAULT '0.00',
     `number_donations`              int(11)                              DEFAULT '0',
     `endowment_number_donations`    int(11)                              DEFAULT '0',
-    `largest_donation`              decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_largest_donation`    decimal(20, 2)                       DEFAULT '0.00',
-    `date_of_largest_donation`      datetime                             DEFAULT NULL,
-    `endowment_total_2018_2019`     decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2019_2020`     decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2020_2021`     decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2021_2022`     decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2022_2023`     decimal(20, 2)                       DEFAULT '0.00',
-    `change_2022_2023`              double                               DEFAULT '0',
-    `total_2023`                    decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2023`          decimal(20, 2)                       DEFAULT '0.00',
-    `endowment_total_2023_2022`     decimal(20, 2)                       DEFAULT '0.00',
-    `change_2023_2024`              double                               DEFAULT '0',
-    `endowment_total_2023_2024`     decimal(20, 2)                       DEFAULT '0.00',
-    `total_2024_2025`               decimal(20,2)                        DEFAULT 0.00,
-    `total_2024`                    decimal(20,2)                        DEFAULT 0.00,
-    `endowment_total_2024_2025`     decimal(20,2)                        DEFAULT 0.00,
-    `endowment_total_2024`          decimal(20,2)                        DEFAULT 0.00,
-    `endowment_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
-    `change_2024_2025`              decimal(20,2)                        DEFAULT 0.00,
-    `total_2025_2026`               decimal(20,2)                        DEFAULT 0.00,
-    `total_2025`                    decimal(20,2)                        DEFAULT 0.00,
-    `endowment_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00,
-    `endowment_total_2025`          decimal(20,2)                        DEFAULT 0.00,
-    `all_funds_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
-    `endowment_change_2025_2026`    decimal(20,2)                        DEFAULT 0.00,
-    `change_2025_2026`              decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2019_2020`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2020_2021`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2021_2022`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2022_2023`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2023_2024`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2024_2025`     decimal(20,2)                        DEFAULT 0.00,
-    `all_funds_change_2024_2025`    decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2025_2026`     decimal(20,2)                        DEFAULT 0.00,
     `all_funds_total_2026_2027`     decimal(20,2)                        DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -203,8 +169,17 @@ create table civicrm_contribution (
     trxn_id varchar(255) COLLATE utf8mb4_unicode_ci,
     contribution_status_id int(10) unsigned,
     financial_type_id int(10) unsigned,
-    payment_method_id int(10) unsigned,
+    payment_instrument_id int(10) unsigned,
     KEY `received_date` (`receive_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+drop table if exists civicrm_contribution_soft;
+create table civicrm_contribution_soft (
+    id int(10) unsigned,
+    contribution_id int(10) unsigned,
+    contact_id int(10) unsigned,
+    soft_credit_type_id int(10) unsigned,
+    KEY `contribution_id` (`contribution_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 drop table if exists civicrm_contribution_recur;
@@ -291,8 +266,21 @@ create table civicrm_value_1_prospect_5
     `net_worth_170`                   varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `family_composition_173`          varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
     `occupation_175`                  varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-    `data_axle_is_grandparent`        int(3) unsigned DEFAULT NULL
+    `data_axle_is_grandparent`        int(3) unsigned DEFAULT NULL,
+    `pg_stage_177`                    varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `relationship_manager_284`        varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `exceptional_upgrade_prospect`   tinyint(4) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_custom_field;
+CREATE TABLE `civicrm_custom_field` (
+    `id` int(10) unsigned NOT NULL,
+    `name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `option_group_id` int(10) unsigned DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(177, 'pg_stage', 100);
+INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(284, 'relationship_manager', 101);
 
 DROP TABLE IF EXISTS civicrm_value_matching_gift;
 CREATE TABLE `civicrm_value_matching_gift` (
@@ -335,6 +323,17 @@ CREATE TABLE `civicrm_relationship` (
   KEY `FK_civicrm_relationship_contact_id_b` (`contact_id_b`),
   KEY `FK_civicrm_relationship_relationship_type_id` (`relationship_type_id`),
   KEY `FK_civicrm_relationship_case_id` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_relationship_cache;
+CREATE TABLE `civicrm_relationship_cache` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `near_contact_id` int(10) unsigned NOT NULL,
+  `far_contact_id` int(10) unsigned NOT NULL,
+  `far_relation` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_active` tinyint(4) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `index_nearid_farrelation` (`near_contact_id`,`far_relation`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `civicrm_relationship_type`;
@@ -381,6 +380,14 @@ CREATE TABLE `civicrm_activity_contact` (
     `record_type_id` int(10) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_value_pg_commitment_25;
+CREATE TABLE `civicrm_value_pg_commitment_25` (
+    `id` int(10) unsigned NOT NULL,
+    `entity_id` int(10) unsigned NOT NULL,
+    `commitment_confirmed__298` tinyint(4) DEFAULT NULL,
+    `commitment_confirmation_date_299` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS civicrm_payment_processor;
 CREATE TABLE `civicrm_payment_processor` (
     `id` int(10) unsigned NOT NULL,
@@ -403,8 +410,14 @@ CREATE TABLE `civicrm_value_1_gift_data_7` (
 PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-DROP TABLE IF EXISTS civicrm_option_value;
+DROP TABLE IF EXISTS civicrm_option_group;
+CREATE TABLE `civicrm_option_group` (
+`id` int(10) unsigned NOT NULL,
+`name` varchar(255) DEFAULT NULL,
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_option_value;
 CREATE TABLE `civicrm_option_value` (
 `id` int(10) unsigned NOT NULL,
 `option_group_id` int(10) unsigned COMMENT 'Group which this option belongs to.',
@@ -426,6 +439,7 @@ CREATE TABLE `civicrm_option_value` (
 `color` varchar(255) DEFAULT NULL COMMENT 'Hex color value e.g. #ffffff'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO civicrm_option_group (id, name) VALUES(10, 'payment_instrument');
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(1, 165, 'Recurring Upgrade', 1);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(2, 166, 'Recurring Upgrade Decline', 2);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(3, 181, 'Direct Mail', 3);
@@ -433,5 +447,10 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(4, 3, 'Activit
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(5, 220, 'Double Opt-In', 5);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(6, 168, 'Recurring Downgrade', 6);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(7, 1, 'donor_segment_overall', 7);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(8, 100, 'Qualification', 'qualification', 'Qualification', 8);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(9, 101, 3, 'jane_manager', 'Jane Manager', 9);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(10, 146, 'PG - Pledge Confirmed', 10);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(11, 10, 188, 'Stock', 'Stock', 11);
+INSERT INTO civicrm_option_value (id, value, name, label, weight) VALUES(12, 9, 'matched_gift', 'Matched Gift', 12);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

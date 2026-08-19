@@ -52,7 +52,7 @@ ON DUPLICATE KEY UPDATE contact_id = c.contact_id;
 -- Query OK, 30 rows affected (1.16 sec)
 INSERT INTO silverpop_export_staging
 (id, modified_date, contact_id, contact_hash, email, first_name, last_name, preferred_language, opted_out, do_not_solicit, opted_in,
- employer_id, employer_name, address_id, city, postal_code, country, state, all_funds_latest_donation_date)
+ employer_id, employer_name, address_id, city, postal_code, country, state, all_funds_latest_otg_donation_date)
 SELECT
   e.id,
   c.modified_date,
@@ -69,7 +69,7 @@ SELECT
   a.postal_code,
   COALESCE(ctry.iso_code, mc.country) as country,
   st.name as state,
-  donor.all_funds_last_donation_date as all_funds_latest_donation_date
+  donor.last_otg_donation_date as all_funds_latest_otg_donation_date
 FROM civicrm.civicrm_email e
   LEFT JOIN silverpop_export_staging staging ON staging.id = e.id
   LEFT JOIN civicrm.civicrm_contact c ON e.contact_id = c.id
@@ -134,7 +134,7 @@ SET
     s.postal_code = a.postal_code,
     s.country = COALESCE(ctry.iso_code, mc.country),
     s.state = st.name,
-    s.all_funds_latest_donation_date = donor.all_funds_last_donation_date
+    s.all_funds_latest_otg_donation_date = donor.last_otg_donation_date
 WHERE
   e.email IS NOT NULL AND e.email != ''
   AND c.is_deleted = 0
