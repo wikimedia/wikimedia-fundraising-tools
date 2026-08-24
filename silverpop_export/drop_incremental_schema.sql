@@ -9,5 +9,6 @@ DROP TABLE IF EXISTS silverpop_export;
 DROP TABLE IF EXISTS silverpop_has_recur;
 DROP TABLE IF EXISTS silverpop_export_checksum_email;
 DROP TABLE IF EXISTS silverpop_latest_direct_mail;
+DROP TABLE IF EXISTS silverpop_export_leadgen;
 DROP TABLE IF EXISTS silverpop_export_segment_change;
 DROP TABLE IF EXISTS silverpop_export_otg_change;

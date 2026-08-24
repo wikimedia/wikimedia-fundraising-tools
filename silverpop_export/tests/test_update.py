@@ -1614,6 +1614,38 @@ def test_direct_mail(testdb):
     assert cursor.fetchone() == (None,)
 
 
+def test_leadgen(testdb):
+    '''
+    Test that we get the most recent leadgen activity for a contact.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
+    """, """
+    insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
+        (1, 1, 3),
+        (2, 1, 3);
+    """, """
+    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time) values
+        (1, 222, 2, '2024-05-01 10:00:00'),
+        (2, 222, 2, '2024-06-15 10:00:00');
+    """, """
+    insert into civicrm_value_source (id, entity_id, source) values
+        (1, 1, 'old campaign'),
+        (2, 2, 'new campaign');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select leadgen_submitDate, leadgen_source from silverpop_export_view WHERE email = 'person1@localhost'")
+    assert cursor.fetchone() == ('06/15/2024', 'new campaign')
+
+
 def test_double_opt_in(testdb):
     '''
     Test that we set double_opt_in_activity = 1 if an activity exists.

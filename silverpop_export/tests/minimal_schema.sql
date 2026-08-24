@@ -305,6 +305,13 @@ CREATE TABLE `civicrm_value_direct_mail_data` (
     `direct_mail_package` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS civicrm_value_source;
+CREATE TABLE `civicrm_value_source` (
+    `id` INT(10) UNSIGNED NOT NULL,
+    `entity_id` INT(10) UNSIGNED NOT NULL,
+    `source` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS civicrm_relationship;
 CREATE TABLE `civicrm_relationship` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -452,5 +459,6 @@ INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weigh
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(10, 146, 'PG - Pledge Confirmed', 10);
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(11, 10, 188, 'Stock', 'Stock', 11);
 INSERT INTO civicrm_option_value (id, value, name, label, weight) VALUES(12, 9, 'matched_gift', 'Matched Gift', 12);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(13, 222, 'Lead Generation Signup', 13);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);
