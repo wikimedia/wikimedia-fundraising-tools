@@ -1642,7 +1642,7 @@ def test_leadgen(testdb):
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select leadgen_submitDate, leadgen_source from silverpop_export_view WHERE email = 'person1@localhost'")
+    cursor.execute("select leadgen_submit_date, leadgen_source from silverpop_export_view WHERE email = 'person1@localhost'")
     assert cursor.fetchone() == ('06/15/2024', 'new campaign')
 
 
