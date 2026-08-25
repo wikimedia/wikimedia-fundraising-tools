@@ -3,6 +3,7 @@ SELECT @recurringUpgradeType := value FROM civicrm.civicrm_option_value WHERE na
 SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Upgrade Decline';
 SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Downgrade';
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
+SELECT @leadGenSignupType := value FROM civicrm.civicrm_option_value WHERE name = 'Lead Generation Signup';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
 SELECT @segmentChangedField := value FROM civicrm.civicrm_option_value WHERE name = 'donor_segment_overall';
@@ -35,6 +36,7 @@ SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 
 --   don't know their language
 -- silverpop_latest_direct_mail - data about contact's most recent direct mail activity in the last 12 months
 --   (noting that direct mail appeals older than 12 months will not be removed from contacts until they are modified)
+-- silverpop_export_leadgen - data about contact's most recent completed Lead Generation Signup activity
 
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
@@ -693,6 +695,32 @@ WHERE latest_activity.rank = 1;
 COMMIT;
 
 BEGIN;
+-- Delete recent rows from silverpop_export_leadgen table (make way for updated version).
+DELETE lg FROM silverpop_update_world t INNER JOIN silverpop_export_leadgen lg ON t.email = lg.email;
+-- Add recent rows to silverpop_export_leadgen table: the contact's most recent completed
+-- Lead Generation Signup activity date and the source on that specific activity
+INSERT INTO silverpop_export_leadgen (
+    email,
+    leadgen_submit_date,
+    leadgen_source
+)
+SELECT
+    email.email,
+    MAX(a.activity_date_time) as leadgen_submit_date,
+    NULLIF(SUBSTRING_INDEX(
+        MAX(CONCAT(a.activity_date_time, '|', COALESCE(src.source, ''))),
+        '|', -1), '') as leadgen_source
+FROM civicrm.civicrm_activity a
+INNER JOIN civicrm.civicrm_activity_contact ac ON a.id = ac.activity_id AND ac.record_type_id = @activityTargets
+INNER JOIN civicrm.civicrm_email email ON ac.contact_id = email.contact_id AND email.is_primary = 1
+INNER JOIN silverpop_update_world t ON t.email = email.email
+LEFT JOIN civicrm.civicrm_value_source src ON src.entity_id = a.id
+WHERE a.status_id = 2 -- Completed
+  AND a.activity_type_id = @leadGenSignupType
+GROUP BY email.email;
+COMMIT;
+
+BEGIN;
 -- Delete recent rows from export table (make way for updated version).
 -- Query OK, 653187 rows affected (10.02 sec)
 DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
@@ -1039,6 +1067,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     IF(legacy_society.email IS NOT NULL, 'Yes', 'No') as wikipedia_legacy_society,
     '' as dataaxle_is_grandparent,
     dm.appeal as direct_mail_latest_appeal,
+    IFNULL(DATE_FORMAT(lg.leadgen_submit_date, '%m/%d/%Y'), '') as leadgen_submit_date,
+    COALESCE(lg.leadgen_source, '') as leadgen_source,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(all_funds_first_donation_date, '%m/%d/%Y'), '') as both_funds_first_donation_date,
@@ -1178,6 +1208,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN silverpop_legacy_society legacy_society ON legacy_society.email = e.email
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
+  LEFT JOIN silverpop_export_leadgen lg ON lg.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
   LEFT JOIN silverpop_mg_gift_date mggd ON mggd.email = e.email
   LEFT JOIN preference_tags pt ON pt.email = e.email
@@ -1265,6 +1296,8 @@ exceptional_upgrade_prospect,
 is_eligible_for_donor_portal,
 lastname,
 latest_optin_response,
+leadgen_submit_date,
+leadgen_source,
 most_recent_cancel_reason,
 pg_stage,
 postal_code,

@@ -102,6 +102,13 @@ CREATE TABLE IF NOT EXISTS silverpop_latest_direct_mail
   appeal VARCHAR(255)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS silverpop_export_leadgen
+(
+  email VARCHAR(255) PRIMARY KEY,
+  leadgen_submit_date DATETIME,
+  leadgen_source VARCHAR(255)
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
 (
   contact_id INT UNSIGNED PRIMARY KEY,
