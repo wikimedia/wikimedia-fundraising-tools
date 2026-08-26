@@ -1349,35 +1349,45 @@ def test_multiple_recurring(testdb):
     assert cursor.fetchone() == (2, 3,)
 
 
-def test_multiple_only_inactive_recurring(testdb):
+def test_multiple_recurrings(testdb):
     """
-    Test that we correctly calculate the number of inactive recurrings and the latest ID
+    Test that we correctly calculate the number of active recurrings,
+    the latest recur id and if the contact has active or any recurrings.
     """
     conn, db_name = testdb
 
     run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_email (contact_id, email, is_primary, on_hold) values
-            (1, 'person1@localhost', 1, 0);
+            (1, 'person1@localhost', 1, 0),
+            (2, 'person2@localhost', 1, 0);
         """, """
         insert into civicrm_contact (id, modified_date) values
-            (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+            (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
         """, """
-        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
-            (1, 1, 1.01, 'USD', 5, '2023-05-11'),
-            (3, 1, 2.02, 'EUR', 5, '2023-05-11'),
-            (5, 1, 3.03, 'GBP', 3, '2023-05-11');
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id) values
+            (1, 1, 1.01, 'USD', 1),
+            (3, 1, 2.02, 'EUR', 3),
+            (5, 1, 3.03, 'GBP', 4),
+            (7, 2, 4.04, 'USD', 5);
         """, """
         insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
             (1, 1, 1, '2015-01-03', 1.01, 'xyz123', 1, 1),
             (2, 1, 3, '2016-05-05', 2.02, 'abc456', 1, 1),
-            (3, 1, 3, '2017-05-05', 2.02, 'def789', 1, 1),
+            (3, 1, 3, '2020-05-05', 2.02, 'def789', 1, 1),
             (4, 1, 5, '2017-05-05', 3.03, 'ghi012', 1, 1),
-            (5, 1, 5, '2017-05-05', 3.03, 'jkl345', 9, 1);
+            (5, 1, 5, '2017-05-05', 3.03, 'jkl345', 9, 1),
+            (6, 2, 7, '2021-06-06', 4.04, 'mno678', 1, 1);
         """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id from silverpop_export")
-    assert cursor.fetchone() == (0, 5,)
+    cursor.execute("""
+        select foundation_recurring_active_count, foundation_recurring_latest_contribution_recur_id,
+               foundation_has_active_recurring_donation, foundation_has_recurred_donation
+        from silverpop_export order by contact_id
+    """)
+    assert cursor.fetchone() == (0, 5, 0, 1)
+    assert cursor.fetchone() == (1, 7, 1, 1)
 
 
 def test_recurring_latest_donation_date_by_frequency(testdb):

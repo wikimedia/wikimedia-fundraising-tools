@@ -572,31 +572,15 @@ INSERT INTO silverpop_has_recur (
 )
  SELECT email.email,
  1 as foundation_has_recurred_donation,
- MAX(IF(
-   ((end_date IS NULL OR end_date > NOW())
-   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
-   AND recur.cancel_date IS NULL
-   ), 1, 0)
- ) as foundation_has_active_recurring_donation,
+ MAX(IF(recur.contribution_status_id NOT IN(1,3,4), 1, 0)) as foundation_has_active_recurring_donation, -- Not Completed,Cancelled,Failed
  MIN(receive_date) as foundation_recurring_first_donation_date,
  MAX(receive_date) as foundation_recurring_latest_donation_date,
  MAX(CASE WHEN recur.frequency_unit = 'month' THEN receive_date END) as foundation_recurring_month_latest_donation_date,
  MAX(CASE WHEN recur.frequency_unit = 'year' THEN receive_date END) as foundation_recurring_year_latest_donation_date,
  MAX(recur.cancel_date) as most_recent_cancel_date,
- COUNT(DISTINCT CASE WHEN
-  ((end_date IS NULL OR end_date > NOW())
-   AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
-   AND recur.cancel_date IS NULL
-   ) THEN recur.id ELSE NULL END) as foundation_recurring_active_count,
- (-- latest active recur id if any or latest inactive recur id
- CASE WHEN COUNT(DISTINCT CASE WHEN (end_date IS NULL OR end_date > NOW())
- AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
- AND recur.cancel_date IS NULL THEN recur.id ELSE NULL END) > 0
- THEN MAX(IF(((end_date IS NULL OR end_date > NOW())
-  AND recur.contribution_status_id NOT IN(1,3,4) -- Completed,Cancelled,Failed
-  AND recur.cancel_date IS NULL
-  ), recur.id, 0)) ELSE MAX(recur.id)
-  END) as foundation_recurring_latest_contribution_recur_id,
+ COUNT(DISTINCT CASE WHEN recur.contribution_status_id NOT IN(1,3,4) THEN recur.id END) as foundation_recurring_active_count, -- Not Completed,Cancelled,Failed
+ -- latest active recur id if any, else latest overall recur id
+ COALESCE(MAX(CASE WHEN recur.contribution_status_id NOT IN(1,3,4) THEN recur.id END), MAX(recur.id)) as foundation_recurring_latest_contribution_recur_id, -- Not Completed,Cancelled,Failed
  MAX(upgrade_activity.contact_id IS NOT NULL) as recurring_has_upgrade_activity,
  MAX(CASE WHEN recur.contribution_status_id NOT IN (1, 3, 4) -- Completed,Cancelled,Failed
    AND recur.payment_processor_id IN (@paypalProcessor, @paypal_ecProcessor)
