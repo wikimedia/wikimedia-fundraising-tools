@@ -4,13 +4,19 @@ SELECT @recurringUpgradeTypeDecline := value FROM civicrm.civicrm_option_value W
 SELECT @recurringDowngradeType := value FROM civicrm.civicrm_option_value WHERE name = 'Recurring Downgrade';
 SELECT @directMailType := value FROM civicrm.civicrm_option_value WHERE name = 'Direct Mail';
 SELECT @leadGenSignupType := value FROM civicrm.civicrm_option_value WHERE name = 'Lead Generation Signup';
+SELECT @smsConsentGivenType := value FROM civicrm.civicrm_option_value WHERE name = 'sms_consent_given';
 SELECT @doubleOptInType := value FROM civicrm.civicrm_option_value WHERE name = 'Double Opt-In';
 SELECT @activityTargets := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Targets';
+SELECT @activitySource := value FROM civicrm.civicrm_option_value WHERE name = 'Activity Source';
 SELECT @segmentChangedField := value FROM civicrm.civicrm_option_value WHERE name = 'donor_segment_overall';
 SELECT @paypalProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal' AND is_test = 0;
 SELECT @paypal_ecProcessor := id FROM civicrm.civicrm_payment_processor WHERE name = 'paypal_ec' AND is_test = 0;
 SELECT @pgStageOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'pg_stage';
 SELECT @relationshipManagerOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'relationship_manager';
+SELECT @consentSourceOptionGroup := option_group_id FROM civicrm.civicrm_custom_field WHERE name = 'consent_source';
+SELECT @consentSourceDonationForm := value
+  FROM civicrm.civicrm_option_value
+  WHERE option_group_id = @consentSourceOptionGroup AND name = 'Donation_form';
 SELECT @pgCommitmentType := value FROM civicrm.civicrm_option_value WHERE name = 'PG - Pledge Confirmed';
 SELECT @stockInstrument := ov.value
   FROM civicrm.civicrm_option_value ov
@@ -37,6 +43,7 @@ SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 
 -- silverpop_latest_direct_mail - data about contact's most recent direct mail activity in the last 12 months
 --   (noting that direct mail appeals older than 12 months will not be removed from contacts until they are modified)
 -- silverpop_export_leadgen - data about contact's most recent completed Lead Generation Signup activity
+-- silverpop_export_sms_optin - data about contact's most optin for SMS from the donation form
 
 -- The point of silverpop_export is presumably that it is more performant than skipping straight to silverpop_export_view
 -- although I believe that theory needs testing.
@@ -721,6 +728,29 @@ GROUP BY email.email;
 COMMIT;
 
 BEGIN;
+-- Delete recent rows from silverpop_export_sms_optin table (make way for updated version).
+DELETE so FROM silverpop_update_world t INNER JOIN silverpop_export_sms_optin so ON t.email = so.email;
+-- Add recent rows to silverpop_export_sms_optin table: the contact's most recent completed
+-- SMS Consent Given activity date where the consent source was the donation form
+INSERT INTO silverpop_export_sms_optin (
+    email,
+    sms_donateform_optin_date
+)
+SELECT
+    email.email,
+    MAX(a.activity_date_time) as sms_donateform_optin_date
+FROM civicrm.civicrm_activity a
+INNER JOIN civicrm.civicrm_activity_contact ac ON a.id = ac.activity_id AND ac.record_type_id = @activitySource
+INNER JOIN civicrm.civicrm_email email ON ac.contact_id = email.contact_id AND email.is_primary = 1
+INNER JOIN silverpop_update_world t ON t.email = email.email
+INNER JOIN civicrm.civicrm_value_sms_consent_52 sms_consent ON sms_consent.entity_id = a.id
+WHERE a.status_id = 2 -- Completed
+  AND a.activity_type_id = @smsConsentGivenType
+  AND sms_consent.consent_source_485 = @consentSourceDonationForm
+GROUP BY email.email;
+COMMIT;
+
+BEGIN;
 -- Delete recent rows from export table (make way for updated version).
 -- Query OK, 653187 rows affected (10.02 sec)
 DELETE export FROM silverpop_update_world t INNER JOIN silverpop_export export ON t.email = export.email;
@@ -1069,6 +1099,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
     dm.appeal as direct_mail_latest_appeal,
     IFNULL(DATE_FORMAT(lg.leadgen_submit_date, '%m/%d/%Y'), '') as leadgen_submit_date,
     COALESCE(lg.leadgen_source, '') as leadgen_source,
+    IFNULL(DATE_FORMAT(sms_optin.sms_donateform_optin_date, '%m/%d/%Y'), '') as sms_donateform_optin_date,
     -- These 2 fields have been coalesced further up so we know they have a value. Addition at this point is cheap.
     (donation_count + endowment_number_donations) as both_funds_donation_count,
     IFNULL(DATE_FORMAT(all_funds_first_donation_date, '%m/%d/%Y'), '') as both_funds_first_donation_date,
@@ -1209,6 +1240,7 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
   LEFT JOIN civicrm.civicrm_contact c ON c.id = contact_id
   LEFT JOIN silverpop_latest_direct_mail dm ON dm.email = e.email
   LEFT JOIN silverpop_export_leadgen lg ON lg.email = e.email
+  LEFT JOIN silverpop_export_sms_optin sms_optin ON sms_optin.email = e.email
   LEFT JOIN silverpop_export_latest latest ON e.email = latest.email
   LEFT JOIN silverpop_mg_gift_date mggd ON mggd.email = e.email
   LEFT JOIN preference_tags pt ON pt.email = e.email
@@ -1298,6 +1330,7 @@ lastname,
 latest_optin_response,
 leadgen_submit_date,
 leadgen_source,
+sms_donateform_optin_date,
 most_recent_cancel_reason,
 pg_stage,
 postal_code,

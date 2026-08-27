@@ -109,6 +109,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export_leadgen
   leadgen_source VARCHAR(255)
 ) COLLATE 'utf8mb4_unicode_ci';
 
+CREATE TABLE IF NOT EXISTS silverpop_export_sms_optin
+(
+  email VARCHAR(255) PRIMARY KEY,
+  sms_donateform_optin_date DATETIME
+) COLLATE 'utf8mb4_unicode_ci';
+
 CREATE TABLE IF NOT EXISTS silverpop_export_segment_change
 (
   contact_id INT UNSIGNED PRIMARY KEY,
