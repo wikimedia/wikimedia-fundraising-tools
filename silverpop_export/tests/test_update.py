@@ -882,6 +882,12 @@ def test_latest_donation(testdb):
     Test that latest fields are correctly populated when the latest donation
     is endowment or foundation, and that both_funds_latest_donation_date is
     distinct from both_funds_overall_latest_donation_date (includes recurring).
+
+    Also test that both_funds_overall_latest_currency/currency_symbol/
+    native_amount/donation_source reflect that same overall (recurring
+    included) latest donation, and that AF_recurring_latest_currency/
+    native_amount/currency_symbol/donation_source reflect the contact's most
+    recent recurring contribution.
     '''
     conn, db_name = testdb
 
@@ -895,12 +901,13 @@ def test_latest_donation(testdb):
         (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
-        (1, 1, 15.00, 'GBP', 5, NULL);
+        (1, 1, 99.00, 'EUR', 5, NULL);
     """, """
     insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, NULL, '2016-03-01', 5.00, 'aaa001', 1, 1),
         (2, 1, NULL, '2018-09-15', 20.00, 'bbb002', 1, 26),
         (3, 1, 1, '2020-01-10', 15.00, 'rec001', 1, 1),
+        (6, 1, 1, '2019-05-05', 10.00, 'rec002', 1, 1),
         (4, 2, NULL, '2016-06-01', 12.00, 'ccc003', 1, 26),
         (5, 2, NULL, '2019-02-20', 8.00, 'ddd004', 1, 1);
     """, """
@@ -908,8 +915,14 @@ def test_latest_donation(testdb):
         (1, 5.00, 'USD'),
         (2, 18.00, 'EUR'),
         (3, 15.00, 'GBP'),
+        (6, 10.00, 'USD'),
         (4, 12.00, 'USD'),
         (5, 7.00, 'GBP');
+    """, """
+    insert into civicrm_value_1_gift_data_7 (id, entity_id, channel) values
+        (1, 2, 'Web'),
+        (2, 3, 'Recurring'),
+        (3, 6, 'OldRecurring');
     """, """
     insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date, last_otg_donation_date) values
         (1, 18.00, 20.00, 'EUR', '2020-01-10', '2018-09-15'),
@@ -922,11 +935,28 @@ def test_latest_donation(testdb):
     assert cursor.fetchone() == ('GBP', '£', Decimal('7.00'), datetime.datetime(2019, 2, 20))
 
     cursor.execute("""
-        select both_funds_latest_donation_date, both_funds_overall_latest_donation_date
+        select both_funds_latest_donation_date, both_funds_overall_latest_donation_date,
+               both_funds_latest_currency, both_funds_latest_currency_symbol,
+               both_funds_latest_native_amount, both_funds_latest_donation_source,
+               both_funds_overall_latest_currency, both_funds_overall_latest_currency_symbol,
+               both_funds_overall_latest_native_amount, both_funds_overall_latest_donation_source,
+               AF_recurring_latest_donation_date, AF_recurring_latest_currency,
+               AF_recurring_latest_currency_symbol, AF_recurring_latest_native_amount,
+               AF_recurring_latest_donation_source
         from silverpop_export_view order by ContactID
     """)
-    assert cursor.fetchone() == ('09/15/2018', '01/10/2020')
-    assert cursor.fetchone() == ('02/20/2019', '02/20/2019')
+    assert cursor.fetchone() == (
+        '09/15/2018', '01/10/2020',
+        'EUR', '€', Decimal('18.00'), 'Web',
+        'GBP', '£', Decimal('15.00'), 'Recurring',
+        '01/10/2020', 'GBP', '£', Decimal('15.00'), 'Recurring',
+    )
+    assert cursor.fetchone() == (
+        '02/20/2019', '02/20/2019',
+        'GBP', '£', Decimal('7.00'), '',
+        'GBP', '£', Decimal('7.00'), '',
+        '', '', '', Decimal('0.00'), '',
+    )
 
 
 def test_export_hash(testdb):
