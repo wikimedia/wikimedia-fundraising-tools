@@ -465,7 +465,6 @@ BEGIN;
 -- Query OK, 679293 rows affected (4.27 sec)
 DELETE highest FROM silverpop_update_world t INNER JOIN silverpop_export_highest highest ON t.email = highest.email;
 -- Add recent rows to highest export table
--- Query OK, 679293 rows affected, 12 warnings (1 min 15.22 sec)
 INSERT INTO silverpop_export_highest (
   email,
   highest_native_currency,
@@ -474,25 +473,51 @@ INSERT INTO silverpop_export_highest (
   highest_donation_date
 )
   SELECT
-    e.email,
-    ex.original_currency,
-    ex.original_amount,
-    ct.total_amount,
-    ct.receive_date
-   FROM silverpop_update_world t
-     INNER JOIN silverpop_export_staging e ON t.email = e.email,
-    civicrm.civicrm_contribution ct,
-    civicrm.wmf_contribution_extra ex
-  WHERE
-    e.contact_id = ct.contact_id AND
-    ex.entity_id = ct.id AND
-    ct.receive_date IS NOT NULL AND
-    ct.total_amount > 0 AND -- Refunds don't count
-    ct.contribution_status_id = 1 -- 'Completed'
-  ORDER BY
-    ct.total_amount DESC,
-    ct.receive_date DESC
-ON DUPLICATE KEY UPDATE highest_native_currency = silverpop_export_highest.highest_native_currency;
+    email,
+    original_currency,
+    original_amount,
+    total_amount,
+    receive_date
+  FROM (
+    SELECT
+      email,
+      original_currency,
+      original_amount,
+      total_amount,
+      receive_date,
+      ROW_NUMBER() OVER (
+        PARTITION BY email
+        ORDER BY total_amount DESC, receive_date DESC
+      ) as overall_rank
+    FROM (
+      -- Native amounts are only directly comparable within the same currency, so first
+      -- find each email's biggest donation per currency (ties broken by most recent, since
+      -- from the donor's perspective a repeated amount is still their "highest" donation),
+      -- then pick the overall winner across currencies by USD-converted total_amount.
+      SELECT
+        e.email,
+        ex.original_currency,
+        ex.original_amount,
+        ct.total_amount,
+        ct.receive_date,
+        ROW_NUMBER() OVER (
+          PARTITION BY e.email, ex.original_currency
+          ORDER BY ex.original_amount DESC, ct.receive_date DESC
+        ) as currency_rank
+      FROM silverpop_update_world t
+        INNER JOIN silverpop_export_staging e ON t.email = e.email,
+        civicrm.civicrm_contribution ct,
+        civicrm.wmf_contribution_extra ex
+      WHERE
+        e.contact_id = ct.contact_id AND
+        ex.entity_id = ct.id AND
+        ct.receive_date IS NOT NULL AND
+        ct.total_amount > 0 AND -- Refunds don't count
+        ct.contribution_status_id = 1 -- 'Completed'
+    ) currency_best
+    WHERE currency_rank = 1
+  ) overall_best
+  WHERE overall_rank = 1;
 COMMIT;
 
 -- Populate table of QCD (Retirement Fund), stock donation and matched gift dates.
