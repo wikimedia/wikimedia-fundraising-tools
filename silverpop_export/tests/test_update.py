@@ -774,6 +774,75 @@ def test_native_amount(testdb):
     assert actual == expected
 
 
+def test_highest_amount_same_currency_tie_prefers_latest_date(testdb):
+    '''
+    When a donor's highest donation is tied between two contributions in the same
+    currency, we use the most recent one - even though an older donation converted
+    to a higher USD total_amount because the exchange rate was higher then.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2015-01-01', 140.00, 'xyz123', 1, 1),
+        (2, 1, '2020-01-01', 120.00, 'abc456', 1, 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 100.00, 'GBP'),
+        (2, 100.00, 'GBP');
+    """, """
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+         (1, 260.00, 100.00, 120.00, 'GBP', '2015-01-01');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select highest_usd_amount, highest_native_amount, highest_native_currency, highest_donation_date from silverpop_export")
+    expected = (Decimal('120.00'), Decimal('100'), 'GBP', datetime.datetime(2020, 1, 1))
+    assert cursor.fetchone() == expected
+
+
+def test_highest_amount_across_currencies_uses_currencys_own_best(testdb):
+    '''
+    The highest donation is chosen by comparing each a contact's highest donation per
+    currency and then picking the highest of those by USD total_amount.
+    Pick the highest native amount, even if a lower amount has a higher USD conversion -
+    that's the donor's actual highest, from their perspective.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date) values
+        (1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    """, """
+    insert into civicrm_contribution (id, contact_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
+        (1, 1, '2019-01-01', 80.00, 'xyz123', 1, 1),
+        (2, 1, '2022-01-01', 81.00, 'abc456', 1, 1),
+        (3, 1, '2021-01-01', 68.00, 'def789', 1, 1);
+    """, """
+    insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
+        (1, 60.00, 'GBP'),
+        (2, 59.00, 'GBP'),
+        (3, 68.00, 'USD');
+    """, """
+    insert into wmf_donor (entity_id, lifetime_including_endowment, last_donation_amount, last_donation_usd, last_donation_currency, first_donation_date) values
+         (1, 203.00, 68.00, 68.00, 'USD', '2019-01-01');
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select highest_usd_amount, highest_native_amount, highest_native_currency, highest_donation_date from silverpop_export")
+    expected = (Decimal('80.00'), Decimal('60'), 'GBP', datetime.datetime(2019, 1, 1))
+    assert cursor.fetchone() == expected
+
+
 def test_currency_symbol(testdb):
     '''
     Test that we correctly pull in the currency symbol for the latest donation
@@ -813,6 +882,12 @@ def test_latest_donation(testdb):
     Test that latest fields are correctly populated when the latest donation
     is endowment or foundation, and that both_funds_latest_donation_date is
     distinct from both_funds_overall_latest_donation_date (includes recurring).
+
+    Also test that both_funds_overall_latest_currency/currency_symbol/
+    native_amount/donation_source reflect that same overall (recurring
+    included) latest donation, and that AF_recurring_latest_currency/
+    native_amount/currency_symbol/donation_source reflect the contact's most
+    recent recurring contribution.
     '''
     conn, db_name = testdb
 
@@ -826,12 +901,13 @@ def test_latest_donation(testdb):
         (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
     """, """
     insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
-        (1, 1, 15.00, 'GBP', 5, NULL);
+        (1, 1, 99.00, 'EUR', 5, NULL);
     """, """
     insert into civicrm_contribution (id, contact_id, contribution_recur_id, receive_date, total_amount, trxn_id, contribution_status_id, financial_type_id) values
         (1, 1, NULL, '2016-03-01', 5.00, 'aaa001', 1, 1),
         (2, 1, NULL, '2018-09-15', 20.00, 'bbb002', 1, 26),
         (3, 1, 1, '2020-01-10', 15.00, 'rec001', 1, 1),
+        (6, 1, 1, '2019-05-05', 10.00, 'rec002', 1, 1),
         (4, 2, NULL, '2016-06-01', 12.00, 'ccc003', 1, 26),
         (5, 2, NULL, '2019-02-20', 8.00, 'ddd004', 1, 1);
     """, """
@@ -839,8 +915,14 @@ def test_latest_donation(testdb):
         (1, 5.00, 'USD'),
         (2, 18.00, 'EUR'),
         (3, 15.00, 'GBP'),
+        (6, 10.00, 'USD'),
         (4, 12.00, 'USD'),
         (5, 7.00, 'GBP');
+    """, """
+    insert into civicrm_value_1_gift_data_7 (id, entity_id, channel) values
+        (1, 2, 'Web'),
+        (2, 3, 'Recurring'),
+        (3, 6, 'OldRecurring');
     """, """
     insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date, last_otg_donation_date) values
         (1, 18.00, 20.00, 'EUR', '2020-01-10', '2018-09-15'),
@@ -853,11 +935,28 @@ def test_latest_donation(testdb):
     assert cursor.fetchone() == ('GBP', '£', Decimal('7.00'), datetime.datetime(2019, 2, 20))
 
     cursor.execute("""
-        select both_funds_latest_donation_date, both_funds_overall_latest_donation_date
+        select both_funds_latest_donation_date, both_funds_overall_latest_donation_date,
+               both_funds_latest_currency, both_funds_latest_currency_symbol,
+               both_funds_latest_native_amount, both_funds_latest_donation_source,
+               both_funds_overall_latest_currency, both_funds_overall_latest_currency_symbol,
+               both_funds_overall_latest_native_amount, both_funds_overall_latest_donation_source,
+               AF_recurring_latest_donation_date, AF_recurring_latest_currency,
+               AF_recurring_latest_currency_symbol, AF_recurring_latest_native_amount,
+               AF_recurring_latest_donation_source
         from silverpop_export_view order by ContactID
     """)
-    assert cursor.fetchone() == ('09/15/2018', '01/10/2020')
-    assert cursor.fetchone() == ('02/20/2019', '02/20/2019')
+    assert cursor.fetchone() == (
+        '09/15/2018', '01/10/2020',
+        'EUR', '€', Decimal('18.00'), 'Web',
+        'GBP', '£', Decimal('15.00'), 'Recurring',
+        '01/10/2020', 'GBP', '£', Decimal('15.00'), 'Recurring',
+    )
+    assert cursor.fetchone() == (
+        '02/20/2019', '02/20/2019',
+        'GBP', '£', Decimal('7.00'), '',
+        'GBP', '£', Decimal('7.00'), '',
+        '', '', '', Decimal('0.00'), '',
+    )
 
 
 def test_export_hash(testdb):
@@ -1644,6 +1743,45 @@ def test_leadgen(testdb):
     cursor = conn.db_conn.cursor()
     cursor.execute("select leadgen_submit_date, leadgen_source from silverpop_export_view WHERE email = 'person1@localhost'")
     assert cursor.fetchone() == ('06/15/2024', 'new campaign')
+
+
+def test_sms_donateform_optin(testdb):
+    '''
+    Test that we get the most recent SMS consent activity for a contact where the
+    consent source was the donation form.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+        (1, 'person1@localhost', 1, 0),
+        (2, 'person2@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
+    """, """
+    insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time) values
+        (1, 182, 2, '2024-05-01 10:00:00'),
+        (2, 182, 2, '2024-06-15 10:00:00'),
+        (3, 182, 2, '2024-06-15 10:00:00');
+    """, """
+    insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
+        (1, 1, 1),
+        (2, 1, 1),
+        (3, 2, 1);
+    """, """
+    insert into civicrm_value_sms_consent_52 (id, entity_id, consent_source_485) values
+        (1, 1, 2),
+        (2, 2, 2),
+        (3, 3, 1); -- not Donation Form
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select sms_donateform_optin_date from silverpop_export_view WHERE email = 'person1@localhost'")
+    assert cursor.fetchone() == ('06/15/2024',)
+    cursor.execute("select sms_donateform_optin_date from silverpop_export_view WHERE email = 'person2@localhost'")
+    assert cursor.fetchone() == ('',)
 
 
 def test_double_opt_in(testdb):

@@ -59,7 +59,11 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   latest_currency_symbol VARCHAR(8),
   latest_native_amount DECIMAL(20, 2),
   latest_payment_method VARCHAR(64),
-  latest_donation_source VARCHAR(64)
+  latest_donation_source VARCHAR(64),
+  recurring_latest_currency VARCHAR(3),
+  recurring_latest_currency_symbol VARCHAR(8),
+  recurring_latest_native_amount DECIMAL(20, 2),
+  recurring_latest_donation_source VARCHAR(64)
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
@@ -107,6 +111,12 @@ CREATE TABLE IF NOT EXISTS silverpop_export_leadgen
   email VARCHAR(255) PRIMARY KEY,
   leadgen_submit_date DATETIME,
   leadgen_source VARCHAR(255)
+) COLLATE 'utf8mb4_unicode_ci';
+
+CREATE TABLE IF NOT EXISTS silverpop_export_sms_optin
+(
+  email VARCHAR(255) PRIMARY KEY,
+  sms_donateform_optin_date DATETIME
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS silverpop_export_segment_change

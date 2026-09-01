@@ -281,6 +281,7 @@ CREATE TABLE `civicrm_custom_field` (
 
 INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(177, 'pg_stage', 100);
 INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(284, 'relationship_manager', 101);
+INSERT INTO civicrm_custom_field (id, name, option_group_id) VALUES(485, 'consent_source', 102);
 
 DROP TABLE IF EXISTS civicrm_value_matching_gift;
 CREATE TABLE `civicrm_value_matching_gift` (
@@ -310,6 +311,13 @@ CREATE TABLE `civicrm_value_source` (
     `id` INT(10) UNSIGNED NOT NULL,
     `entity_id` INT(10) UNSIGNED NOT NULL,
     `source` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS civicrm_value_sms_consent_52;
+CREATE TABLE `civicrm_value_sms_consent_52` (
+    `id` INT(10) UNSIGNED NOT NULL,
+    `entity_id` INT(10) UNSIGNED NOT NULL,
+    `consent_source_485` INT(10) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS civicrm_relationship;
@@ -460,5 +468,8 @@ INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(10, 146, 'PG -
 INSERT INTO civicrm_option_value (id, option_group_id, value, name, label, weight) VALUES(11, 10, 188, 'Stock', 'Stock', 11);
 INSERT INTO civicrm_option_value (id, value, name, label, weight) VALUES(12, 9, 'matched_gift', 'Matched Gift', 12);
 INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(13, 222, 'Lead Generation Signup', 13);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(14, 182, 'sms_consent_given', 14);
+INSERT INTO civicrm_option_value (id, value, name, weight) VALUES(15, 1, 'Activity Source', 15);
+INSERT INTO civicrm_option_value (id, option_group_id, value, name, weight) VALUES(16, 102, 2, 'Donation_form', 16);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(13, 'paypal', 0);
 INSERT INTO civicrm_payment_processor (id, name, is_test) VALUES(14, 'paypal_ec', 0);

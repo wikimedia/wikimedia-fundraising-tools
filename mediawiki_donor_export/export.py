@@ -7,7 +7,7 @@ Exports donor status data from silverpop_export_view_full for sync to MediaWiki.
 This module reads from the existing silverpop export views (built by the
 silverpop_export module) and produces a simple CSV with:
 
-  email_address, donor_status_id
+  email_address, relationship_type
 
 Designed to run after the silverpop export has completed its table/view rebuild.
 """
@@ -26,22 +26,25 @@ import process.lock as lock
 
 log = logging.getLogger(__name__)
 
-EXPORT_QUERY = """
+EXPORT_QUERY_BASE = """
     SELECT
         -- e.ContactID AS contact_id,
         e.email,
-        e.donor_status_id
+        CASE
+          WHEN e.donor_status_recur_overall in (15,25,35,45) THEN 2 -- Sustaining donor
+          WHEN e.donor_status_otg IN (10,20,40,50) THEN 4 -- Returning / Loyal Supporter
+          WHEN e.donor_status_otg IN (30,60) THEN 1 -- New / Recent Supporter
+          WHEN e.donor_status_recur_overall IN (55,65) THEN 3 -- Lapsed Supporter
+          WHEN e.donor_status_otg IN (70,80,90) THEN 3 -- Lapsed Supporter
+          ELSE 5 -- Contactable Reader
+        END as relationship_type
         -- e.do_not_solicit
     FROM silverpop_export_view_full e
 """
 
-EXPORT_QUERY_DELTA = """
-    SELECT
-        -- e.ContactID AS contact_id,
-        e.email,
-        e.donor_status_id
-        -- e.do_not_solicit
-    FROM silverpop_export_view_full e
+EXPORT_QUERY = EXPORT_QUERY_BASE
+
+EXPORT_QUERY_DELTA = EXPORT_QUERY_BASE + """
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
 
@@ -83,7 +86,7 @@ def export(days=None, limit=None):
     try:
         results = db.execute(query, params)
 
-        fieldnames = ['email', 'donor_status_id']
+        fieldnames = ['email', 'relationship_type']
         # fieldnames += ['contact_id', 'do_not_solicit']
 
         with open(output_path, 'w', newline='') as f:

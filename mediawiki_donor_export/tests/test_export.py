@@ -16,25 +16,35 @@ from mediawiki_donor_export import export
 
 def test_export(testdb):  # noqa: F811
     """
-    Smoke test: export produces a CSV with the right columns
-    and correct donor status values.
+    Smoke test: export produces a CSV with the right columns, and
+    donor_status_otg / donor_status_recur_overall map to the expected
+    relationship_type, including CASE precedence when a donor matches
+    more than one condition.
     """
     run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_email (contact_id, email, is_primary, on_hold) values
-            (1, 'active@localhost', 1, 0),
-            (2, 'lapsed@localhost', 1, 0);
+            (1, 'sustaining@localhost', 1, 0),
+            (2, 'returning@localhost', 1, 0),
+            (3, 'new@localhost', 1, 0),
+            (4, 'lapsed-recur@localhost', 1, 0),
+            (5, 'lapsed-otg@localhost', 1, 0),
+            (6, 'reader@localhost', 1, 0);
     """, """
-        insert into civicrm_contact (id, modified_date) values
-            (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-            (2, DATE_SUB(NOW(), INTERVAL 1 DAY));
+        insert into civicrm_contact (id, modified_date)
+        select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+        from civicrm_email;
     """, """
-        insert into civicrm_value_1_communication_4 (id, entity_id, do_not_solicit) values
-            (1, 1, 0),
-            (2, 2, 1);
+        insert into civicrm_value_1_communication_4 (id, entity_id, do_not_solicit)
+        select id, id, 0
+        from civicrm_contact;
     """, """
-        insert into wmf_donor (entity_id, donor_status_id) values
-            (1, 30),
-            (2, 50);
+        insert into wmf_donor (entity_id, donor_status_otg, donor_status_recur_overall) values
+            (1, 10, 15),  -- recur_overall -> Sustaining donor (precedence over otg=10 "Returning")
+            (2, 10, 55),  -- otg -> Returning / Loyal Supporter
+            (3, 30, 65),  -- otg -> New / Recent Supporter
+            (4, 70, 55),  -- recur_overall -> Lapsed Supporter
+            (5, 70, 95),  -- otg -> Lapsed Supporter
+            (6, 99, 95);  -- neither -> Contactable Reader
     """])
 
     conn, db_name = testdb
@@ -59,17 +69,20 @@ def test_export(testdb):  # noqa: F811
             rows = list(reader)
 
     # Should have the right columns
-    assert set(rows[0].keys()) == {'email', 'donor_status_id'}
+    assert set(rows[0].keys()) == {'email', 'relationship_type'}
 
-    # Both donors should be present
-    emails = {row['email'] for row in rows}
-    assert 'active@localhost' in emails
-    assert 'lapsed@localhost' in emails
-
-    # Check status values came through
+    # All donors should be present with the expected relationship_type
+    expected = {
+        'sustaining@localhost': '2',
+        'returning@localhost': '4',
+        'new@localhost': '1',
+        'lapsed-recur@localhost': '3',
+        'lapsed-otg@localhost': '3',
+        'reader@localhost': '5',
+    }
     by_email = {row['email']: row for row in rows}
-    assert by_email['active@localhost']['donor_status_id'] == '30'
-    assert by_email['lapsed@localhost']['donor_status_id'] == '50'
+    for email, relationship_type in expected.items():
+        assert by_email[email]['relationship_type'] == relationship_type
 
 
 def test_fresh_data_permits_export():
@@ -152,7 +165,7 @@ def test_export_with_encryption():
     """Export with age_identity_file calls encrypt_file."""
     identity_path = '/path/to/identity.txt'
     fake_rows = [
-        {'email': 'enc@localhost', 'donor_status_id': 30}
+        {'email': 'enc@localhost', 'relationship_type': 2}
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -205,7 +218,7 @@ def test_encrypt_file_roundtrip_integration():
 def test_export_without_encryption_key():
     """Backwards compat: no encryption_key means plain CSV output."""
     fake_rows = [
-        {'email': 'plain@localhost', 'donor_status_id': 30}
+        {'email': 'plain@localhost', 'relationship_type': 2}
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
