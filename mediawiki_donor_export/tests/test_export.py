@@ -65,11 +65,8 @@ def test_export(testdb):  # noqa: F811
         assert os.path.exists(output_path)
 
         with open(output_path, 'r') as f:
-            reader = csv.DictReader(f)
+            reader = csv.DictReader(f, fieldnames=['email', 'relationship_type'])
             rows = list(reader)
-
-    # Should have the right columns
-    assert set(rows[0].keys()) == {'email', 'relationship_type'}
 
     # All donors should be present with the expected relationship_type
     expected = {
@@ -237,7 +234,7 @@ def test_export_without_encryption_key():
         assert os.path.exists(output_path)
 
         with open(output_path, 'r') as f:
-            reader = csv.DictReader(f)
+            reader = csv.DictReader(f, fieldnames=['email', 'relationship_type'])
             rows = list(reader)
         assert any(r['email'] == 'plain@localhost' for r in rows)
 

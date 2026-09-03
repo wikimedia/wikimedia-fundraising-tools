@@ -91,7 +91,6 @@ def export(days=None, limit=None):
 
         with open(output_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
             num_rows = 0
             for row in results:
                 writer.writerow(row)
