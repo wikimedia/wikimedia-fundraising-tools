@@ -893,9 +893,6 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
       AND IFNULL(recur.paypal_direct_recurring, 0) = 0, 1, 0) as is_eligible_for_donor_portal
 FROM silverpop_update_world t
 INNER JOIN silverpop_export_staging ex ON t.email = ex.email
--- this inner join is restricting us to only one record per email.
--- currently it is the highest email_id. Ideally it will later to change to
--- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
 INNER JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
