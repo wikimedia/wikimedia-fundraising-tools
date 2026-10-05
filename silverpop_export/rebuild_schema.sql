@@ -65,7 +65,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   recurring_latest_currency VARCHAR(3),
   recurring_latest_currency_symbol VARCHAR(8),
   recurring_latest_native_amount DECIMAL(20, 2),
-  recurring_latest_donation_source VARCHAR(64)
+  recurring_latest_donation_source VARCHAR(64),
+  latest_cy_native_total DECIMAL(20, 2),
+  latest_cy_count INT UNSIGNED
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (

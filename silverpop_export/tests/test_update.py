@@ -980,6 +980,10 @@ def test_latest_donation(testdb):
     included) latest donation, and that AF_recurring_latest_currency/
     native_amount/currency_symbol/donation_source reflect the contact's most
     recent recurring contribution.
+
+    Also test that both_funds_overall_latest_cy_native_total & _cy_count
+    include donations from both funds in the calendar year of the overall
+    latest donation, only including those in the latest currency donated in.
     '''
     conn, db_name = testdb
 
@@ -1000,6 +1004,10 @@ def test_latest_donation(testdb):
         (2, 1, NULL, '2018-09-15', 20.00, 'bbb002', 1, 26),
         (3, 1, 1, '2020-01-10', 15.00, 'rec001', 1, 1),
         (6, 1, 1, '2019-05-05', 10.00, 'rec002', 1, 1),
+        (7, 1, 1, '2020-01-05', 14.00, 'rec003', 1, 1),
+        (8, 1, 1, '2020-01-03', 6.00, 'rec004', 1, 1),
+        (9, 1, 1, '2019-12-31', 15.00, 'rec005', 1, 1),
+        (10, 2, NULL, '2019-01-15', 5.00, 'eee005', 1, 26),
         (4, 2, NULL, '2016-06-01', 12.00, 'ccc003', 1, 26),
         (5, 2, NULL, '2019-02-20', 8.00, 'ddd004', 1, 1);
     """, """
@@ -1008,6 +1016,10 @@ def test_latest_donation(testdb):
         (2, 18.00, 'EUR'),
         (3, 15.00, 'GBP'),
         (6, 10.00, 'USD'),
+        (7, 12.50, 'GBP'),
+        (8, 6.00, 'USD'),
+        (9, 15.00, 'GBP'),
+        (10, 4.00, 'GBP'),
         (4, 12.00, 'USD'),
         (5, 7.00, 'GBP');
     """, """
@@ -1034,7 +1046,9 @@ def test_latest_donation(testdb):
                both_funds_overall_latest_native_amount, both_funds_overall_latest_donation_source,
                AF_recurring_latest_donation_date, AF_recurring_latest_currency,
                AF_recurring_latest_currency_symbol, AF_recurring_latest_native_amount,
-               AF_recurring_latest_donation_source
+               AF_recurring_latest_donation_source,
+               both_funds_overall_latest_cy_native_total,
+               both_funds_overall_latest_cy_count
         from silverpop_export_view order by ContactID
     """)
     assert cursor.fetchone() == (
@@ -1042,12 +1056,14 @@ def test_latest_donation(testdb):
         'EUR', '€', Decimal('18.00'), 'Web',
         'GBP', '£', Decimal('15.00'), 'Recurring',
         '01/10/2020', 'GBP', '£', Decimal('15.00'), 'Recurring',
+        Decimal('27.50'), 2,
     )
     assert cursor.fetchone() == (
         '02/20/2019', '02/20/2019',
         'GBP', '£', Decimal('7.00'), '',
         'GBP', '£', Decimal('7.00'), '',
         '', '', '', Decimal('0.00'), '',
+        Decimal('11.00'), 2,
     )
 
 
