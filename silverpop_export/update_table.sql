@@ -31,7 +31,7 @@ SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 
 -- silverpop_missing_countries - support table for building the above table
 -- silverpop_email_map - summary table of contact data where we want 'the one that has this data', provides master_id
 --    for later filtering.
--- silverpop_export_stat aggregate data about contact's contibutions
+-- silverpop_export_stat aggregate data about contact's contributions
 -- silverpop_export_latest - data about contact's most recent donation
 -- silverpop_export_highest - data about contact's highest donation
 -- silverpop_export - collation of data from above tables
@@ -375,48 +375,97 @@ BEGIN;
 COMMIT;
 
 
--- 44m rows affected (23 min 16.153 sec)
+-- Contacts with a double opt-in activity for an email, to join below rather than
+-- doing a subquery for every row.
+-- A few seconds
+DROP TEMPORARY TABLE IF EXISTS double_opt_in_contact;
+CREATE TEMPORARY TABLE double_opt_in_contact (
+  contact_id INT UNSIGNED,
+  email VARCHAR(255),
+  PRIMARY KEY (contact_id, email)
+) COLLATE 'utf8mb4_unicode_ci'
+AS SELECT DISTINCT ac.contact_id, a.subject as email
+FROM civicrm.civicrm_activity a
+INNER JOIN civicrm.civicrm_activity_contact ac ON ac.activity_id = a.id
+WHERE ac.record_type_id = @activityTargets
+  AND a.activity_type_id = @doubleOptInType
+  AND a.subject IS NOT NULL;
+
+-- 46m rows affected (28 min 15.167 sec)
 INSERT INTO silverpop_email_map (
   email,
   master_email_id,
   address_id,
+  has_multiple_contacts,
   preferred_language,
   opted_out,
   opted_in,
+  do_not_solicit,
   modified_date,
   sms_consent,
   double_opt_in_activity
 )
   SELECT ex.email,
-    -- ex.all_funds_latest_otg_donation_date is this single contact row's own OTG date
-    -- stat.all_funds_latest_otg_donation_date is the MAX OTG date across every contact sharing this email
-    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
-    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
+    -- Only correct for emails with a single contact, emails shared between contacts
+    -- are updated with the details from the chosen contact below.
+    MAX(ex.id) as master_email_id,
+    MAX(ex.address_id) as address_id,
+    MIN(ex.id) <> MAX(ex.id) as has_multiple_contacts,
     # Use MAX to prefer non-blank
     MAX(ex.preferred_language) as preferred_language,
     # Use MAX as any opted out IS opted out.
     MAX(ex.opted_out) as opted_out,
-    # 0 if they have ever actually opted out, else 1
-    # we use this for filtering so do not need to preserve the nuance.
-    # This should be revisited per https://phabricator.wikimedia.org/T256522
-    MIN(IF (ex.opted_in = 0, 0, 1)) as opted_in,
+    # 0 if any contact said no, else 1 if any said yes, else NULL (no response).
+    IF(MAX(ex.opted_in = 0), 0, MAX(ex.opted_in)) as opted_in,
+    MAX(ex.do_not_solicit) as do_not_solicit,
     MAX(ex.modified_date) as modified_date,
     MAX(pc.opted_in) as sms_consent,
-    (EXISTS (
-      SELECT 1
-      FROM civicrm.civicrm_activity_contact ac
-      INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
-      WHERE ac.contact_id = ex.contact_id
-        AND ac.record_type_id = @activityTargets
-        AND a.activity_type_id = @doubleOptInType
-        AND a.subject = ex.email
-    )) as double_opt_in_activity
+    # Use MAX as any contact sharing the email confirming it counts.
+    MAX(doi.contact_id IS NOT NULL) as double_opt_in_activity
   FROM silverpop_export_staging ex
   INNER JOIN silverpop_export_stat stat
     ON ex.email = stat.email
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
+  LEFT JOIN double_opt_in_contact doi ON doi.contact_id = ex.contact_id AND doi.email = ex.email
   GROUP BY ex.email;
+
+DROP TEMPORARY TABLE double_opt_in_contact;
+
+-- For emails shared between contacts, rank the contacts to pick the master contact by:
+--   1. Individuals over Organizations
+--   2. the latest OTG donation
+--   3. the latest donation of any kind
+--   4. the lowest contact id
+-- Only a small fraction of emails are shared so this is much quicker than ranking all of them.
+-- 1m rows affected (59.457 sec)
+UPDATE silverpop_email_map map
+INNER JOIN (
+  SELECT email,
+    MAX(IF(master_rank = 1, id, NULL)) as master_email_id,
+    MAX(IF(address_rank = 1, address_id, NULL)) as address_id
+  FROM (
+    SELECT ex.email, ex.id, ex.address_id,
+      ROW_NUMBER() OVER (
+        PARTITION BY ex.email
+        ORDER BY c.contact_type <=> 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+      ) as master_rank,
+      -- Same ranking for the address, but any address is preferred over none.
+      ROW_NUMBER() OVER (
+        PARTITION BY ex.email
+        ORDER BY ex.address_id IS NULL, c.contact_type <=> 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+      ) as address_rank
+    FROM silverpop_email_map shared
+    INNER JOIN silverpop_export_staging ex ON ex.email = shared.email
+    LEFT JOIN civicrm.civicrm_contact c ON c.id = ex.contact_id
+    LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = ex.contact_id
+    WHERE shared.has_multiple_contacts = 1
+  ) ranked
+  WHERE master_rank = 1 OR address_rank = 1
+  GROUP BY email
+) best ON best.email = map.email
+SET map.master_email_id = best.master_email_id,
+  map.address_id = best.address_id;
 
 -- Populate table for highest donation amount and date
 BEGIN;
@@ -843,7 +892,7 @@ INSERT INTO silverpop_export (
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email, ex.opted_in, ex.do_not_solicit, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
+  ex.email, dedupe_table.opted_in, dedupe_table.do_not_solicit, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
   ex.employer_id, ex.employer_name,
   foundation_has_recurred_donation,
   foundation_has_active_recurring_donation,
@@ -861,7 +910,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(all_funds_lifetime_usd_total, 0) as all_funds_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
   stats.all_funds_latest_donation_date as all_funds_latest_donation_date,
-  ex.all_funds_latest_otg_donation_date as all_funds_latest_otg_donation_date,
+  stats.all_funds_latest_otg_donation_date as all_funds_latest_otg_donation_date,
   lt.latest_currency as latest_currency,
   lt.latest_currency_symbol as latest_currency_symbol,
   COALESCE(lt.latest_native_amount, 0) as latest_native_amount,

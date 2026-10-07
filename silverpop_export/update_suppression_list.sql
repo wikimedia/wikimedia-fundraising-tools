@@ -97,4 +97,5 @@ FROM silverpop_excluded
   LEFT JOIN silverpop_email_map s
   ON s.email = silverpop_excluded.email
 WHERE s.opted_out = 0
-  AND s.opted_in = 1;
+  -- no contact said no, unset is emailable
+  AND COALESCE(s.opted_in, 1) = 1;
