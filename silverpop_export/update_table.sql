@@ -448,12 +448,12 @@ INNER JOIN (
     SELECT ex.email, ex.id, ex.address_id,
       ROW_NUMBER() OVER (
         PARTITION BY ex.email
-        ORDER BY c.contact_type <=> 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+        ORDER BY c.contact_type = 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
       ) as master_rank,
       -- Same ranking for the address, but any address is preferred over none.
       ROW_NUMBER() OVER (
         PARTITION BY ex.email
-        ORDER BY ex.address_id IS NULL, c.contact_type <=> 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+        ORDER BY ex.address_id IS NULL, c.contact_type = 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
       ) as address_rank
     FROM silverpop_email_map shared
     INNER JOIN silverpop_export_staging ex ON ex.email = shared.email
@@ -684,34 +684,43 @@ WHERE most_recent_cancel_date > DATE_SUB(foundation_recurring_latest_donation_da
   AND r.cancel_date > '2024-06-01'
 GROUP BY recur.email;
 
--- Native amount totals & counts per currency for all donations (OTG & recurring) in the
--- calendar year of each email's overall latest donation, for use in the latest table below.
--- 1m45s for 600k contacts
+-- Native amount totals & counts for all donations (OTG & recurring) in the calendar year
+-- of each email's overall latest donation, for use in the latest table below.
+-- The total only includes donations in the currency of the most recent donation row
+-- (only ~14k donors donate in two currencies each year); the count includes all currencies.
+-- This will always match both_funds_latest_currency and will be used in combination.
+-- 2m45s for 600k contacts
 DROP TEMPORARY TABLE IF EXISTS silverpop_latest_cy_total;
 CREATE TEMPORARY TABLE silverpop_latest_cy_total (
-  email VARCHAR(255),
-  currency VARCHAR(3),
+  email VARCHAR(255) PRIMARY KEY,
   native_total DECIMAL(20, 2),
-  donation_count INT UNSIGNED,
-  PRIMARY KEY (email, currency)
+  donation_count INT UNSIGNED
 ) COLLATE 'utf8mb4_unicode_ci'
 AS SELECT
-  t.email,
-  extra.original_currency as currency,
-  SUM(extra.original_amount) as native_total,
+  year_donation.email,
+  SUM(IF(year_donation.original_currency = year_donation.latest_currency, year_donation.original_amount, 0)) as native_total,
   COUNT(*) as donation_count
-FROM silverpop_update_world t
-  INNER JOIN silverpop_export_stat export ON t.email = export.email
-  INNER JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
-  INNER JOIN civicrm.civicrm_contribution c ON c.contact_id = email.contact_id
-    AND c.contribution_status_id = 1
-    AND c.total_amount > 0
-    AND c.receive_date >= MAKEDATE(YEAR(export.all_funds_latest_donation_date), 1)
-    AND c.receive_date < MAKEDATE(YEAR(export.all_funds_latest_donation_date) + 1, 1)
-  -- NULL currency can't match the latest currency below, and would violate the primary key.
-  INNER JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
-    AND extra.original_currency IS NOT NULL
-GROUP BY t.email, extra.original_currency;
+FROM (
+  SELECT
+    t.email,
+    extra.original_currency,
+    extra.original_amount,
+    FIRST_VALUE(extra.original_currency) OVER (
+      PARTITION BY t.email
+      ORDER BY c.receive_date DESC, c.id DESC
+    ) as latest_currency
+  FROM silverpop_update_world t
+    INNER JOIN silverpop_export_stat export ON t.email = export.email
+    INNER JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
+    INNER JOIN civicrm.civicrm_contribution c ON c.contact_id = email.contact_id
+      AND c.contribution_status_id = 1
+      AND c.total_amount > 0
+      AND c.receive_date >= MAKEDATE(YEAR(export.all_funds_latest_donation_date), 1)
+      AND c.receive_date < MAKEDATE(YEAR(export.all_funds_latest_donation_date) + 1, 1)
+    INNER JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+      AND extra.original_currency IS NOT NULL
+) year_donation
+GROUP BY year_donation.email;
 
 -- Find the latest OTG and recurring donation info for each email address.
 -- Run after silverpop_has_recur is populated above so we can match the recurring
@@ -769,12 +778,7 @@ INSERT INTO silverpop_export_latest (
     LEFT JOIN civicrm.civicrm_value_1_gift_data_7 recur_gift ON recur_gift.entity_id = recur_c.id
     LEFT JOIN civicrm.wmf_contribution_extra recur_extra ON recur_extra.entity_id = recur_c.id
     LEFT JOIN civicrm.civicrm_currency recur_cur ON recur_cur.name = recur_extra.original_currency
-    -- Overall latest currency is the OTG one if the overall latest donation was OTG, or recur if recur.
-    -- Rows for donations not in the latest donation currency for the email are simply ignored
-    -- (only ~14k donors donate in two currencies each year).
     LEFT JOIN silverpop_latest_cy_total year_total ON year_total.email = t.email
-      AND year_total.currency = IF(export.all_funds_latest_donation_date = export.all_funds_latest_otg_donation_date,
-        extra.original_currency, recur_extra.original_currency)
     GROUP BY t.email;
 COMMIT;
 DROP TEMPORARY TABLE silverpop_latest_cy_total;

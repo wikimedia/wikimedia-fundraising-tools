@@ -983,7 +983,10 @@ def test_latest_donation(testdb):
 
     Also test that both_funds_overall_latest_cy_native_total & _cy_count
     include donations from both funds in the calendar year of the overall
-    latest donation, only including those in the latest currency donated in.
+    latest donation, with the total only including those in the latest
+    currency donated in, and the count including all currencies. The latest
+    currency (EUR) sorts before the other currency that year (USD) so that
+    picking the MAX currency would give the wrong total.
     '''
     conn, db_name = testdb
 
@@ -1014,11 +1017,11 @@ def test_latest_donation(testdb):
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 5.00, 'USD'),
         (2, 18.00, 'EUR'),
-        (3, 15.00, 'GBP'),
+        (3, 15.00, 'EUR'),
         (6, 10.00, 'USD'),
-        (7, 12.50, 'GBP'),
+        (7, 12.50, 'EUR'),
         (8, 6.00, 'USD'),
-        (9, 15.00, 'GBP'),
+        (9, 15.00, 'EUR'),
         (10, 4.00, 'GBP'),
         (4, 12.00, 'USD'),
         (5, 7.00, 'GBP');
@@ -1029,7 +1032,7 @@ def test_latest_donation(testdb):
         (3, 6, 'OldRecurring');
     """, """
     insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date, last_otg_donation_date) values
-        (1, 18.00, 20.00, 'EUR', '2020-01-10', '2018-09-15'),
+        (1, 15.00, 15.00, 'EUR', '2020-01-10', '2018-09-15'),
         (2, 7.00, 8.00, 'GBP', '2019-02-20', '2019-02-20');
     """])
 
@@ -1054,9 +1057,9 @@ def test_latest_donation(testdb):
     assert cursor.fetchone() == (
         '09/15/2018', '01/10/2020',
         'EUR', '€', Decimal('18.00'), 'Web',
-        'GBP', '£', Decimal('15.00'), 'Recurring',
-        '01/10/2020', 'GBP', '£', Decimal('15.00'), 'Recurring',
-        Decimal('27.50'), 2,
+        'EUR', '€', Decimal('15.00'), 'Recurring',
+        '01/10/2020', 'EUR', '€', Decimal('15.00'), 'Recurring',
+        Decimal('27.50'), 3,
     )
     assert cursor.fetchone() == (
         '02/20/2019', '02/20/2019',
