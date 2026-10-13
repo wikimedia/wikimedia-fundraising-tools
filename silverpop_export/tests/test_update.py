@@ -70,6 +70,98 @@ def test_duplicate(testdb):
     assert cursor.fetchone() == (1,)
 
 
+def test_duplicate_email_selection(testdb):
+    '''
+    Test how the master contact is chosen for an email shared between contacts, with one
+    email per step where only that step picks the right contact:
+      1. Individuals over Organizations
+      2. the latest OTG donation
+      3. the latest donation of any kind
+      4. the lowest contact id
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 2, 'individual@localhost', 1, 0),
+        (2, 1, 'individual@localhost', 1, 0),
+        (3, 5, 'otg@localhost', 1, 0),
+        (4, 3, 'otg@localhost', 1, 0),
+        (5, 4, 'otg@localhost', 1, 0),
+        (6, 7, 'anydonation@localhost', 1, 0),
+        (7, 6, 'anydonation@localhost', 1, 0),
+        (8, 8, 'lowestid@localhost', 1, 0),
+        (9, 9, 'lowestid@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
+    """, """
+    update civicrm_contact set contact_type = 'Organization' where id = 1;
+    """, """
+    insert into wmf_donor (entity_id, last_otg_donation_date, all_funds_last_donation_date) values
+        -- the Organization has the latest donation, but the Individual wins
+        (1, '2025-01-01', '2025-01-01'),
+        (2, '2023-01-01', '2023-01-01'),
+        -- contact 5 has the latest OTG donation, over 3 and 4 with later recurring donations
+        (3, '2023-01-01', '2024-06-01'),
+        (4, NULL, '2025-06-01'),
+        (5, '2024-01-01', '2024-01-01'),
+        -- no OTG donations, contact 7 has the latest recurring donation
+        (6, NULL, '2024-01-01'),
+        (7, NULL, '2025-01-01');
+        -- no donations for 8 & 9, the lowest contact id wins
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email, contact_id from silverpop_export order by id")
+    assert cursor.fetchall() == (
+        ('individual@localhost', 2),
+        ('otg@localhost', 5),
+        ('anydonation@localhost', 7),
+        ('lowestid@localhost', 8),
+    )
+
+
+def test_duplicate_opted_in_any_no_wins(testdb):
+    '''
+    Test that opted_in for a shared email is 0 if any contact sharing it said no,
+    else 1 if any said yes, and stays NULL if no contact has responded.
+    '''
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+    insert into civicrm_email (id, contact_id, email, is_primary, on_hold) values
+        (1, 1, 'anyno@localhost', 1, 0),
+        (2, 2, 'anyno@localhost', 1, 0),
+        (3, 3, 'anyno@localhost', 1, 0),
+        (4, 4, 'yes@localhost', 1, 0),
+        (5, 5, 'yes@localhost', 1, 0),
+        (6, 6, 'noresponse@localhost', 1, 0);
+    """, """
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
+    """, """
+    -- the master is the lowest contact id, the responses that should win are on other contacts
+    insert into civicrm_value_1_communication_4 (id, entity_id, opt_in) values
+        (1, 1, NULL),
+        (2, 2, 1),
+        (3, 3, 0),
+        (4, 4, NULL),
+        (5, 5, 1),
+        (6, 6, NULL);
+    """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("select email, opted_in from silverpop_export order by id")
+    assert cursor.fetchall() == (
+        ('anyno@localhost', 0),
+        ('yes@localhost', 1),
+        ('noresponse@localhost', None),
+    )
+
+
 def test_tag(testdb):
     '''
     Test that we export preference tags.
@@ -888,6 +980,13 @@ def test_latest_donation(testdb):
     included) latest donation, and that AF_recurring_latest_currency/
     native_amount/currency_symbol/donation_source reflect the contact's most
     recent recurring contribution.
+
+    Also test that both_funds_overall_latest_cy_native_total & _cy_count
+    include donations from both funds in the calendar year of the overall
+    latest donation, with the total only including those in the latest
+    currency donated in, and the count including all currencies. The latest
+    currency (EUR) sorts before the other currency that year (USD) so that
+    picking the MAX currency would give the wrong total.
     '''
     conn, db_name = testdb
 
@@ -908,14 +1007,22 @@ def test_latest_donation(testdb):
         (2, 1, NULL, '2018-09-15', 20.00, 'bbb002', 1, 26),
         (3, 1, 1, '2020-01-10', 15.00, 'rec001', 1, 1),
         (6, 1, 1, '2019-05-05', 10.00, 'rec002', 1, 1),
+        (7, 1, 1, '2020-01-05', 14.00, 'rec003', 1, 1),
+        (8, 1, 1, '2020-01-03', 6.00, 'rec004', 1, 1),
+        (9, 1, 1, '2019-12-31', 15.00, 'rec005', 1, 1),
+        (10, 2, NULL, '2019-01-15', 5.00, 'eee005', 1, 26),
         (4, 2, NULL, '2016-06-01', 12.00, 'ccc003', 1, 26),
         (5, 2, NULL, '2019-02-20', 8.00, 'ddd004', 1, 1);
     """, """
     insert into wmf_contribution_extra (entity_id, original_amount, original_currency) values
         (1, 5.00, 'USD'),
         (2, 18.00, 'EUR'),
-        (3, 15.00, 'GBP'),
+        (3, 15.00, 'EUR'),
         (6, 10.00, 'USD'),
+        (7, 12.50, 'EUR'),
+        (8, 6.00, 'USD'),
+        (9, 15.00, 'EUR'),
+        (10, 4.00, 'GBP'),
         (4, 12.00, 'USD'),
         (5, 7.00, 'GBP');
     """, """
@@ -925,7 +1032,7 @@ def test_latest_donation(testdb):
         (3, 6, 'OldRecurring');
     """, """
     insert into wmf_donor (entity_id, last_donation_amount, last_donation_usd, last_donation_currency, all_funds_last_donation_date, last_otg_donation_date) values
-        (1, 18.00, 20.00, 'EUR', '2020-01-10', '2018-09-15'),
+        (1, 15.00, 15.00, 'EUR', '2020-01-10', '2018-09-15'),
         (2, 7.00, 8.00, 'GBP', '2019-02-20', '2019-02-20');
     """])
 
@@ -942,20 +1049,24 @@ def test_latest_donation(testdb):
                both_funds_overall_latest_native_amount, both_funds_overall_latest_donation_source,
                AF_recurring_latest_donation_date, AF_recurring_latest_currency,
                AF_recurring_latest_currency_symbol, AF_recurring_latest_native_amount,
-               AF_recurring_latest_donation_source
+               AF_recurring_latest_donation_source,
+               both_funds_overall_latest_cy_native_total,
+               both_funds_overall_latest_cy_count
         from silverpop_export_view order by ContactID
     """)
     assert cursor.fetchone() == (
         '09/15/2018', '01/10/2020',
         'EUR', '€', Decimal('18.00'), 'Web',
-        'GBP', '£', Decimal('15.00'), 'Recurring',
-        '01/10/2020', 'GBP', '£', Decimal('15.00'), 'Recurring',
+        'EUR', '€', Decimal('15.00'), 'Recurring',
+        '01/10/2020', 'EUR', '€', Decimal('15.00'), 'Recurring',
+        Decimal('27.50'), 3,
     )
     assert cursor.fetchone() == (
         '02/20/2019', '02/20/2019',
         'GBP', '£', Decimal('7.00'), '',
         'GBP', '£', Decimal('7.00'), '',
         '', '', '', Decimal('0.00'), '',
+        Decimal('11.00'), 2,
     )
 
 
@@ -1796,7 +1907,8 @@ def test_sms_donateform_optin(testdb):
 
 def test_double_opt_in(testdb):
     '''
-    Test that we set double_opt_in_activity = 1 if an activity exists.
+    Test that we set double_opt_in_activity = 1 if an activity exists for the email,
+    including when it is on another contact sharing the email rather than the master contact.
     '''
     conn, db_name = testdb
 
@@ -1804,29 +1916,34 @@ def test_double_opt_in(testdb):
     insert into civicrm_email (contact_id, email, is_primary, on_hold) values
         (1, 'person1@localhost', 1, 0),
         (2, 'person2@localhost', 1, 0),
-        (3, 'person3@localhost', 1, 0);
+        (3, 'person3@localhost', 1, 0),
+        (4, 'shared@localhost', 1, 0),
+        (5, 'shared@localhost', 1, 0);
     """, """
-    insert into civicrm_contact (id, modified_date) values
-        (1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (2, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-        (3, DATE_SUB(NOW(), INTERVAL 1 DAY));
+    insert into civicrm_contact (id, modified_date)
+    select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+    from civicrm_email;
     """, """
     insert into civicrm_activity_contact (activity_id, contact_id, record_type_id) values
         (1, 2, 3),
-        (2, 3, 3);
+        (2, 3, 3),
+        (3, 5, 3);
     """, """
     insert into civicrm_activity (id, activity_type_id, status_id, activity_date_time, subject) values
         (1, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'person2@localhost'),
-        (2, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'nottherightemail@localhost');
+        (2, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'nottherightemail@localhost'),
+        (3, 220, 2, DATE_SUB(NOW(), INTERVAL 1 MONTH), 'shared@localhost');
     """])
 
     cursor = conn.db_conn.cursor()
-    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person1@localhost'")
-    assert cursor.fetchone() == ("No",)
-    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person2@localhost'")
-    assert cursor.fetchone() == ("Yes",)
-    cursor.execute("select double_opt_in_activity from silverpop_export_view WHERE email = 'person3@localhost'")
-    assert cursor.fetchone() == ("No",)
+    cursor.execute("select email, ContactID, double_opt_in_activity from silverpop_export_view order by email")
+    assert cursor.fetchall() == (
+        ('person1@localhost', 1, 'No'),
+        ('person2@localhost', 2, 'Yes'),
+        ('person3@localhost', 3, 'No'),
+        # The activity is on contact 5, but contact 4 is the master contact
+        ('shared@localhost', 4, 'Yes'),
+    )
 
 
 def test_opted_out_email_but_sms_consent_included(testdb):

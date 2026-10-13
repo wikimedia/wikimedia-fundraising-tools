@@ -31,7 +31,7 @@ SELECT @matchedGiftType := value FROM civicrm.civicrm_option_value WHERE name = 
 -- silverpop_missing_countries - support table for building the above table
 -- silverpop_email_map - summary table of contact data where we want 'the one that has this data', provides master_id
 --    for later filtering.
--- silverpop_export_stat aggregate data about contact's contibutions
+-- silverpop_export_stat aggregate data about contact's contributions
 -- silverpop_export_latest - data about contact's most recent donation
 -- silverpop_export_highest - data about contact's highest donation
 -- silverpop_export - collation of data from above tables
@@ -375,48 +375,97 @@ BEGIN;
 COMMIT;
 
 
--- 44m rows affected (23 min 16.153 sec)
+-- Contacts with a double opt-in activity for an email, to join below rather than
+-- doing a subquery for every row.
+-- A few seconds
+DROP TEMPORARY TABLE IF EXISTS double_opt_in_contact;
+CREATE TEMPORARY TABLE double_opt_in_contact (
+  contact_id INT UNSIGNED,
+  email VARCHAR(255),
+  PRIMARY KEY (contact_id, email)
+) COLLATE 'utf8mb4_unicode_ci'
+AS SELECT DISTINCT ac.contact_id, a.subject as email
+FROM civicrm.civicrm_activity a
+INNER JOIN civicrm.civicrm_activity_contact ac ON ac.activity_id = a.id
+WHERE ac.record_type_id = @activityTargets
+  AND a.activity_type_id = @doubleOptInType
+  AND a.subject IS NOT NULL;
+
+-- 46m rows affected (28 min 15.167 sec)
 INSERT INTO silverpop_email_map (
   email,
   master_email_id,
   address_id,
+  has_multiple_contacts,
   preferred_language,
   opted_out,
   opted_in,
+  do_not_solicit,
   modified_date,
   sms_consent,
   double_opt_in_activity
 )
   SELECT ex.email,
-    -- ex.all_funds_latest_otg_donation_date is this single contact row's own OTG date
-    -- stat.all_funds_latest_otg_donation_date is the MAX OTG date across every contact sharing this email
-    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.id, NULL)), MAX(ex.id)) as master_email_id,
-    COALESCE(MAX(if(ex.all_funds_latest_otg_donation_date = stat.all_funds_latest_otg_donation_date, ex.address_id, NULL)), MAX(address_id)) as address_id,
+    -- Only correct for emails with a single contact, emails shared between contacts
+    -- are updated with the details from the chosen contact below.
+    MAX(ex.id) as master_email_id,
+    MAX(ex.address_id) as address_id,
+    MIN(ex.id) <> MAX(ex.id) as has_multiple_contacts,
     # Use MAX to prefer non-blank
     MAX(ex.preferred_language) as preferred_language,
     # Use MAX as any opted out IS opted out.
     MAX(ex.opted_out) as opted_out,
-    # 0 if they have ever actually opted out, else 1
-    # we use this for filtering so do not need to preserve the nuance.
-    # This should be revisited per https://phabricator.wikimedia.org/T256522
-    MIN(IF (ex.opted_in = 0, 0, 1)) as opted_in,
+    # 0 if any contact said no, else 1 if any said yes, else NULL (no response).
+    IF(MAX(ex.opted_in = 0), 0, MAX(ex.opted_in)) as opted_in,
+    MAX(ex.do_not_solicit) as do_not_solicit,
     MAX(ex.modified_date) as modified_date,
     MAX(pc.opted_in) as sms_consent,
-    (EXISTS (
-      SELECT 1
-      FROM civicrm.civicrm_activity_contact ac
-      INNER JOIN civicrm.civicrm_activity a ON a.id = ac.activity_id
-      WHERE ac.contact_id = ex.contact_id
-        AND ac.record_type_id = @activityTargets
-        AND a.activity_type_id = @doubleOptInType
-        AND a.subject = ex.email
-    )) as double_opt_in_activity
+    # Use MAX as any contact sharing the email confirming it counts.
+    MAX(doi.contact_id IS NOT NULL) as double_opt_in_activity
   FROM silverpop_export_staging ex
   INNER JOIN silverpop_export_stat stat
     ON ex.email = stat.email
   LEFT JOIN civicrm.civicrm_phone p ON ex.contact_id = p.contact_id
   LEFT JOIN civicrm.civicrm_phone_consent pc ON pc.phone_number = p.phone_numeric
+  LEFT JOIN double_opt_in_contact doi ON doi.contact_id = ex.contact_id AND doi.email = ex.email
   GROUP BY ex.email;
+
+DROP TEMPORARY TABLE double_opt_in_contact;
+
+-- For emails shared between contacts, rank the contacts to pick the master contact by:
+--   1. Individuals over Organizations
+--   2. the latest OTG donation
+--   3. the latest donation of any kind
+--   4. the lowest contact id
+-- Only a small fraction of emails are shared so this is much quicker than ranking all of them.
+-- 1m rows affected (59.457 sec)
+UPDATE silverpop_email_map map
+INNER JOIN (
+  SELECT email,
+    MAX(IF(master_rank = 1, id, NULL)) as master_email_id,
+    MAX(IF(address_rank = 1, address_id, NULL)) as address_id
+  FROM (
+    SELECT ex.email, ex.id, ex.address_id,
+      ROW_NUMBER() OVER (
+        PARTITION BY ex.email
+        ORDER BY c.contact_type = 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+      ) as master_rank,
+      -- Same ranking for the address, but any address is preferred over none.
+      ROW_NUMBER() OVER (
+        PARTITION BY ex.email
+        ORDER BY ex.address_id IS NULL, c.contact_type = 'Individual' DESC, donor.last_otg_donation_date DESC, donor.all_funds_last_donation_date DESC, ex.contact_id
+      ) as address_rank
+    FROM silverpop_email_map shared
+    INNER JOIN silverpop_export_staging ex ON ex.email = shared.email
+    LEFT JOIN civicrm.civicrm_contact c ON c.id = ex.contact_id
+    LEFT JOIN civicrm.wmf_donor donor ON donor.entity_id = ex.contact_id
+    WHERE shared.has_multiple_contacts = 1
+  ) ranked
+  WHERE master_rank = 1 OR address_rank = 1
+  GROUP BY email
+) best ON best.email = map.email
+SET map.master_email_id = best.master_email_id,
+  map.address_id = best.address_id;
 
 -- Populate table for highest donation amount and date
 BEGIN;
@@ -635,6 +684,44 @@ WHERE most_recent_cancel_date > DATE_SUB(foundation_recurring_latest_donation_da
   AND r.cancel_date > '2024-06-01'
 GROUP BY recur.email;
 
+-- Native amount totals & counts for all donations (OTG & recurring) in the calendar year
+-- of each email's overall latest donation, for use in the latest table below.
+-- The total only includes donations in the currency of the most recent donation row
+-- (only ~14k donors donate in two currencies each year); the count includes all currencies.
+-- This will always match both_funds_latest_currency and will be used in combination.
+-- 2m45s for 600k contacts
+DROP TEMPORARY TABLE IF EXISTS silverpop_latest_cy_total;
+CREATE TEMPORARY TABLE silverpop_latest_cy_total (
+  email VARCHAR(255) PRIMARY KEY,
+  native_total DECIMAL(20, 2),
+  donation_count INT UNSIGNED
+) COLLATE 'utf8mb4_unicode_ci'
+AS SELECT
+  year_donation.email,
+  SUM(IF(year_donation.original_currency = year_donation.latest_currency, year_donation.original_amount, 0)) as native_total,
+  COUNT(*) as donation_count
+FROM (
+  SELECT
+    t.email,
+    extra.original_currency,
+    extra.original_amount,
+    FIRST_VALUE(extra.original_currency) OVER (
+      PARTITION BY t.email
+      ORDER BY c.receive_date DESC, c.id DESC
+    ) as latest_currency
+  FROM silverpop_update_world t
+    INNER JOIN silverpop_export_stat export ON t.email = export.email
+    INNER JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
+    INNER JOIN civicrm.civicrm_contribution c ON c.contact_id = email.contact_id
+      AND c.contribution_status_id = 1
+      AND c.total_amount > 0
+      AND c.receive_date >= MAKEDATE(YEAR(export.all_funds_latest_donation_date), 1)
+      AND c.receive_date < MAKEDATE(YEAR(export.all_funds_latest_donation_date) + 1, 1)
+    INNER JOIN civicrm.wmf_contribution_extra extra ON extra.entity_id = c.id
+      AND extra.original_currency IS NOT NULL
+) year_donation
+GROUP BY year_donation.email;
+
 -- Find the latest OTG and recurring donation info for each email address.
 -- Run after silverpop_has_recur is populated above so we can match the recurring
 -- donation against its already-computed foundation_recurring_latest_donation_date.
@@ -652,7 +739,9 @@ INSERT INTO silverpop_export_latest (
    recurring_latest_currency,
    recurring_latest_currency_symbol,
    recurring_latest_native_amount,
-   recurring_latest_donation_source
+   recurring_latest_donation_source,
+   latest_cy_native_total,
+   latest_cy_count
 )
   SELECT
     t.email,
@@ -663,7 +752,9 @@ INSERT INTO silverpop_export_latest (
     MAX(recur_extra.original_currency) as recurring_latest_currency,
     MAX(recur_cur.symbol) as recurring_latest_currency_symbol,
     MAX(recur_extra.original_amount) as recurring_latest_native_amount,
-    MAX(recur_gift.channel) as recurring_latest_donation_source
+    MAX(recur_gift.channel) as recurring_latest_donation_source,
+    MAX(year_total.native_total) as latest_cy_native_total,
+    MAX(year_total.donation_count) as latest_cy_count
   FROM silverpop_update_world t
     INNER JOIN silverpop_export_stat export ON t.email = export.email
     LEFT JOIN civicrm.civicrm_email email ON email.email = export.email AND email.is_primary = 1
@@ -687,8 +778,10 @@ INSERT INTO silverpop_export_latest (
     LEFT JOIN civicrm.civicrm_value_1_gift_data_7 recur_gift ON recur_gift.entity_id = recur_c.id
     LEFT JOIN civicrm.wmf_contribution_extra recur_extra ON recur_extra.entity_id = recur_c.id
     LEFT JOIN civicrm.civicrm_currency recur_cur ON recur_cur.name = recur_extra.original_currency
+    LEFT JOIN silverpop_latest_cy_total year_total ON year_total.email = t.email
     GROUP BY t.email;
 COMMIT;
+DROP TEMPORARY TABLE silverpop_latest_cy_total;
 
 BEGIN;
 -- Delete recent rows from silverpop_latest_direct_mail table (make way for updated version).
@@ -843,7 +936,7 @@ INSERT INTO silverpop_export (
 SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first_name,ex.last_name,
   -- get the one associated with the master email, failing that 'any'
   COALESCE(ex.preferred_language, dedupe_table.preferred_language) as preferred_language,
-  ex.email, ex.opted_in, ex.do_not_solicit, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
+  ex.email, dedupe_table.opted_in, dedupe_table.do_not_solicit, dedupe_table.opted_out, dedupe_table.sms_consent, dedupe_table.double_opt_in_activity,
   ex.employer_id, ex.employer_name,
   foundation_has_recurred_donation,
   foundation_has_active_recurring_donation,
@@ -861,7 +954,7 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
   COALESCE(all_funds_lifetime_usd_total, 0) as all_funds_lifetime_usd_total,
   COALESCE(foundation_donation_count, 0) as foundation_donation_count,
   stats.all_funds_latest_donation_date as all_funds_latest_donation_date,
-  ex.all_funds_latest_otg_donation_date as all_funds_latest_otg_donation_date,
+  stats.all_funds_latest_otg_donation_date as all_funds_latest_otg_donation_date,
   lt.latest_currency as latest_currency,
   lt.latest_currency_symbol as latest_currency_symbol,
   COALESCE(lt.latest_native_amount, 0) as latest_native_amount,
@@ -893,9 +986,6 @@ SELECT ex.id, dedupe_table.modified_date, ex.contact_id,ex.contact_hash,ex.first
       AND IFNULL(recur.paypal_direct_recurring, 0) = 0, 1, 0) as is_eligible_for_donor_portal
 FROM silverpop_update_world t
 INNER JOIN silverpop_export_staging ex ON t.email = ex.email
--- this inner join is restricting us to only one record per email.
--- currently it is the highest email_id. Ideally it will later to change to
--- email_id associated with the highest donation.
 INNER JOIN silverpop_email_map dedupe_table ON ex.id = dedupe_table.master_email_id
 INNER JOIN silverpop_export_stat stats ON stats.email = dedupe_table.email
 LEFT JOIN silverpop_has_recur recur ON recur.email = dedupe_table.email
@@ -1158,6 +1248,8 @@ CREATE OR REPLACE VIEW silverpop_export_view_full AS
       THEN COALESCE(latest.latest_native_amount, 0) ELSE COALESCE(latest.recurring_latest_native_amount, 0) END as both_funds_overall_latest_native_amount,
     CASE WHEN all_funds_latest_donation_date = all_funds_latest_otg_donation_date
       THEN COALESCE(latest.latest_donation_source, '') ELSE COALESCE(latest.recurring_latest_donation_source, '') END as both_funds_overall_latest_donation_source,
+    COALESCE(latest.latest_cy_native_total, 0) as both_funds_overall_latest_cy_native_total,
+    COALESCE(latest.latest_cy_count, 0) as both_funds_overall_latest_cy_count,
     IF(foundation_has_recurred_donation, 'Yes', 'No') as AF_has_recurred_donation,
     IF(foundation_has_active_recurring_donation, 'Yes', 'No') as AF_has_active_recurring_donation,
     IFNULL(DATE_FORMAT(foundation_recurring_first_donation_date, '%m/%d/%Y'), '') as AF_recurring_first_donation_date,
@@ -1323,6 +1415,8 @@ both_funds_overall_latest_currency,
 both_funds_overall_latest_currency_symbol,
 both_funds_overall_latest_native_amount,
 both_funds_overall_latest_donation_source,
+both_funds_overall_latest_cy_native_total,
+both_funds_overall_latest_cy_count,
 both_funds_usd_total_fy1920,
 both_funds_usd_total_fy2021,
 both_funds_usd_total_fy2122,

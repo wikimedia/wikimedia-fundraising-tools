@@ -40,9 +40,11 @@ CREATE TABLE IF NOT EXISTS `silverpop_email_map`
   `email` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `master_email_id` INT(16) NOT NULL,
   `address_id` INT(16) DEFAULT NULL,
+  `has_multiple_contacts` TINYINT(1) DEFAULT 0,
   `preferred_language` VARCHAR(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `opted_out` TINYINT(1) DEFAULT NULL,
   `opted_in` TINYINT(1) DEFAULT NULL,
+  `do_not_solicit` TINYINT(1) DEFAULT NULL,
   `modified_date` DATETIME NULL,
   `sms_consent` TINYINT(1) DEFAULT 0,
   `double_opt_in_activity` TINYINT(1) DEFAULT 0,
@@ -63,7 +65,9 @@ CREATE TABLE IF NOT EXISTS silverpop_export_latest
   recurring_latest_currency VARCHAR(3),
   recurring_latest_currency_symbol VARCHAR(8),
   recurring_latest_native_amount DECIMAL(20, 2),
-  recurring_latest_donation_source VARCHAR(64)
+  recurring_latest_donation_source VARCHAR(64),
+  latest_cy_native_total DECIMAL(20, 2),
+  latest_cy_count INT UNSIGNED
 ) COLLATE 'utf8mb4_unicode_ci';
 
 CREATE TABLE IF NOT EXISTS `silverpop_endowment_highest` (
