@@ -1548,6 +1548,42 @@ def test_recurring_latest_donation_date_by_frequency(testdb):
     assert cursor.fetchone() == ('07/07/2018', '', '07/07/2018')
 
 
+def test_recurring_latest_cancel_date(testdb):
+    """
+    AF_recurring_latest_cancel_date should be the latest cancel_date across all
+    the contact's recurring contributions, and blank when none have been cancelled.
+    """
+    conn, db_name = testdb
+
+    run_update_with_fixtures(testdb, fixture_queries=["""
+        insert into civicrm_email (contact_id, email, is_primary, on_hold) values
+            (1, 'twocancels@localhost', 1, 0),
+            (2, 'nocancel@localhost', 1, 0);
+        """, """
+        insert into civicrm_contact (id, modified_date)
+        select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
+        from civicrm_email;
+        """, """
+        insert into civicrm_contribution_recur (id, contact_id, amount, currency, contribution_status_id, cancel_date) values
+            (1, 1, 1.01, 'USD', 3, '2021-02-03'),
+            (2, 1, 2.02, 'USD', 3, '2023-04-05'),
+            (3, 1, 3.03, 'USD', 5, NULL),
+            (4, 2, 4.04, 'USD', 5, NULL);
+        """])
+
+    cursor = conn.db_conn.cursor()
+    cursor.execute("""
+        select AF_recurring_latest_cancel_date
+        from silverpop_export_view_full where email = 'twocancels@localhost'
+    """)
+    assert cursor.fetchone() == ('04/05/2023',)
+    cursor.execute("""
+        select AF_recurring_latest_cancel_date
+        from silverpop_export_view_full where email = 'nocancel@localhost'
+    """)
+    assert cursor.fetchone() == ('',)
+
+
 def test_recurring_upgrade_eligibility(testdb):
     """
     Test that we correctly calculate who is eligible for a recurring upgrade solicitation.

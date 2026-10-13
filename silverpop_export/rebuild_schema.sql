@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS silverpop_export
   foundation_recurring_latest_donation_date DATETIME,
   foundation_recurring_month_latest_donation_date DATETIME,
   foundation_recurring_year_latest_donation_date DATETIME,
+  foundation_recurring_latest_cancel_date DATETIME,
   foundation_recurring_active_count TINYINT UNSIGNED, -- First donor with 256 active recurrings wins a prize
   foundation_recurring_latest_contribution_recur_id INT(10),
   recurring_has_upgrade_activity TINYINT(1),
