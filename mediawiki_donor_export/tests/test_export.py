@@ -16,19 +16,33 @@ from mediawiki_donor_export import export
 
 def test_export(testdb):  # noqa: F811
     """
-    Smoke test: export produces a CSV with the right columns, and
-    donor_status_otg / donor_status_recur_overall map to the expected
-    relationship_type, including CASE precedence when a donor matches
-    more than one condition.
+    Smoke test: export produces a CSV with no header row, and each
+    donor_status_otg / donor_status_recur_overall value gives the expected
+    relationship_type. When a donor matches more than one rule, the rule
+    that comes first in the export query is used.
     """
     run_update_with_fixtures(testdb, fixture_queries=["""
         insert into civicrm_email (contact_id, email, is_primary, on_hold) values
-            (1, 'sustaining@localhost', 1, 0),
-            (2, 'returning@localhost', 1, 0),
-            (3, 'new@localhost', 1, 0),
-            (4, 'lapsed-recur@localhost', 1, 0),
-            (5, 'lapsed-otg@localhost', 1, 0),
-            (6, 'reader@localhost', 1, 0);
+            (1, 'recur-active@localhost', 1, 0),
+            (2, 'recur-new@localhost', 1, 0),
+            (3, 'recur-paused@localhost', 1, 0),
+            (4, 'recur-failing@localhost', 1, 0),
+            (5, 'recur-active-and-otg-consecutive@localhost', 1, 0),
+            (6, 'otg-consecutive@localhost', 1, 0),
+            (7, 'otg-reactivated@localhost', 1, 0),
+            (8, 'otg-consecutive-last-year@localhost', 1, 0),
+            (9, 'otg-reactivated-last-year@localhost', 1, 0),
+            (10, 'otg-consecutive-and-recur-failed@localhost', 1, 0),
+            (11, 'otg-new@localhost', 1, 0),
+            (12, 'otg-new-last-year@localhost', 1, 0),
+            (13, 'otg-new-and-recur-cancelled@localhost', 1, 0),
+            (14, 'recur-failed@localhost', 1, 0),
+            (15, 'recur-cancelled@localhost', 1, 0),
+            (16, 'otg-lapsed@localhost', 1, 0),
+            (17, 'otg-deep-lapsed@localhost', 1, 0),
+            (18, 'otg-ultra-lapsed@localhost', 1, 0),
+            (19, 'otg-lapsed-and-recur-failed@localhost', 1, 0),
+            (20, 'reader@localhost', 1, 0);
     """, """
         insert into civicrm_contact (id, modified_date)
         select distinct contact_id, DATE_SUB(NOW(), INTERVAL 1 DAY)
@@ -39,12 +53,31 @@ def test_export(testdb):  # noqa: F811
         from civicrm_contact;
     """, """
         insert into wmf_donor (entity_id, donor_status_otg, donor_status_recur_overall) values
-            (1, 10, 15),  -- recur_overall -> Sustaining donor (precedence over otg=10 "Returning")
-            (2, 10, 55),  -- otg -> Returning / Loyal Supporter
-            (3, 30, 65),  -- otg -> New / Recent Supporter
-            (4, 70, 55),  -- recur_overall -> Lapsed Supporter
-            (5, 70, 95),  -- otg -> Lapsed Supporter
-            (6, 99, 95);  -- neither -> Contactable Reader
+            -- Sustaining Donor (2): recur in 15, 25, 35, 45
+            (1, 99, 15),
+            (2, 99, 25),
+            (3, 99, 35),
+            (4, 99, 45),
+            (5, 10, 15),   -- also matches otg 10 (Returning), but the recur rule is checked first
+            -- Returning / Loyal Supporter (4): otg in 10, 20, 40, 50
+            (6, 10, 95),
+            (7, 20, 95),
+            (8, 40, 95),
+            (9, 50, 95),
+            (10, 10, 55),  -- also matches recur 55 (Lapsed), but the otg rule is checked first
+            -- New / Recent Supporter (1): otg in 30, 60
+            (11, 30, 95),
+            (12, 60, 95),
+            (13, 30, 65),  -- also matches recur 65 (Lapsed), but the otg rule is checked first
+            -- Lapsed Supporter (3): recur in 55, 65, or otg in 70, 80, 90
+            (14, 99, 55),
+            (15, 99, 65),
+            (16, 70, 95),
+            (17, 80, 95),
+            (18, 90, 95),
+            (19, 70, 55),
+            -- Contactable Reader (5): no rule matches
+            (20, 99, 95);
     """])
 
     conn, db_name = testdb
@@ -68,18 +101,33 @@ def test_export(testdb):  # noqa: F811
             reader = csv.DictReader(f, fieldnames=['email', 'relationship_type'])
             rows = list(reader)
 
-    # All donors should be present with the expected relationship_type
     expected = {
-        'sustaining@localhost': '2',
-        'returning@localhost': '4',
-        'new@localhost': '1',
-        'lapsed-recur@localhost': '3',
-        'lapsed-otg@localhost': '3',
+        'recur-active@localhost': '2',
+        'recur-new@localhost': '2',
+        'recur-paused@localhost': '2',
+        'recur-failing@localhost': '2',
+        'recur-active-and-otg-consecutive@localhost': '2',
+        'otg-consecutive@localhost': '4',
+        'otg-reactivated@localhost': '4',
+        'otg-consecutive-last-year@localhost': '4',
+        'otg-reactivated-last-year@localhost': '4',
+        'otg-consecutive-and-recur-failed@localhost': '4',
+        'otg-new@localhost': '1',
+        'otg-new-last-year@localhost': '1',
+        'otg-new-and-recur-cancelled@localhost': '1',
+        'recur-failed@localhost': '3',
+        'recur-cancelled@localhost': '3',
+        'otg-lapsed@localhost': '3',
+        'otg-deep-lapsed@localhost': '3',
+        'otg-ultra-lapsed@localhost': '3',
+        'otg-lapsed-and-recur-failed@localhost': '3',
         'reader@localhost': '5',
     }
-    by_email = {row['email']: row for row in rows}
-    for email, relationship_type in expected.items():
-        assert by_email[email]['relationship_type'] == relationship_type
+    actual = {row['email']: row['relationship_type'] for row in rows}
+
+    # One row per donor, with no header row
+    assert len(rows) == len(expected)
+    assert actual == expected
 
 
 def test_fresh_data_permits_export():
@@ -233,10 +281,9 @@ def test_export_without_encryption_key():
         assert output_path.endswith('.csv')
         assert os.path.exists(output_path)
 
-        with open(output_path, 'r') as f:
-            reader = csv.DictReader(f, fieldnames=['email', 'relationship_type'])
-            rows = list(reader)
-        assert any(r['email'] == 'plain@localhost' for r in rows)
+        # Headerless: the file is exactly the data rows
+        with open(output_path, 'r', newline='') as f:
+            assert f.read() == 'plain@localhost,2\r\n'
 
 
 def _make_db(update_time):

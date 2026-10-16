@@ -5,9 +5,9 @@ MediaWiki Donor Status Export
 
 Exports donor status data from silverpop_export_view_full for sync to MediaWiki.
 This module reads from the existing silverpop export views (built by the
-silverpop_export module) and produces a simple CSV with:
+silverpop_export module) and produces a headerless CSV with the columns:
 
-  email_address, relationship_type
+  email, relationship_type
 
 Designed to run after the silverpop export has completed its table/view rebuild.
 """
@@ -26,7 +26,7 @@ import process.lock as lock
 
 log = logging.getLogger(__name__)
 
-EXPORT_QUERY_BASE = """
+EXPORT_QUERY = """
     SELECT
         -- e.ContactID AS contact_id,
         e.email,
@@ -42,9 +42,7 @@ EXPORT_QUERY_BASE = """
     FROM silverpop_export_view_full e
 """
 
-EXPORT_QUERY = EXPORT_QUERY_BASE
-
-EXPORT_QUERY_DELTA = EXPORT_QUERY_BASE + """
+EXPORT_QUERY_DELTA = EXPORT_QUERY + """
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
 
