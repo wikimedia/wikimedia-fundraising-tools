@@ -168,6 +168,8 @@ if __name__ == '__main__':
     if days is None and 'offset_in_days' in config:
         days = config.offset_in_days
 
-    lock.begin()
+    # Explicit name: running via -m makes the default lock "export.py.lock",
+    # which would collide with silverpop_export/export.py
+    lock.begin(filename="/tmp/%s-mediawiki_donor_export.lock" % os.environ['LOGNAME'])
     export(days=days, limit=args.limit)
     lock.end()
