@@ -96,8 +96,8 @@ def export(days=None, limit=None):
 
         log.info("Wrote %d rows to %s", num_rows, output_path)
 
-        if 'age_identity_file' in config:
-            output_path = encrypt_file(output_path, config.age_identity_file)
+        if 'age_recipient' in config:
+            output_path = encrypt_file(output_path, config.age_recipient)
 
         if 'sftp' in config:
             upload(output_path)
@@ -130,13 +130,13 @@ def upload(path):
     sftpc.close()
 
 
-def encrypt_file(input_path, identity_path):
+def encrypt_file(input_path, recipient):
     enc_path = input_path + '.age'
     subprocess.run(
         [
             'age',
             '-e',
-            '-i', identity_path,
+            '-r', recipient,
             '-o', enc_path,
             input_path
         ],

@@ -166,22 +166,22 @@ def test_one_second_past_threshold_blocks_export():
 
 
 def test_encrypt_file_calls_age_correctly():
-    """encrypt_file invokes age with identity file path."""
-    identity_path = '/path/to/identity.txt'
+    """encrypt_file invokes age with the recipient public key."""
+    recipient = 'age1examplepublickey'
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
 
     with mock.patch("mediawiki_donor_export.export.subprocess.run") as mock_run, \
          mock.patch("mediawiki_donor_export.export.os.remove") as mock_remove:
-        enc_path = export.encrypt_file(plaintext_path, identity_path)
+        enc_path = export.encrypt_file(plaintext_path, recipient)
 
     assert enc_path == plaintext_path + '.age'
     call_args = mock_run.call_args
     assert call_args[0][0] == [
         'age',
         '-e',
-        '-i', identity_path,
+        '-r', recipient,
         '-o', enc_path,
         plaintext_path
     ]
@@ -192,7 +192,7 @@ def test_encrypt_file_calls_age_correctly():
 
 def test_encrypt_file_keeps_plaintext_on_failure():
     """encrypt_file does not remove plaintext when age fails."""
-    identity_path = '/path/to/identity.txt'
+    recipient = 'age1examplepublickey'
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
@@ -200,15 +200,15 @@ def test_encrypt_file_keeps_plaintext_on_failure():
     with mock.patch("mediawiki_donor_export.export.subprocess.run",
                     side_effect=subprocess.CalledProcessError(1, 'age')):
         with pytest.raises(subprocess.CalledProcessError):
-            export.encrypt_file(plaintext_path, identity_path)
+            export.encrypt_file(plaintext_path, recipient)
 
     assert os.path.exists(plaintext_path)
     os.unlink(plaintext_path)
 
 
 def test_export_with_encryption():
-    """Export with age_identity_file calls encrypt_file."""
-    identity_path = '/path/to/identity.txt'
+    """Export with age_recipient calls encrypt_file."""
+    recipient = 'age1examplepublickey'
     fake_rows = [
         {'email': 'enc@localhost', 'relationship_type': 2}
     ]
@@ -223,14 +223,14 @@ def test_export_with_encryption():
             mock_config.return_value = DictAsAttrDict(
                 silverpop_db={},
                 working_path=tmpdir,
-                age_identity_file=identity_path,
+                age_recipient=recipient,
             )
 
             output_path = export.export(days=None)
 
         assert output_path.endswith('.age')
         mock_encrypt.assert_called_once()
-        assert mock_encrypt.call_args[0][1] == identity_path
+        assert mock_encrypt.call_args[0][1] == recipient
 
 
 @pytest.mark.skipif(not shutil.which('age'), reason='age not on PATH')
@@ -242,12 +242,15 @@ def test_encrypt_file_roundtrip_integration():
 
     subprocess.run(['age-keygen', '-o', identity_path],
                    check=True, capture_output=True)
+    recipient = subprocess.run(['age-keygen', '-y', identity_path],
+                               check=True, capture_output=True,
+                               text=True).stdout.strip()
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
         f.write('hello,world\n')
         plaintext_path = f.name
 
-    enc_path = export.encrypt_file(plaintext_path, identity_path)
+    enc_path = export.encrypt_file(plaintext_path, recipient)
 
     result = subprocess.run(
         ['age', '-d', '-i', identity_path, enc_path],
@@ -261,7 +264,7 @@ def test_encrypt_file_roundtrip_integration():
 
 
 def test_export_without_encryption_key():
-    """Backwards compat: no encryption_key means plain CSV output."""
+    """Backwards compat: no age_recipient means plain CSV output."""
     fake_rows = [
         {'email': 'plain@localhost', 'relationship_type': 2}
     ]
