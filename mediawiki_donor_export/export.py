@@ -5,9 +5,9 @@ MediaWiki Donor Status Export
 
 Exports donor status data from silverpop_export_view_full for sync to MediaWiki.
 This module reads from the existing silverpop export views (built by the
-silverpop_export module) and produces a simple CSV with:
+silverpop_export module) and produces a headerless CSV with the columns:
 
-  email_address, relationship_type
+  email, relationship_type
 
 Designed to run after the silverpop export has completed its table/view rebuild.
 """
@@ -26,7 +26,7 @@ import process.lock as lock
 
 log = logging.getLogger(__name__)
 
-EXPORT_QUERY_BASE = """
+EXPORT_QUERY = """
     SELECT
         -- e.ContactID AS contact_id,
         e.email,
@@ -42,9 +42,7 @@ EXPORT_QUERY_BASE = """
     FROM silverpop_export_view_full e
 """
 
-EXPORT_QUERY = EXPORT_QUERY_BASE
-
-EXPORT_QUERY_DELTA = EXPORT_QUERY_BASE + """
+EXPORT_QUERY_DELTA = EXPORT_QUERY + """
     WHERE e.modified_date >= DATE_SUB(NOW(), INTERVAL %s DAY)
 """
 
@@ -98,8 +96,8 @@ def export(days=None, limit=None):
 
         log.info("Wrote %d rows to %s", num_rows, output_path)
 
-        if 'age_identity_file' in config:
-            output_path = encrypt_file(output_path, config.age_identity_file)
+        if 'age_recipient' in config:
+            output_path = encrypt_file(output_path, config.age_recipient)
 
         if 'sftp' in config:
             upload(output_path)
@@ -132,13 +130,13 @@ def upload(path):
     sftpc.close()
 
 
-def encrypt_file(input_path, identity_path):
+def encrypt_file(input_path, recipient):
     enc_path = input_path + '.age'
     subprocess.run(
         [
             'age',
             '-e',
-            '-i', identity_path,
+            '-r', recipient,
             '-o', enc_path,
             input_path
         ],
@@ -170,6 +168,8 @@ if __name__ == '__main__':
     if days is None and 'offset_in_days' in config:
         days = config.offset_in_days
 
-    lock.begin()
+    # Explicit name: running via -m makes the default lock "export.py.lock",
+    # which would collide with silverpop_export/export.py
+    lock.begin(filename="/tmp/%s-mediawiki_donor_export.lock" % os.environ['LOGNAME'])
     export(days=days, limit=args.limit)
     lock.end()

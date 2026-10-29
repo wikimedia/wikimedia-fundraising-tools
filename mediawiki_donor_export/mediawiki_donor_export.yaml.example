@@ -8,11 +8,13 @@ working_path: /tmp/mediawiki_donor_export/
 # Omit or set to null for a full export of all contacts.
 offset_in_days: 3
 
-# Optional: path to an age identity file for encrypting the output.
-# The same file encrypts and decrypts (age -e -i derives the recipient
-# pubkey from the private key). Generate with: age-keygen -o identity.txt
-# Decrypt with: age -d -i identity.txt -o FILE.csv FILE.age
-# age_identity_file: /etc/fundraising/mediawiki_donor_export/age_identity
+# Optional: age public key (age1...) to encrypt the output for.
+# This is the recipient's public key, not a private key. The recipient
+# keeps the private key, so this server cannot decrypt the output.
+# The recipient generates a key pair with: age-keygen -o identity.txt
+# and gets the public key to send us with: age-keygen -y identity.txt
+# The recipient decrypts with: age -d -i identity.txt -o FILE.csv FILE.age
+# age_recipient: age1...
 
 # Optional: SFTP upload destination
 # sftp:

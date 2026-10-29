@@ -1,8 +1,8 @@
 # MediaWiki Donor Status Export
 
 Exports donor status data from `silverpop_export_view_full` for sync to
-MediaWiki user preferences. Produces a CSV containing `email` and
-`donor_status_id`.
+MediaWiki user preferences. Produces a headerless CSV with the columns
+`email` and `relationship_type`.
 
 Requires the silverpop export to have run first (it builds the views this
 module reads from). Data is read from `silverpop_export_view_full`, but the
@@ -32,9 +32,18 @@ Copy `mediawiki_donor_export.yaml.example` to
 
 See `sample_output.csv` for an example of the export format.
 
-## Donor Status Values
+## Relationship Type Values
 
-The `donor_status_id` values come directly from `wmf_donor.donor_status_id`
-in CiviCRM. See the
-[technical implementation doc](https://phabricator.wikimedia.org/T416638)
-for the full value table.
+`relationship_type` is set from `donor_status_otg` and
+`donor_status_recur_overall`, using the approved mapping in
+[T436548](https://phabricator.wikimedia.org/T436548). The rules are checked
+in this order and the first rule that matches is used:
+
+| Condition                                      | Description                                    | relationship_type               |
+|------------------------------------------------|------------------------------------------------|---------------------------------|
+| `donor_status_recur_overall` in 15, 25, 35, 45 | New, Active, Paused, Failing recurring         | 2 - Sustaining Donor            |
+| `donor_status_otg` in 10, 20, 40, 50           | Consecutive or Reactivated OTG this FY or last | 4 - Returning / Loyal Supporter |
+| `donor_status_otg` in 30, 60                   | New OTG this FY or last                        | 1 - New / Recent Supporter      |
+| `donor_status_recur_overall` in 55, 65         | Failed or Cancelled recurring                  | 3 - Lapsed Supporter            |
+| `donor_status_otg` in 70, 80, 90               | Lapsed, Deep Lapsed, Ultra Lapsed OTG          | 3 - Lapsed Supporter            |
+| any other                                      |                                                | 5 - Contactable Reader          |
